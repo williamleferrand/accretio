@@ -1,0 +1,1280 @@
+@import url(//fonts.googleapis.com/css?family=Pontano+Sans);
+@import url(https://fonts.googleapis.com/css?family=Molengo);
+/* line 5, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 100%;
+  vertical-align: baseline;
+}
+
+/* line 22, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+html {
+  line-height: 1;
+}
+
+/* line 24, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+ol, ul {
+  list-style: none;
+}
+
+/* line 26, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* line 28, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+caption, th, td {
+  text-align: left;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+/* line 30, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+q, blockquote {
+  quotes: none;
+}
+/* line 103, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+q:before, q:after, blockquote:before, blockquote:after {
+  content: "";
+  content: none;
+}
+
+/* line 32, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+a img {
+  border: none;
+}
+
+/* line 116, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+article, aside, details, figcaption, figure, footer, header, hgroup, main, menu, nav, section, summary {
+  display: block;
+}
+
+@font-face {
+  font-family: 'fontello';
+  src: url("fonts/fontello/fontello.eot?18064223");
+  src: url("fonts/fontello/fontello.eot?18064223#iefix") format("embedded-opentype"), url("fonts/fontello/fontello.woff?18064223") format("woff"), url("fonts/fontello/fontello.ttf?18064223") format("truetype"), url("fonts/fontello/fontello.svg?18064223#fontello") format("svg");
+  font-weight: normal;
+  font-style: normal;
+}
+/*
+ * /Ys/kernel is a community template for myrilion
+ * Copyright (C) 2014 William Le Ferrand
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+/* line 48, ../sass/_box.scss */
+.box {
+  background-color: #ffae00;
+  position: relative;
+  color: white;
+  border-radius: 10px;
+  padding: 10px;
+}
+/* line 8, ../sass/_box.scss */
+.box h2, .box h3 {
+  margin-bottom: 10px;
+}
+/* line 13, ../sass/_box.scss */
+.box h2 {
+  font-size: 18px;
+}
+/* line 17, ../sass/_box.scss */
+.box h3 {
+  font-size: 20px;
+}
+/* line 21, ../sass/_box.scss */
+.box .box-section {
+  margin-bottom: 15px;
+}
+/* line 25, ../sass/_box.scss */
+.box .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.box .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.box .box-action button {
+  margin-left: 10px;
+}
+/* line 36, ../sass/_box.scss */
+.box .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.box .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.box .join-before button {
+  padding-right: 10px;
+}
+
+/* line 53, ../sass/_box.scss */
+.box-with-header {
+  background-color: #ffae00;
+  position: relative;
+  color: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+/* line 8, ../sass/_box.scss */
+.box-with-header h2, .box-with-header h3 {
+  margin-bottom: 10px;
+}
+/* line 13, ../sass/_box.scss */
+.box-with-header h2 {
+  font-size: 18px;
+}
+/* line 17, ../sass/_box.scss */
+.box-with-header h3 {
+  font-size: 20px;
+}
+/* line 21, ../sass/_box.scss */
+.box-with-header .box-section {
+  margin-bottom: 15px;
+}
+/* line 25, ../sass/_box.scss */
+.box-with-header .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.box-with-header .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.box-with-header .box-action button {
+  margin-left: 10px;
+}
+/* line 36, ../sass/_box.scss */
+.box-with-header .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.box-with-header .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.box-with-header .join-before button {
+  padding-right: 10px;
+}
+/* line 56, ../sass/_box.scss */
+.box-with-header .box-header {
+  line-height: 26px;
+  padding-left: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  padding-right: 5px;
+  overflow: hidden;
+  height: 26px;
+}
+/* line 68, ../sass/_box.scss */
+.box-with-header .box-inner {
+  padding: 10px;
+}
+
+/* line 73, ../sass/_box.scss */
+.box-slider {
+  max-width: 880px;
+  margin: 0 10px 0 10px;
+  background-color: white;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  padding: 15px;
+}
+
+/*
+ * /Ys/kernel is a community template for myrilion
+ * Copyright (C) 2014 William Le Ferrand
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+/* line 19, ../sass/_nutshell.scss */
+html {
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* line 24, ../sass/_nutshell.scss */
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+/* line 30, ../sass/_nutshell.scss */
+body {
+  font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
+  font-size: 14px;
+  background-color: white;
+  color: #3d3d3d;
+  margin: 0px;
+  position: relative;
+  min-height: 100%;
+  padding-bottom: 36px;
+}
+
+/* line 41, ../sass/_nutshell.scss */
+a, a:visited, a:hover {
+  text-decoration: none;
+  color: #3d3d3d;
+  cursor: pointer;
+}
+
+/* line 47, ../sass/_nutshell.scss */
+button, input[type="submit"] {
+  cursor: pointer;
+  font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
+  background-color: #3d3d3d;
+  color: white;
+  font-size: 14px;
+  padding: 8px 10px 7px 10px;
+  line-height: 16px;
+  border: none;
+  margin: 0;
+  border-radius: 5px;
+  /* text-transform: uppercase; */
+}
+
+/* line 61, ../sass/_nutshell.scss */
+button:focus {
+  outline: none;
+}
+
+/* line 65, ../sass/_nutshell.scss */
+.clearfix:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* line 71, ../sass/_nutshell.scss */
+.left {
+  float: left;
+}
+
+/* line 75, ../sass/_nutshell.scss */
+.right {
+  float: right;
+}
+
+/* line 79, ../sass/_nutshell.scss */
+input[type="text"], input[type="password"], textarea {
+  padding: 10px;
+  font-size: 14px;
+  color: #3d3d3d;
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 5px;
+  border: none;
+  resize: none;
+  display: block;
+}
+
+/* line 96, ../sass/_nutshell.scss */
+.hide {
+  display: none;
+}
+
+/* line 100, ../sass/_nutshell.scss */
+.clickable {
+  cursor: pointer;
+}
+
+/* line 120, ../sass/_nutshell.scss */
+.button-inverted {
+  color: #3d3d3d;
+  background-color: white;
+}
+
+/* line 126, ../sass/_nutshell.scss */
+.nutshell-inner {
+  margin: auto;
+  padding: 0 10px;
+}
+
+/* line 132, ../sass/_nutshell.scss */
+h2 {
+  margin: 0 0 20px 0;
+  padding: 10px 0px;
+  border-bottom: 1px solid #3d3d3d;
+  font-size: 18px;
+  font-family: 'Molengo', sans-serif;
+}
+
+/* line 1, ../sass/_header.scss */
+.header, .header-admin {
+  padding: 10px 0 0 64px;
+  text-transform: uppercase;
+  z-index: 999;
+  overflow: hidden;
+  top: 10px;
+  left: 10px;
+  height: 64px;
+  background-color: white;
+  /* height: 54px; */
+}
+/* line 15, ../sass/_header.scss */
+.header .logo, .header-admin .logo {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 44px;
+  display: block;
+  margin-right: 10px;
+  background-color: #3d3d3d;
+  cursor: pointer;
+}
+/* line 26, ../sass/_header.scss */
+.header .menu, .header-admin .menu {
+  height: 44px;
+  width: 44px;
+  cursor: pointer;
+  text-align: center;
+  background-color: white;
+  border-radius: 25px;
+  color: #2a9827;
+  font-size: 22px;
+  line-height: 46px;
+  border: none;
+  padding: 0;
+  background-color: #2a9827;
+  color: white;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+/* line 34, ../sass/_header.scss */
+.header .menu-admin, .header-admin .menu-admin {
+  font-size: 8px;
+  line-height: 48px;
+}
+/* line 39, ../sass/_header.scss */
+.header .profile-picture, .header-admin .profile-picture {
+  width: 44px;
+  height: 44px;
+  background-color: white;
+  border-radius: 50px;
+  text-align: center;
+  font-size: 22px;
+  line-height: 44px;
+  overflow: hidden;
+  color: #3d3d3d;
+}
+/* line 49, ../sass/_header.scss */
+.header .profile-picture img, .header-admin .profile-picture img {
+  height: 100%;
+}
+
+/*
+ * /Ys/kernel is a community template for myrilion
+ * Copyright (C) 2014 William Le Ferrand
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+/* line 19, ../sass/_authentication.scss */
+.connection-box {
+  padding: 10px;
+}
+/* line 22, ../sass/_authentication.scss */
+.connection-box .recovery-link {
+  font-size: 14px;
+  line-height: 30px;
+}
+/* line 27, ../sass/_authentication.scss */
+.connection-box .authentication-toggle {
+  text-align: center;
+  padding: 10px;
+}
+/* line 31, ../sass/_authentication.scss */
+.connection-box .authentication-toggle .authentication-new-member {
+  cursor: pointer;
+  display: inline-block;
+  text-align: right;
+  padding-right: 5px;
+}
+/* line 32, ../sass/_authentication.scss */
+.connection-box .authentication-toggle .authentication-new-member label, .connection-box .authentication-toggle .authentication-new-member input {
+  cursor: pointer;
+}
+/* line 35, ../sass/_authentication.scss */
+.connection-box .authentication-toggle .authentication-new-member label {
+  padding-right: 5px;
+  vertical-align: middle;
+}
+/* line 44, ../sass/_authentication.scss */
+.connection-box .authentication-toggle .authentication-returning-member {
+  display: inline-block;
+  text-align: left;
+  padding-right: 5px;
+}
+/* line 45, ../sass/_authentication.scss */
+.connection-box .authentication-toggle .authentication-returning-member label, .connection-box .authentication-toggle .authentication-returning-member input {
+  cursor: pointer;
+}
+/* line 48, ../sass/_authentication.scss */
+.connection-box .authentication-toggle .authentication-returning-member label {
+  padding-left: 5px;
+  vertical-align: middle;
+}
+/* line 58, ../sass/_authentication.scss */
+.connection-box .icon-facebook-squared {
+  height: 44px;
+  width: 44px;
+  cursor: pointer;
+  text-align: center;
+  background-color: white;
+  border-radius: 25px;
+  padding: 0;
+  color: #3d3d3d;
+  font-size: 22px;
+  line-height: 48px;
+}
+/* line 75, ../sass/_authentication.scss */
+.connection-box .authentication-box-fb {
+  text-align: center;
+  margin-bottom: 10px;
+}
+/* line 76, ../sass/_authentication.scss */
+.connection-box .authentication-box-fb .fb-connect {
+  text-align: center;
+}
+/* line 84, ../sass/_authentication.scss */
+.connection-box .authentication-box {
+  background-color: #ffae00;
+  position: relative;
+  color: white;
+  border-radius: 10px;
+  padding: 0px;
+  margin-top: 15px;
+}
+/* line 8, ../sass/_box.scss */
+.connection-box .authentication-box h2, .connection-box .authentication-box h3 {
+  margin-bottom: 10px;
+}
+/* line 13, ../sass/_box.scss */
+.connection-box .authentication-box h2 {
+  font-size: 18px;
+}
+/* line 17, ../sass/_box.scss */
+.connection-box .authentication-box h3 {
+  font-size: 20px;
+}
+/* line 21, ../sass/_box.scss */
+.connection-box .authentication-box .box-section {
+  margin-bottom: 15px;
+}
+/* line 25, ../sass/_box.scss */
+.connection-box .authentication-box .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.connection-box .authentication-box .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.connection-box .authentication-box .box-action button {
+  margin-left: 10px;
+}
+/* line 36, ../sass/_box.scss */
+.connection-box .authentication-box .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.connection-box .authentication-box .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.connection-box .authentication-box .join-before button {
+  padding-right: 10px;
+}
+
+/*
+ * /Ys/kernel is a community template for myrilion
+ * Copyright (C) 2014 William Le Ferrand
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+/* line 19, ../sass/_help.scss */
+.help {
+  background-color: black;
+  top: 0;
+  left: 0;
+  position: fixed;
+  width: 100%;
+  z-index: 9999;
+  text-align: center;
+  font-size: 16px;
+  line-height: 28px;
+  padding: 10px 0;
+  color: white;
+}
+/* line 31, ../sass/_help.scss */
+.help button {
+  margin-left: 10px;
+  color: black;
+  background-color: white;
+}
+
+/* line 1, ../sass/_settings.scss */
+.settings {
+  margin: 10px;
+}
+/* line 3, ../sass/_settings.scss */
+.settings .box {
+  padding: 15px;
+  margin-bottom: 10px;
+}
+/* line 6, ../sass/_settings.scss */
+.settings .box input[type=radio] {
+  margin-right: 10px;
+}
+/* line 9, ../sass/_settings.scss */
+.settings .box label {
+  vertical-align: middle;
+}
+
+/* line 1, ../sass/_admin.scss */
+.admin {
+  padding-bottom: 20px;
+  left: 50%;
+  width: 840px;
+  margin-left: -420px;
+  position: relative;
+  padding-top: 40px;
+}
+/* line 7, ../sass/_admin.scss */
+.admin .box {
+  margin-bottom: 20px;
+}
+/* line 11, ../sass/_admin.scss */
+.admin .field {
+  padding: 5px 0;
+  line-height: 32px;
+}
+/* line 14, ../sass/_admin.scss */
+.admin .field .label {
+  width: 200px;
+}
+/* line 20, ../sass/_admin.scss */
+.admin .field .content input[type="text"] {
+  width: 200px;
+}
+/* line 24, ../sass/_admin.scss */
+.admin .field .content textarea {
+  width: 490px;
+}
+/* line 30, ../sass/_admin.scss */
+.admin .field .content > * {
+  margin-right: 10px;
+}
+/* line 32, ../sass/_admin.scss */
+.admin .field .content > * > * {
+  margin-right: 10px;
+}
+
+/* line 1, ../sass/_popup.scss */
+.popup {
+  margin: 10px 10px 0 10px;
+}
+
+/* line 1, ../sass/_recover.scss */
+.recover {
+  margin: 10px;
+}
+
+/* line 1, ../sass/_dashboard.scss */
+.dashboard {
+  margin: 10px 0;
+}
+/* line 4, ../sass/_dashboard.scss */
+.dashboard .dashboard-create-new-circle {
+  text-align: center;
+}
+
+/* line 4, ../sass/_landing.scss */
+.landing .landing-title {
+  font-size: 32px;
+  font-family: 'Molengo', sans-serif;
+  text-align: center;
+}
+/* line 12, ../sass/_landing.scss */
+.landing svg g polygon {
+  fill: white;
+}
+/* line 15, ../sass/_landing.scss */
+.landing svg g text {
+  font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
+  font-size: 12px;
+}
+@media screen and (min-width: 800px) {
+  /* line 25, ../sass/_landing.scss */
+  .landing .landing-pitch {
+    margin: 24px auto 0 auto;
+    width: 800px;
+  }
+  /* line 29, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch {
+    float: left;
+    width: 400px;
+    font-size: 20px;
+    padding-top: 16px;
+    line-height: 24px;
+  }
+  /* line 36, ../sass/_landing.scss */
+  .landing .landing-pitch .graph-demo {
+    float: left;
+  }
+  /* line 38, ../sass/_landing.scss */
+  .landing .landing-pitch .graph-demo svg {
+    width: 400px;
+  }
+}
+@media screen and (max-width: 799px) {
+  /* line 48, ../sass/_landing.scss */
+  .landing .landing-pitch {
+    margin: 0 auto 20px auto;
+  }
+  /* line 50, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch {
+    text-align: center;
+    font-size: 20px;
+    margin: 24px 0 0 0;
+    line-height: 24px;
+  }
+  /* line 56, ../sass/_landing.scss */
+  .landing .landing-pitch .graph-demo {
+    display: none;
+  }
+  /* line 58, ../sass/_landing.scss */
+  .landing .landing-pitch .graph-demo svg {
+    width: 100%;
+    height: auto !important;
+  }
+}
+/* line 69, ../sass/_landing.scss */
+.landing .landing-popular .playbooks .playbook {
+  margin: 0 0 10px 0;
+  padding: 10px;
+  background-color: #3d3d3d;
+  color: white;
+  cursor: pointer;
+}
+/* line 75, ../sass/_landing.scss */
+.landing .landing-popular .playbooks .playbook .name {
+  font-size: 18px;
+  border-bottom: 1px solid white;
+  padding: 0 0 10px 0;
+  margin: 0 0 10px 0;
+}
+/* line 81, ../sass/_landing.scss */
+.landing .landing-popular .playbooks .playbook .description {
+  font-size: 14px;
+}
+@media screen and (min-width: 800px) {
+  /* line 87, ../sass/_landing.scss */
+  .landing .landing-popular .playbooks .playbook {
+    width: 400px;
+    margin: 0 10px 10px 0;
+  }
+}
+
+/* line 1, ../sass/_thanks.scss */
+.thanks {
+  text-align: center;
+  color: white;
+  line-height: 16px;
+  margin-top: 20px;
+  padding: 0 10px;
+}
+
+/* line 1, ../sass/_profile.scss */
+.profile {
+  padding: 10px;
+}
+/* line 5, ../sass/_profile.scss */
+.profile .profile-header {
+  background-color: #ffae00;
+  position: relative;
+  color: white;
+  border-radius: 10px;
+  padding: 10px;
+  background-color: #42aac8;
+}
+/* line 8, ../sass/_box.scss */
+.profile .profile-header h2, .profile .profile-header h3 {
+  margin-bottom: 10px;
+}
+/* line 13, ../sass/_box.scss */
+.profile .profile-header h2 {
+  font-size: 18px;
+}
+/* line 17, ../sass/_box.scss */
+.profile .profile-header h3 {
+  font-size: 20px;
+}
+/* line 21, ../sass/_box.scss */
+.profile .profile-header .box-section {
+  margin-bottom: 15px;
+}
+/* line 25, ../sass/_box.scss */
+.profile .profile-header .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.profile .profile-header .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.profile .profile-header .box-action button {
+  margin-left: 10px;
+}
+/* line 36, ../sass/_box.scss */
+.profile .profile-header .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.profile .profile-header .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.profile .profile-header .join-before button {
+  padding-right: 10px;
+}
+/* line 10, ../sass/_profile.scss */
+.profile .profile-header .profile-picture-image .profile-picture-image-inner {
+  width: 100px;
+  height: 100px;
+  background-color: white;
+  border-radius: 50px;
+  text-align: center;
+  font-size: 44px;
+  line-height: 100px;
+  margin: auto;
+  overflow: hidden;
+  color: #3d3d3d;
+}
+/* line 21, ../sass/_profile.scss */
+.profile .profile-header .profile-picture-image .profile-picture-image-inner img {
+  height: 100%;
+}
+/* line 26, ../sass/_profile.scss */
+.profile .profile-header .profile-picture-image .darkroom {
+  width: 100px;
+  text-align: center;
+  margin-top: 10px;
+}
+/* line 30, ../sass/_profile.scss */
+.profile .profile-header .profile-picture-image .darkroom input {
+  display: none;
+}
+/* line 34, ../sass/_profile.scss */
+.profile .profile-header .profile-picture-image .darkroom label {
+  display: block;
+  cursor: pointer;
+  color: white;
+}
+/* line 44, ../sass/_profile.scss */
+.profile .profile-header .profile-bio {
+  margin-left: 110px;
+}
+/* line 48, ../sass/_profile.scss */
+.profile .profile-header .profile-bio button.icon-pencil {
+  background-color: transparent;
+  padding: 0;
+  margin-left: 5px;
+}
+/* line 54, ../sass/_profile.scss */
+.profile .profile-header .profile-bio .profile-name {
+  display: table;
+  width: 100%;
+  margin-bottom: 10px;
+}
+/* line 58, ../sass/_profile.scss */
+.profile .profile-header .profile-bio .profile-name > span:first-child {
+  display: table-cell;
+  text-align: left;
+  font-size: 18px;
+  padding-top: 5px;
+  vertical-align: middle;
+  line-height: 20px;
+}
+/* line 66, ../sass/_profile.scss */
+.profile .profile-header .profile-bio .profile-name span.profile-relationship {
+  display: table-cell;
+  text-align: right;
+  margin-left: 10px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+/* line 75, ../sass/_profile.scss */
+.profile .profile-header .profile-bio .profile-statement {
+  line-height: 18px;
+}
+/* line 80, ../sass/_profile.scss */
+.profile .profile-header .profile-bio .profile-statement-edit .profile-statement-edit-controls {
+  text-align: right;
+}
+/* line 82, ../sass/_profile.scss */
+.profile .profile-header .profile-bio .profile-statement-edit .profile-statement-edit-controls button {
+  margin-top: 10px;
+  margin-left: 10px;
+  padding: 6px 10px;
+}
+/* line 94, ../sass/_profile.scss */
+.profile .profile-new-story {
+  text-align: center;
+  margin-top: 10px;
+}
+/* line 98, ../sass/_profile.scss */
+.profile .profile-new-story button.icon-plus {
+  height: 44px;
+  width: 44px;
+  cursor: pointer;
+  text-align: center;
+  background-color: white;
+  border-radius: 25px;
+  color: #2a9827;
+  font-size: 22px;
+  line-height: 46px;
+  border: none;
+  padding: 0;
+}
+/* line 103, ../sass/_profile.scss */
+.profile .profile-stories {
+  margin-top: 10px;
+}
+/* line 107, ../sass/_profile.scss */
+.profile .profile-panels {
+  margin-top: 10px;
+  background-color: #ffae00;
+  position: relative;
+  color: white;
+  border-radius: 10px;
+  background-color: #42aac8;
+  padding: 0 0 10px 10px;
+}
+/* line 8, ../sass/_box.scss */
+.profile .profile-panels h2, .profile .profile-panels h3 {
+  margin-bottom: 10px;
+}
+/* line 13, ../sass/_box.scss */
+.profile .profile-panels h2 {
+  font-size: 18px;
+}
+/* line 17, ../sass/_box.scss */
+.profile .profile-panels h3 {
+  font-size: 20px;
+}
+/* line 21, ../sass/_box.scss */
+.profile .profile-panels .box-section {
+  margin-bottom: 15px;
+}
+/* line 25, ../sass/_box.scss */
+.profile .profile-panels .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.profile .profile-panels .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.profile .profile-panels .box-action button {
+  margin-left: 10px;
+}
+/* line 36, ../sass/_box.scss */
+.profile .profile-panels .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.profile .profile-panels .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.profile .profile-panels .join-before button {
+  padding-right: 10px;
+}
+/* line 112, ../sass/_profile.scss */
+.profile .profile-panels button {
+  margin-top: 10px;
+  margin-right: 10px;
+}
+/* line 117, ../sass/_profile.scss */
+.profile .profile-panels input {
+  width: 100px;
+  display: inline;
+  margin-right: 10px;
+  height: 30px;
+}
+
+/* line 1, ../sass/_sandbox.scss */
+.sandbox {
+  padding: 10px;
+}
+/* line 5, ../sass/_sandbox.scss */
+.sandbox .sandbox-title {
+  padding: 10px 0 20px 0;
+}
+/* line 7, ../sass/_sandbox.scss */
+.sandbox .sandbox-title h1 {
+  text-align: center;
+  font-size: 18px;
+  color: white;
+}
+/* line 14, ../sass/_sandbox.scss */
+.sandbox .sandbox-upper {
+  margin-bottom: 10px;
+}
+/* line 15, ../sass/_sandbox.scss */
+.sandbox .sandbox-upper .sandbox-upper-left {
+  width: 50%;
+}
+/* line 18, ../sass/_sandbox.scss */
+.sandbox .sandbox-upper .sandbox-upper-left .automata {
+  padding: 0 10px 0 10px;
+}
+/* line 20, ../sass/_sandbox.scss */
+.sandbox .sandbox-upper .sandbox-upper-left .automata svg {
+  width: 100%;
+  height: 100%;
+}
+/* line 27, ../sass/_sandbox.scss */
+.sandbox .sandbox-upper .sandbox-upper-right {
+  background-color: yellow;
+  width: 25%;
+}
+/* line 35, ../sass/_sandbox.scss */
+.sandbox .logs {
+  background-color: yellow;
+  overflow-y: scroll;
+  max-height: 500px;
+}
+/* line 39, ../sass/_sandbox.scss */
+.sandbox .logs .info {
+  background-color: green;
+}
+/* line 42, ../sass/_sandbox.scss */
+.sandbox .logs .warning {
+  background-color: orange;
+}
+/* line 45, ../sass/_sandbox.scss */
+.sandbox .logs .error {
+  background-color: red;
+}
+/* line 50, ../sass/_sandbox.scss */
+.sandbox .mailbox {
+  background-color: pink;
+  overflow-y: scroll;
+  max-height: 500px;
+}
+/* line 56, ../sass/_sandbox.scss */
+.sandbox h2 {
+  color: white;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+/* line 63, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .triggers {
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: orange;
+}
+/* line 67, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .triggers .trigger {
+  width: 550px;
+  padding-bottom: 10px;
+  padding-right: 10px;
+  float: left;
+}
+/* line 68, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .triggers .trigger input[type="number"], .sandbox .sandbox-lower .triggers .trigger input[type="text"] {
+  padding: 10px;
+  font-size: 14px;
+  color: #3d3d3d;
+  box-sizing: border-box;
+  width: 100px;
+  border-radius: 5px;
+  border: none;
+  resize: none;
+  margin-right: 10px;
+  display: inline;
+}
+/* line 87, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .send-message {
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: orange;
+}
+/* line 91, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .send-message textarea {
+  margin-bottom: 10px;
+}
+/* line 94, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .send-message button {
+  margin-left: 10px;
+}
+/* line 99, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members {
+  padding: 10px;
+  background-color: yellow;
+}
+/* line 102, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members input[type="text"] {
+  width: 300px;
+  display: inline;
+  margin-right: 10px;
+}
+/* line 108, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members .member .member-name {
+  margin-right: 10px;
+}
+/* line 111, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members .member .member-tags {
+  margin-right: 10px;
+}
+/* line 112, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members .member .member-tags span {
+  background-color: black;
+  color: white;
+  padding: 5px 0px 5px 7px;
+}
+/* line 116, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members .member .member-tags span button {
+  margin-left: 3px;
+}
+/* line 123, ../sass/_sandbox.scss */
+.sandbox .sandbox-lower .members .member .member-controls button {
+  margin-right: 10px;
+}
+
+/* line 3, ../sass/_society.scss */
+.society .society-mode {
+  text-align: center;
+  padding: 10px 0;
+}
+/* line 6, ../sass/_society.scss */
+.society .society-mode button {
+  margin: 0 5px;
+}
+/* line 9, ../sass/_society.scss */
+.society .society-mode button.active {
+  background-color: pink;
+  color: black;
+}
+/* line 15, ../sass/_society.scss */
+.society .society-upper {
+  margin-bottom: 10px;
+}
+/* line 17, ../sass/_society.scss */
+.society .society-upper .logs {
+  width: 25%;
+  max-height: 500px;
+  background-color: yellow;
+  overflow-y: scroll;
+  max-height: 250px;
+}
+/* line 18, ../sass/_society.scss */
+.society .society-upper .logs .logs-inner {
+  padding: 0 10px 0 0;
+}
+/* line 26, ../sass/_society.scss */
+.society .society-upper .logs div[class*="context-info"] {
+  background-color: green;
+}
+/* line 29, ../sass/_society.scss */
+.society .society-upper .logs div[class*="context-warning"] {
+  background-color: orange;
+}
+/* line 32, ../sass/_society.scss */
+.society .society-upper .logs div[class*="context-error"] {
+  background-color: red;
+}
+/* line 37, ../sass/_society.scss */
+.society .society-upper .playbook-automata {
+  width: 50%;
+}
+/* line 39, ../sass/_society.scss */
+.society .society-upper .playbook-automata svg {
+  width: 100%;
+  height: 100%;
+}
+/* line 44, ../sass/_society.scss */
+.society .society-upper .mailboxes {
+  overflow-y: scroll;
+  background-color: pink;
+  width: 25%;
+  max-height: 250px;
+}
+/* line 49, ../sass/_society.scss */
+.society .society-upper .mailboxes .inbox, .society .society-upper .mailboxes .outbox {
+  padding: 0 0 0 10px;
+}
+/* line 56, ../sass/_society.scss */
+.society .society-lower > div {
+  padding: 10px;
+  margin-bottom: 10px;
+}
+/* line 59, ../sass/_society.scss */
+.society .society-lower > div h2 {
+  padding: 10px 0;
+  font-size: 24px;
+}
+/* line 63, ../sass/_society.scss */
+.society .society-lower > div input[type="number"], .society .society-lower > div input[type="text"] {
+  padding: 10px;
+  font-size: 14px;
+  color: #3d3d3d;
+  box-sizing: border-box;
+  width: 100px;
+  border-radius: 5px;
+  border: none;
+  resize: none;
+  margin-right: 10px;
+  display: inline;
+}
+/* line 78, ../sass/_society.scss */
+.society .society-lower .triggers {
+  background-color: orange;
+}
+/* line 80, ../sass/_society.scss */
+.society .society-lower .triggers .trigger {
+  width: 550px;
+  padding-bottom: 10px;
+  padding-right: 10px;
+  float: left;
+}
+/* line 88, ../sass/_society.scss */
+.society .society-lower .members {
+  background-color: blue;
+}
+/* line 91, ../sass/_society.scss */
+.society .society-lower .members .add-member {
+  float: left;
+}
+/* line 95, ../sass/_society.scss */
+.society .society-lower .members .member {
+  float: left;
+  margin-left: 20px;
+}
+/* line 98, ../sass/_society.scss */
+.society .society-lower .members .member .member-email {
+  margin: 0 5px;
+}
+/* line 101, ../sass/_society.scss */
+.society .society-lower .members .member button {
+  margin-right: 10px;
+}
+/* line 109, ../sass/_society.scss */
+.society .society-lower .messenger {
+  background-color: yellow;
+}
+/* line 111, ../sass/_society.scss */
+.society .society-lower .messenger button {
+  margin-left: 10px;
+}
+/* line 114, ../sass/_society.scss */
+.society .society-lower .messenger .messenger-controls {
+  margin-top: 10px;
+}
+/* line 119, ../sass/_society.scss */
+.society .society-lower .data {
+  background-color: purple;
+}
+/* line 121, ../sass/_society.scss */
+.society .society-lower .data .data-item {
+  margin-left: 20px;
+  padding: 3px 0;
+}
+
+/* line 2, ../sass/_footer.scss */
+.footer {
+  text-align: center;
+  line-height: 36px;
+  height: 36px;
+  width: 100%;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* line 3, ../sass/_playbook.scss */
+.playbook .playbook-description {
+  font-size: 32px;
+  font-family: 'Molengo', sans-serif;
+  text-align: center;
+  margin: 0 0 24px 0;
+}
+/* line 11, ../sass/_playbook.scss */
+.playbook .playbook-automata svg {
+  width: 100%;
+}
+/* line 18, ../sass/_playbook.scss */
+.playbook .societies .society {
+  margin: 0 0 10px 0;
+  padding: 10px;
+  background-color: #3d3d3d;
+  color: white;
+}

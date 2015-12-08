@@ -1,0 +1,129 @@
+.society {
+
+    .society-mode {
+        text-align: center;
+        padding: 10px 0 ;
+        button {
+            margin: 0 5px ;
+        }
+        button.active{
+            background-color: pink ;
+            color: black ;
+        }
+    }
+
+    .society-upper {
+        margin-bottom: 10px;
+        .logs {
+            .logs-inner {
+                padding: 0 10px 0 0;
+            }
+            width: 25%;
+            max-height: 500px ;
+            background-color: yellow ;
+            overflow-y: scroll ;
+            max-height: 250px;
+            div[class*="context-info"] {
+                background-color: green ;
+            }
+            div[class*="context-warning"] {
+                background-color: orange ;
+            }
+            div[class*="context-error"] {
+                background-color: red ;
+            }
+
+        }
+        .playbook-automata {
+           width: 50% ;
+           svg {
+               width: 100% ;
+               height: 100% ;
+           }
+        }
+        .mailboxes {
+            overflow-y: scroll ;
+            background-color: pink ;
+            width: 25% ;
+            max-height: 250px;
+            .inbox, .outbox {
+                padding: 0 0 0 10px;
+            }
+        }
+    }
+
+    .society-lower {
+        > div {
+            padding: 10px;
+            margin-bottom: 10px;
+            h2 {
+                padding: 10px 0;
+                font-size: 24px;
+            }
+             input[type="number"], input[type="text"] {
+                    padding: 10px;
+                    font-size: 14px;
+                    color: #3d3d3d;
+                    box-sizing: border-box;
+                    width: 100px;
+                    border-radius: 5px;
+                    border: none;
+                    resize: none;
+                    margin-right: 10px;
+                    display: inline ;
+                }
+        }
+
+
+        .triggers {
+            background-color: orange ;
+            .trigger {
+                width: 550px;
+                padding-bottom: 10px;
+                padding-right: 10px;
+                float: left ;
+            }
+        }
+
+        .members {
+            background-color: blue;
+
+            .add-member {
+                float: left ;
+            }
+
+            .member {
+                float: left ;
+                margin-left: 20px;
+                .member-email {
+                    margin: 0 5px;
+                }
+                button {
+                    margin-right: 10px;
+                }
+
+            }
+
+        }
+
+        .messenger {
+            background-color: yellow ;
+            button {
+                margin-left: 10px;
+            }
+            .messenger-controls {
+                margin-top: 10px;
+            }
+        }
+
+        .data {
+            background-color: purple ;
+            .data-item {
+                margin-left: 20px;
+                padding: 3px 0;
+            }
+        }
+
+    }
+
+}

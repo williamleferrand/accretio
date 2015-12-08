@@ -1,0 +1,17 @@
+_build*
+_local*
+.depend
+db*
+*#*
+style/.sass-cache/*
+*.log
+*.cm*
+log_*
+static/mu*
+static/style*
+static/*_*.*
+upload/profile_*
+upload/image_*
+resources/node.xml
+resources/prod-nginx.xml
+keys/*

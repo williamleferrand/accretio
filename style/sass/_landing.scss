@@ -1,0 +1,102 @@
+.landing {
+
+
+    .landing-title {
+        font-size: 32px;
+        font-family: 'Molengo', sans-serif;
+        text-align: center ;
+    }
+
+    svg {
+        g {
+            polygon {
+                fill: white ;
+            }
+            text {
+                font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
+                font-size: 12px;
+
+            }
+        }
+    }
+
+    @media screen and (min-width: 800px) {
+
+        .landing-pitch {
+            margin: 24px auto 0 auto;
+            width: 800px;
+
+            .pitch {
+                float: left ;
+                width: 400px;
+                font-size: 20px;
+                padding-top: 16px;
+                line-height: 24px;
+            }
+            .graph-demo {
+                float: left ;
+                svg {
+                    width: 400px;
+                }
+            }
+        }
+
+    }
+
+     @media screen and (max-width: 799px) {
+
+         .landing-pitch {
+             margin: 0 auto 20px auto ;
+             .pitch {
+                 text-align: center ;
+                 font-size: 20px;
+                 margin: 24px 0 0 0;
+                 line-height: 24px;
+             }
+             .graph-demo {
+                 display: none ;
+                 svg {
+                     width: 100%;
+                     height: auto!important;
+                 }
+             }
+         }
+     }
+
+     .landing-popular {
+
+         .playbooks {
+             .playbook {
+                 margin: 0 0 10px 0 ;
+                 padding: 10px;
+                 background-color: $grey ;
+                 color: white ;
+                 cursor: pointer ;
+                 .name  {
+                     font-size: 18px ;
+                     border-bottom: 1px solid white ;
+                     padding: 0 0 10px 0 ;
+                     margin: 0 0 10px 0 ;
+                 }
+                 .description {
+                     font-size: 14px ;
+                 }
+             }
+
+             @media screen and (min-width: 800px) {
+                 .playbook {
+                     width: 400px ;
+                        margin: 0 10px 10px 0 ;
+
+                 }
+             }
+         }
+     }
+
+
+}
+
+@mixin boxed {
+
+
+}

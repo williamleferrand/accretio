@@ -1,0 +1,31 @@
+$break-large: 1024px;
+
+@mixin hide-on-mobile {
+    @media screen and (max-width: $break-large) {
+        display:none;
+    }
+}
+
+@mixin show-on-mobile {
+    @media screen and (min-width: 1+$break-large) {
+        display:none;
+    }
+}
+
+@mixin mobile {
+    @media screen and (max-width: $break-large) {
+        @content
+    }
+}
+
+@mixin not-mobile {
+    @media screen and (min-width: 1+$break-large) {
+        @content
+    }
+}
+
+@mixin portrait {
+    @media screen and (orientation : portrait) {
+        @content
+    }
+}

@@ -1,0 +1,71 @@
+#
+# Ocamlbuild tags
+#
+
+
+################################################################################
+# generic typing tags
+################################################################################
+
+<app/type/*.ml{,i}>: pkg_deriving.syntax, pkg_js_of_ocaml.deriving.syntax, pkg_js_of_ocaml.syntax
+
+
+################################################################################
+# generic server tags
+################################################################################
+
+<app/server/*.ml{,i}>: pkg_bin_prot, pkg_threads, pkg_lwt.syntax, pkg_aws, syntax_camlp4o, pkg_rtree,pkg_calendar, pkg_ocamlgraph
+
+<app/server/*.ml{,i}> and not <app/server/object_*> and not <app/server/ys_*> : pkg_js_of_ocaml.syntax
+
+<app/server/ys_*.ml{,i}> and not <app/server/ys_stripe*> and not <app/server/ys_twilio*> : syntax_camlp4o, pkg_bin_prot.syntax
+<app/server/object_*.ml{,i}>: syntax_camlp4o, pkg_bin_prot.syntax
+
+<app/server/attribute_*.ml{,i}>: syntax_camlp4o, pkg_bin_prot.syntax
+<app/server/imap_endpoint.ml{,i}>: pkg_imap
+
+# some specific additional libraries might be required
+
+<app/server/ys_config.ml>: pkg_tyxml.parser
+<app/server/ys_persistency.ml>: pkg_leveldb
+<app/server/ys_aliases.ml>: pkg_aliases.patriciatree, pkg_mysql
+<app/server/engine.ml>: pkg_mysql
+<app/server/logs.ml>: pkg_mysql
+
+<app/server/view_*.ml>: pkg_deriving.syntax
+
+<app/server/*.ml{,i}> and not <app/server/object_*.ml{,i}>: pkg_lwt.syntax, use_operators, pkg_lwt.syntax.log, pkg_eliom.server
+
+<app/server/ys_stripe*> or <app/server/ys_twilio*>: pkg_js_of_ocaml.deriving.syntax, pkg_deriving.syntax, pkg_deriving-yojson.syntax, pkg_deriving-yojson, pkg_yojson
+
+<app/server/automata*>: pkg_camlp4.quotations.r, pkg_camlp4.lib
+<app/server/sandbox*>: pkg_camlp4.quotations.r, pkg_camlp4.lib
+
+<app/server/object_*>: use_graph
+
+<app/server/dev>: linkall
+<app/server/mu_server*>: linkall
+
+################################################################################
+# generic client tags
+################################################################################
+
+<app/client/object_*>: use_graph_client
+
+<app/client/*.ml{,i}>: pkg_lwt, pkg_lwt.syntax, pkg_eliom.client, use_operators, syntax_camlp4o, pkg_calendar
+<app/client/*.ml{,i}> and not <app/client/object*>: pkg_js_of_ocaml.syntax, pkg_deriving.syntax, pkg_js_of_ocaml.deriving.syntax
+
+<app/client/mu.js>: pkg_bytes, pkg_eliom.client, pkg_js_of_ocaml.syntax, pkg_js_of_ocaml.deriving.syntax, pkg_ocamlgraph, pkg_calendar
+
+################################################################################
+# testing tags
+################################################################################
+
+<test/*>: pkg_oUnit, pkg_lwt.syntax, pkg_lwt, pkg_lwt.preemptive, pkg_str, thread, syntax_camlp4o, pkg_calendar
+
+
+################################################################################
+# some libs tags
+################################################################################
+
+<library/syntax/*>: pkg_camlp4.lib,pkg_camlp4.quotations.r,pkg_camlp4.metagenerator,pkg_camlp4.extend,syntax_camlp4o,pkg_type_conv,pkg_ocamlgraph

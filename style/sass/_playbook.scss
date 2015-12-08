@@ -1,0 +1,28 @@
+.playbook {
+
+    .playbook-description {
+        font-size: 32px;
+        font-family: 'Molengo', sans-serif;
+        text-align: center ;
+        margin: 0 0 24px 0 ;
+    }
+
+    .playbook-automata {
+        svg {
+            width: 100% ;
+        }
+    }
+
+
+    .societies {
+        .society {
+            margin: 0 0 10px 0 ;
+            padding: 10px;
+            background-color: $grey ;
+            color: white ;
+        }
+
+    }
+
+
+}

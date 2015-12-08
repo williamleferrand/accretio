@@ -1,0 +1,54 @@
+.header, .header-admin {
+    padding: 10px 0 0 64px ;
+
+    text-transform: uppercase;
+
+    z-index: 999;
+    overflow: hidden;
+
+    top: 10px;
+    left: 10px;
+    height: 64px;
+    background-color: white ;
+
+    /* height: 54px; */
+    .logo {
+        position: absolute;
+        top: 10px ;
+        left: 10px ;
+        width: 44px;
+        display: block;
+        margin-right: 10px;
+        background-color: $grey ;
+        cursor: pointer ;
+    }
+
+    .menu {
+        @include round-button-fontello ;
+        background-color: $green;
+        color: white;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+
+    .menu-admin {
+        font-size: 8px;
+        line-height: 48px;
+    }
+
+      .profile-picture {
+            width: 44px ;
+            height: 44px ;
+            background-color: white;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 22px;
+            line-height: 44px;
+            overflow: hidden ;
+            color: $grey ;
+            img {
+                height: 100%;
+            }
+        }
+
+}

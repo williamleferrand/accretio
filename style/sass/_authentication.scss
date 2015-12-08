@@ -1,0 +1,93 @@
+/*
+ * /Ys/kernel is a community template for myrilion
+ * Copyright (C) 2014 William Le Ferrand
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+.connection-box {
+
+    padding: 10px;
+    .recovery-link {
+        font-size: 14px;
+        line-height: 30px;
+    }
+
+    .authentication-toggle {
+        text-align:center;
+        padding: 10px;
+
+        .authentication-new-member {
+            label,input {
+                cursor: pointer ;
+            }
+            label {
+                padding-right: 5px;
+                vertical-align: middle ;
+            }
+            cursor: pointer ;
+            display: inline-block;
+            text-align: right;
+            padding-right: 5px;
+        }
+        .authentication-returning-member {
+            label,input {
+                cursor: pointer ;
+            }
+            label {
+                padding-left: 5px;
+                vertical-align: middle;
+            }
+            display: inline-block;
+            text-align: left;
+            padding-right: 5px;
+        }
+    }
+
+    .icon-facebook-squared {
+        height: 44px;
+            width: 44px;
+            cursor: pointer;
+            text-align:center ;
+            background-color: white;
+            border-radius: 25px;
+            padding:0;
+            color: $grey;
+            font-size: 22px;
+            line-height: 48px;
+    }
+
+    .authentication-box-static {
+
+    }
+
+    .authentication-box-fb {
+        .fb-connect {
+            text-align:center;
+        }
+        text-align:center ;
+        margin-bottom: 10px;
+    }
+
+
+ .authentication-box {
+        @include box-common ;
+        padding: 0px;
+        margin-top: 15px;
+
+
+}
+
+
+}

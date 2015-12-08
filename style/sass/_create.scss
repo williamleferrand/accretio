@@ -1,0 +1,20 @@
+.create {
+
+    margin: 10px;
+    padding: 10px;
+    @include box-common;
+
+    .create-fields {
+        input[type="text"], textarea {
+            margin-bottom: 10px;
+        }
+}
+
+    .box-action {
+        margin-top: 10px;
+    }
+
+    .typeahead {
+
+    }
+}

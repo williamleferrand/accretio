@@ -1,0 +1,38 @@
+body {
+
+    background-color: yellow;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background: white ;
+    height: 80px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+}
+
+.left {
+    float: left;
+    width: 80%;
+    background: red;
+    height: 100%;
+    overflow: scroll;
+    height: 2000px;
+}
+
+.right {
+    float: left;
+    width: 20%;
+    background: blue;
+    height: 100%;
+    overflow: scroll;
+    height: 1000px;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}

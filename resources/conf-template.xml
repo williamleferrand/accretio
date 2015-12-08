@@ -1,0 +1,90 @@
+<!-- node initial configuration file -->
+<ocsigen>
+  <server>
+    <port protocol="HTTP">8080</port>
+
+    <charset>utf-8</charset>
+
+    <extension findlib-package="ocsigenserver.ext.redirectmod"/>
+    <extension findlib-package="ocsigenserver.ext.staticmod"/>
+    <extension findlib-package="ocsigenserver.ext.ocsipersist-sqlite">
+      <database file="db/sessions"/>
+    </extension>
+    <extension findlib-package="ocsigenserver.ext.revproxy"/>
+    <!-- <extension findlib-package="ocsigenserver.ext.deflatemod" /> -->
+    <extension findlib-package="bytes"/>
+    <extension findlib-package="eliom.server">
+      <volatiletimeout value="infinity"/>
+      <persistenttimeout value="infinity"/>
+    </extension>
+    <extension findlib-package="bin_prot"/>
+
+    <extension findlib-package="leveldb"/>
+    <extension findlib-package="aws.ocsigen"/>
+    <extension findlib-package="mysql"/>
+    <extension findlib-package="rtree"/>
+    <extension findlib-package="deriving-yojson"/>
+    <extension findlib-package="imap"/>
+    <extension findlib-package="ocamlgraph"/>
+
+    <maxrequestbodysize>100MB</maxrequestbodysize>
+
+
+    <host charset="utf-8" hostfilter="*">
+
+      <site path="" charset="utf-8">
+          <static dir="style/fonts/" />
+          <static dir="style/" />
+          <static dir="static/" />
+          <static dir="upload/" />
+        <eliom findlib-package="deriving"/>
+        <eliommodule module="_build/app/server/dev.cma" />
+        <eliommodule module="_build/app/server/mu_server.cma">
+
+          <string-param key="db-root-dir" value="db" />
+          <int-param key="cache-size" value="128" />
+          <int-param key="cache-size-aliases" value="16" />
+          <string-param key="private-key" value="myprivatekeyhere" />
+          <string-param key="dep" value="local-william" />
+          <string-param key="aws-access-key-id" value="--" />
+          <string-param key="aws-secret-access-key" value="----" />
+          <string-param key="email-feedback" value="hi@accret.io" />
+          <int-param key="sphinx-pool-size" value="2" />
+          <float-param key="recovery-token-timeout" value="28800" />
+          <int-param key="default-debate-duration" value="24" />
+          <string-param key="mixpanel-id" value="f7d5ef75637b408ec1d326ff848e0b3a" />
+          <int-param key="ses-outbound-max-queue-size" value="8192" />
+          <string-param key="log-file" value="logs/out.log" />
+          <int-param key="max-number-of-results" value="1024" />
+          <string-param key="url-prefix" value="http://localhost:8080"/>
+          <int-param key="agora-page-size" value="3" />
+          <int-param key="suggestion-batch-mailing-hour" value="0" />
+          <string-param key="fb-app-id" value="364973183663773" />
+          <string-param key="upload-directory" value="upload" />
+          <string-param key="stripe-publishable-key" value="---" />
+          <string-param key="stripe-secret-key" value="---" />
+          <string-param key="twilio-sid" value="---" />
+          <string-param key="twilio-auth-token" value="---"/>
+          <int-param key="check-pool-expiration-period" value="3600" />
+          <int-param key="decision-reminder-period-in-hours" value="2"/>
+          <string-param key="imap-host" value="imap.gmail.com" />
+          <int-param key="imap-port" value="993" />
+          <string-param key="imap-user" value="---" />
+          <string-param key="imap-pass" value="---" />
+          <string-param key="imap-mbox" value="[Gmail]/All Mail" />
+         <string-param key="imap-prefix" value="reply_test" />
+         <string-param key="notify-monitoring-email" value="---"/>
+    </eliommodule>
+      </site>
+
+      <!-- <deflate compress="only">
+        <type>text/html</type>
+        <type>text/css</type>
+        <extension>js</extension>
+      </deflate> -->
+
+    </host>
+
+
+  </server>
+</ocsigen>

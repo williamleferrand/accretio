@@ -1,0 +1,42 @@
+.guide {
+    h2 {
+        text-align: center ;
+    }
+    .guide-eg {
+        font-size: 14px;
+        margin-top: 2px;
+    }
+    .step {
+        margin-top: 10px;
+        .control {
+            height: 44px;
+            width: 44px;
+            cursor: pointer;
+            text-align:center ;
+            background-color: white;
+            border-radius: 25px;
+
+            color: $grey;
+            font-size: 22px;
+            line-height: 48px;
+            border: none;
+            padding: 0;
+
+        }
+        .step-content {
+            margin-left: 54px;
+
+            line-height: 44px;
+            span
+            {
+                display: inline-block;
+                vertical-align: middle;
+                line-height: 16px;
+            }
+        }
+    }
+
+    .pitch {
+        font-style:italic ;
+    }
+}

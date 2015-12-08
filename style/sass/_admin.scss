@@ -1,0 +1,38 @@
+.admin {
+
+    @include container;
+    @include large-box;
+    padding-top: 40px;
+
+    .box {
+        margin-bottom: 20px;
+    }
+
+    .field {
+        padding: 5px 0;
+        line-height: 32px;
+        .label {
+            width: 200px;
+
+        }
+
+        .content {
+            input[type="text"] {
+                width: 200px;
+
+            }
+            textarea {
+                width: 490px;
+            }
+            button {
+
+            }
+            > * {
+                margin-right: 10px;
+                > * {
+                    margin-right: 10px;
+                }
+            }
+        }
+    }
+}

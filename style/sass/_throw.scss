@@ -1,0 +1,30 @@
+.throw {
+    background-color:$blue;
+    h2 {
+        margin-top: 10px;
+        text-align: center ;
+    }
+    .throw-section {
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .throw-input {
+        text-align: center ;
+        input[type="number"] {
+
+            font-size: 16px;
+            color:$grey;
+            text-align: center;
+            border-radius: 5px;
+            padding: 5px;
+            border: none;
+        }
+    }
+    .box-action {
+        text-align:center;
+        button {
+            margin:5px ;
+        }
+    }
+}

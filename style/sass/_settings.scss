@@ -1,0 +1,13 @@
+.settings {
+    margin: 10px;
+    .box {
+        padding: 15px;
+        margin-bottom: 10px;
+        input[type=radio] {
+            margin-right: 10px;
+        }
+        label {
+            vertical-align: middle ;
+        }
+    }
+}

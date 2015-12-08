@@ -1,0 +1,9 @@
+@mixin round-button {
+    height: 44px;
+    width: 44px;
+    cursor: pointer;
+    text-align:center ;
+    border-radius: 25px;
+    line-height: 50px;
+    font-size: 20px;
+}

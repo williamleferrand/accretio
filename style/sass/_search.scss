@@ -1,0 +1,73 @@
+.search {
+    padding: 10px;
+    position: relative ;
+    .results {
+        margin-top: 10px;
+
+        > div {
+            margin-bottom: 10px;
+            cursor: pointer ;
+        }
+
+        .leader-picture {
+            width: 44px ;
+            height: 44px ;
+            background-color: white;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 22px;
+            line-height: 44px;
+            margin: auto;
+            overflow: hidden ;
+            color: $grey ;
+            img {
+                height: 100%;
+            }
+        }
+
+
+        .result-profile {
+
+            @include box-common ;
+            padding: 10px ;
+            background-color: $blue;
+            .member-profile {
+                display: table-cell ;
+                widht: 44px;
+            }
+            .member-name {
+                 display: table-cell;
+                text-align: left;
+                font-size: 14px ;
+                padding-top: 5px;
+                vertical-align: middle ;
+                line-height: 18px;
+                padding-left: 10px;
+                height: 100%;
+            }
+
+
+        }
+
+        .result-story {
+            @include box-common ;
+            padding: 10px ;
+
+            .story-owner {
+                display: table-cell ;
+                width: 44px;
+            }
+            .story-pitch {
+                display: table-cell;
+                text-align: left;
+                font-size: 14px ;
+                padding-top: 5px;
+                vertical-align: middle ;
+                line-height: 18px;
+                padding-left: 10px;
+                height: 100%;
+            }
+        }
+
+    }
+}
