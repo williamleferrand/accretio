@@ -44,7 +44,9 @@ type 'output context =
     (* messages primitives *)
 
     get_message_content : message:uid -> string Lwt.t ;
-    get_message_senders : message:uid -> uid list Lwt.t ;
+    get_message_sender : message:uid -> uid Lwt.t ;
+    get_original_message : message:uid -> uid Lwt.t ;
+
   }
 
 module type STAGE_SPECIFICS =
@@ -81,5 +83,6 @@ sig
 
   val triggers : ([ `Unit | `Int | `Float | `String ] * string) list
   val mailables : string list
+  val mailing_helper : (string * string) list
 
 end

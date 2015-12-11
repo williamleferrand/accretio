@@ -64,20 +64,31 @@ let compile_automata chains crons =
   in
   (* then we fold over the graph & output the AST *)
 
-  List.fold_left
-    (fun acc (source, chain) ->
-       snd
-         (List.fold_left
-            (fun (source, acc) (transition, destination) ->
-               let source = update source in
-               let destination = update destination in
-               let acc = G.add_vertex acc source in
-               let acc = G.add_vertex acc destination in
-               destination, (G.add_edge_e acc (source, transition, destination)))
-            (source, acc)
-            chain))
-    G.empty
-    chains
+  let automata =
+    List.fold_left
+      (fun acc (stage, _) ->
+         let options = get_options (stage, []) in
+         G.add_vertex acc (stage, options))
+      G.empty
+      crons
+  in
+  let automata =
+    List.fold_left
+      (fun acc (source, chain) ->
+         snd
+           (List.fold_left
+              (fun (source, acc) (transition, destination) ->
+                 let source = update source in
+                 let destination = update destination in
+                 let acc = G.add_vertex acc source in
+                 let acc = G.add_vertex acc destination in
+                 destination, (G.add_edge_e acc (source, transition, destination)))
+              (source, acc)
+              chain))
+      automata
+      chains
+  in
+  automata
 
 
 let compile_crons _loc crons =
@@ -155,10 +166,12 @@ EXTEND Gram
           let automata_serialized = graph_to_string automata in
           let triggers = triggers _loc automata in
           let mailables = mailables _loc automata in
+          let mailing_helper = mailing_helper _loc automata in
           <:str_item<
                  value automata = $str:automata_serialized$ ;
                  value triggers = $triggers$ ;
                  value mailables = $mailables$ ;
+                 value mailing_helper = $mailing_helper$ ;
           >>
         in
 

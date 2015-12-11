@@ -76,8 +76,13 @@ let decode_candidate_message context message =
     context
     ~message
 
-let extract_member_from_message_when_yes context message = Library.member_from_message context ~message
-let extract_member_from_message_when_no context message = Library.member_from_message context ~message
+let extract_member_from_message_when_yes context message =
+  lwt member = context.get_message_sender ~message in
+  return (`Member member)
+
+let extract_member_from_message_when_no context message =
+  lwt member = context.get_message_sender ~message in
+  return (`Member member)
 
 let ask_member_for_a_place context member =
   Library.message_with_timeout

@@ -204,7 +204,7 @@ let process_email =
               let message_id = header#field "message-id" in
               Lwt_log.ign_info_f "message id is %s" message_id ;
 
-              (* let references =
+              let references =
                 try
                   let references_string = header#field "references" in
                   Lwt_log.ign_info_f "references are %s" references_string ;
@@ -223,7 +223,7 @@ let process_email =
                   Lwt_log.ign_error_f ~exn "error when reading references"; []
               in
               List.iter (fun reference -> Lwt_log.ign_info_f "found reference %s" reference) references ;
-              Lwt_log.ign_info_f "there are %d references" (List.length references) ; *)
+              Lwt_log.ign_info_f "there are %d references" (List.length references) ;
 
               lwt head_plain =
                 match body_plain with
@@ -262,6 +262,8 @@ let process_email =
                   ~content
                   ~origin
                   ~destination
+                  ~reference:(Object_message.create_reference content)
+                  ~references
                   () with
               | `Object_already_exists _ ->
                 Lwt_log.ign_info_f "message already exists" ;
@@ -363,7 +365,7 @@ let wait_mail host port user pass mbox =
       run sock i o c (`Cmd (Imap.login user pass)) >>= login
   | `Untagged _ -> assert false
 
-(*
+
 let _ =
   Lwt_log.ign_info_f "starting imap loop" ;
   ignore_result
@@ -375,4 +377,3 @@ let _ =
             (Ys_config.get_string Ys_config.imap_user)
             (Ys_config.get_string Ys_config.imap_pass)
             (Ys_config.get_string Ys_config.imap_mbox)))
-*)

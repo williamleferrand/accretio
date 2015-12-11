@@ -18,11 +18,6 @@ let decode_message_yes_no context ~message =
   | `No -> return (`No message)
   | `Unknown -> return (`Unknown message)
 
-let member_from_message context ~message =
-  match_lwt context.get_message_senders ~message with
-  | [] -> return `NoMemberFound
-  | owner :: _ -> return (`Member owner)
-
 
 
 

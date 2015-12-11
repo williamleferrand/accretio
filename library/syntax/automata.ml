@@ -290,6 +290,26 @@ let mailables _loc automata =
     <:expr< [] >>
     stages
 
+(* we need to keep track of the next mailbox outside of the context for the sandbox *)
+let mailing_helper _loc automata =
+   let stages = G.fold_vertex
+      (fun stage acc ->
+        G.fold_pred_e
+          (fun transition acc ->
+             match G.E.label transition with
+               <:ctyp< `Message of int >> -> (Vertex.lident (G.E.src transition), Vertex.lident stage) :: acc
+             | _ -> acc)
+          automata
+          stage
+          acc)
+      automata
+      [] in
+
+  List.fold_left
+    (fun acc (src, dst) -> <:expr< [ ($str:src$, $str:dst$) :: $acc$ ] >>)
+    <:expr< [] >>
+    stages
+
 module Dot = Graph.Graphviz.Dot(struct
 
     include G

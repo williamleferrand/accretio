@@ -142,26 +142,32 @@ let trigger_string = server_function ~name:"society-trigger-string" Json.t<int *
 
 (* members *)
 
-let add_member (uid, email, tags) =
+let add_members (uid, emails, tags) =
   protected_connected
     (fun _ ->
-       lwt uid =
-         match_lwt Object_member.Store.find_by_email email with
-         | Some uid -> return uid
-         | None ->
-           match_lwt Object_member.Store.create
-                       ~preferred_email:email
-                       ~emails:[ email ]
-                       () with
-           | `Object_already_exists (_, uid) -> return uid
-           | `Object_created member -> return member.Object_member.uid
-       in
-       let tags = "active" :: tags in
-       lwt _ = $society(uid)<-members +=! (`Member tags, uid) in
+       let emails = Ys_email.get_all_emails emails in
+       lwt _ =
+         Lwt_list.iter_p
+           (fun email ->
+              lwt member =
+                match_lwt Object_member.Store.find_by_email email with
+                | Some uid -> return uid
+                | None ->
+                  match_lwt Object_member.Store.create
+                              ~preferred_email:email
+                              ~emails:[ email ]
+                              () with
+                  | `Object_already_exists (_, uid) -> return uid
+                  | `Object_created member -> return member.Object_member.uid
+              in
+              let tags = "active" :: tags in
+              lwt _ = $society(uid)<-members +=! (`Member tags, member) in
+              return_unit)
+           emails in
        lwt members = retrieve_members uid in
        return (Some members))
 
-let add_member = server_function ~name:"society-add-member" Json.t<int * string * string list> add_member
+let add_members = server_function ~name:"society-add-members" Json.t<int * string * string list> add_members
 
 let remove_member (uid, member) =
   protected_connected
@@ -188,7 +194,6 @@ let update_member_tags = server_function ~name:"society-update-member-tags" Json
 let get_messages_inbox (society, since) =
   lwt inbox = $society(society)->inbox in
   let inbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) inbox in
-  let inbox = List.rev inbox in
   Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) inbox
 
 let get_messages_inbox = server_function ~name:"society-get-messages-inbox" Json.t<int * int64> get_messages_inbox
@@ -196,7 +201,6 @@ let get_messages_inbox = server_function ~name:"society-get-messages-inbox" Json
 let get_messages_outbox (society, since) =
   lwt outbox = $society(society)->outbox in
   let outbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) outbox in
-  let outbox = List.rev outbox in
   Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) outbox
 
 let get_messages_outbox = server_function ~name:"society-get-messages-outbox" Json.t<int * int64> get_messages_outbox
@@ -204,30 +208,44 @@ let get_messages_outbox = server_function ~name:"society-get-messages-outbox" Js
 let reply_message (society, message, content) =
   protected_connected
     (fun _ ->
+       Lwt_log.ign_info_f "replying to message %d with content %s" message content ;
+       lwt playbook = $society(society)->playbook in
+       let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+
        match_lwt $message(message)->origin with
         | Object_message.Member _ -> return (Some false)
-        | Object_message.Stage stage as destination ->
+        | Object_message.Stage stage ->
+
+          lwt original_reference = $message(message)->reference in
           lwt origin = $message(message)->destination in
+          Lwt_log.ign_info_f "message was emitted from stage %s" stage ;
+          let destination = List.assoc stage Playbook.mailing_helper in
+
           lwt uid =
             match_lwt Object_message.Store.create
                         ~origin
                         ~society
                         ~content
-                        ~destination
+                        ~destination:(Object_message.Stage destination)
+                        ~references:[ original_reference ]
+                        ~reference:(Object_message.create_reference content)
                         () with
             | `Object_already_exists (_, uid) -> return uid
             | `Object_created message -> return message.Object_message.uid in
           lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = true }), uid) in
-          let call = Ys_executor.({ stage ; args = Executor.int_args uid ; schedule = Immediate }) in
+          let call = Ys_executor.({ stage = destination ; args = Executor.int_args uid ; schedule = Immediate }) in
           lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
           ignore_result (Executor.step society) ;
-          (* Scheduler.dispatch_message society uid ; *)
           return (Some true))
 
 let reply_message = server_function ~name:"society-reply-message" Json.t<int * int * string> reply_message
 
 let create_message_and_trigger_stage (society, sender, content, stage) =
   Lwt_log.ign_info_f "creating message for society %d, sender is %d, content is %s, stage is %s" society sender content stage ;
+  lwt playbook = $society(society)->playbook in
+  let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+  let destination = List.assoc stage Playbook.mailing_helper in
+
   protected_connected
     (fun _ ->
        lwt uid =
@@ -235,7 +253,8 @@ let create_message_and_trigger_stage (society, sender, content, stage) =
                      ~origin:(Object_message.Member sender)
                      ~society
                      ~content
-                     ~destination:(Object_message.Stage stage) (* !!!!! this is not really correct! *)
+                     ~destination:(Object_message.Stage destination)
+                     ~reference:(Object_message.create_reference content)
                      () with
          | `Object_already_exists (_, uid) -> return uid
          | `Object_created message -> return message.Object_message.uid in
@@ -531,11 +550,11 @@ let builder bundle =
       let create _ =
         match Ys_dom.get_value input_email with
           "" -> Help.warning "Please specify a valid email"
-        | _ as email ->
+        | _ as emails ->
           let tags = Ys_dom.get_value input_tags in
           let tags : string list = Regexp.split (Regexp.regexp ",") tags in
           Authentication.if_connected
-            (fun _ -> rpc %add_member (view.uid, email, tags) (fun m -> RList.update members m ; Ys_dom.set_value input_email "" ; Ys_dom.set_value input_tags ""))
+            (fun _ -> rpc %add_members (view.uid, emails, tags) (fun m -> RList.update members m ; Ys_dom.set_value input_email "" ; Ys_dom.set_value input_tags ""))
       in
       let create =
         button
