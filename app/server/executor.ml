@@ -32,67 +32,198 @@ open Api
 (* the context factory -- there is a little bit a first class module magic
    so that pa_playbook can craft a context specific to each module *)
 
-let context_factory_sandbox society =
-  let module Factory (Stage_Specifics : STAGE_SPECIFICS) =
+module type MODE_SPECIFICS = functor (Stage_specifics : STAGE_SPECIFICS) ->
+sig
+
+  val log_info : ('a, unit, string, unit) Pervasives.format4 -> 'a
+  val log_warning : ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
+  val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
+
+  val message_member : member:uid -> subject:string -> content:Html5_types.div_content_fun elt list -> unit Lwt.t
+  val message_supervisor : subject:string -> content:Html5_types.div_content_fun elt list -> unit Lwt.t
+  val forward_to_supervisor : message:uid -> subject:string -> unit Lwt.t
+
+end
+
+let context_factory mode society =
+
+  let mode_specifics =
+    match mode with
+    | `Sandbox ->
+      let module Mode_Specifics (Stage_Specifics: STAGE_SPECIFICS) =
+      struct
+
+        include Stage_Specifics
+
+        let log_info = fun fmt ->
+          let source = sprintf "context-info-%d" society in
+          let timestamp = Ys_time.now () in
+          Printf.ksprintf
+            (fun message ->
+               Lwt_log.ign_info_f "%s" message ;
+               ignore_result (Logs.insert source timestamp message)) fmt
+
+        let log_warning = fun ?exn fmt ->
+          let source = sprintf "context-warning-%d" society in
+          let timestamp = Ys_time.now () in
+          Printf.ksprintf
+            (fun message ->
+               Lwt_log.ign_warning_f ?exn "%s" message ;
+               ignore_result (Logs.insert source timestamp message)) fmt
+
+        let log_error = fun ?exn fmt ->
+          let source = sprintf "context-error-%d" society in
+          let timestamp = Ys_time.now () in
+          Printf.ksprintf
+            (fun message ->
+               Lwt_log.ign_error_f ?exn "%s" message ;
+               ignore_result (Logs.insert source timestamp message)) fmt
+
+        let send_message ?(reference=None) member subject content =
+          let origin = Object_message.Stage Stage_Specifics.stage in
+          lwt uid =
+            match_lwt Object_message.Store.create
+                        ~society
+                        ~origin
+                        ~content
+                        ~subject
+                        ~destination:(Object_message.Member member)
+                        ~reference:(Object_message.create_reference subject)
+                        ~references:(match reference with Some reference -> [ reference ] | None -> [])
+                        () with
+            | `Object_already_exists (_, uid) -> return uid
+            | `Object_created message -> return message.Object_message.uid
+          in
+          lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
+          return_unit
+
+        let message_member ~member ~subject ~content =
+          let flat_content = ref "" in
+          Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
+          send_message member subject !flat_content
+
+        let message_supervisor ~subject ~content =
+          lwt leader = $society(society)->leader in
+          message_member leader subject content
+
+        let forward_to_supervisor ~message ~subject =
+          match next_mailbox with
+            None ->
+            log_error "can't forward message %d to supervisor, subject %s, there is no `Message transition on this stage" message subject ;
+            return_unit
+          | Some _ ->
+            lwt content = $message(message)->content in
+            lwt leader = $society(society)->leader in
+            lwt reference = $message(message)->reference in
+            send_message ~reference:(Some reference) leader subject content
+
+      end
+      in (module Mode_Specifics: MODE_SPECIFICS)
+    | `Production ->
+      let module Mode_Specifics (Stage_Specifics: STAGE_SPECIFICS) =
+      struct
+
+        include Stage_Specifics
+
+        let log_info = fun fmt ->
+          let source = sprintf "context-info-%d" society in
+          let timestamp = Ys_time.now () in
+          Printf.ksprintf
+            (fun message ->
+               Lwt_log.ign_info_f "%s" message ;
+               ignore_result (Logs.insert source timestamp message)) fmt
+
+        let log_warning = fun ?exn fmt ->
+          let source = sprintf "context-warning-%d" society in
+          let timestamp = Ys_time.now () in
+          Printf.ksprintf
+            (fun message ->
+               Lwt_log.ign_warning_f ?exn "%s" message ;
+               ignore_result (Logs.insert source timestamp message)) fmt
+
+        let log_error = fun ?exn fmt ->
+          let source = sprintf "context-error-%d" society in
+          let timestamp = Ys_time.now () in
+          Printf.ksprintf
+            (fun message ->
+               Lwt_log.ign_error_f ?exn "%s" message ;
+               ignore_result (Logs.insert source timestamp message)) fmt
+
+        let send_message ?(reference=None) member subject content =
+          match next_mailbox with
+            None ->
+            log_error "can't send message to member %d, subject %s, there is no `Message transition on this stage" member subject ;
+            return_unit
+          | Some destination ->
+            let flat_content = ref "" in
+            Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
+
+            let origin = Object_message.Stage Stage_Specifics.stage in
+            lwt uid =
+              match_lwt Object_message.Store.create
+                          ~society
+                          ~origin
+                          ~content:!flat_content
+                          ~subject
+                          ~destination:(Object_message.Member member)
+                          ~reference:(Object_message.create_reference subject)
+                          ~references:(match reference with Some reference -> [ reference ] | None -> [])
+                          () with
+              | `Object_already_exists (_, uid) -> return uid
+              | `Object_created message -> return message.Object_message.uid
+            in
+            lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
+            lwt _ = Notify.api_send_message society destination subject member content in
+            return_unit
+
+        let message_member ~member ~subject ~content =
+          send_message member subject content
+
+        let message_supervisor ~subject ~content =
+          lwt leader = $society(society)->leader in
+          message_member leader subject content
+
+        let forward_to_supervisor ~message ~subject =
+          match next_mailbox with
+            None ->
+            log_error "can't forward message %d to supervisor, subject %s, there is no `Message transition on this stage" message subject ;
+            return_unit
+          | Some destination ->
+            lwt leader = $society(society)->leader in
+            lwt reference, content = $message(message)->(reference, content) in
+
+            lwt _ = Notify.api_forward_message reference society destination subject leader message in
+
+            lwt uid =
+              match_lwt Object_message.Store.create
+                          ~society
+                          ~origin:(Object_message.Stage stage)
+                          ~content
+                          ~subject
+                          ~destination:(Object_message.Member leader)
+                          ~reference:(Object_message.create_reference subject)
+                          ~references:[reference ]
+                          () with
+              | `Object_already_exists (_, uid) -> return uid
+              | `Object_created message -> return message.Object_message.uid
+            in
+
+            lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
+
+            return_unit
+
+      end
+      in (module Mode_Specifics: MODE_SPECIFICS)
+  in
+
+  let module Mode_Specifics = (val mode_specifics : MODE_SPECIFICS) in
+
+  let module Factory (Mode_Specifics: MODE_SPECIFICS) (Stage_Specifics : STAGE_SPECIFICS) =
   struct
 
     include Stage_Specifics
+    include Mode_Specifics(Stage_Specifics)
 
-    let log_info = fun fmt ->
-      let source = sprintf "context-info-%d" society in
-      let timestamp = Ys_time.now () in
-      Printf.ksprintf
-        (fun message ->
-           Lwt_log.ign_info_f "%s" message ;
-           ignore_result (Logs.insert source timestamp message)) fmt
-
-    let log_warning = fun ?exn fmt ->
-      let source = sprintf "context-warning-%d" society in
-      let timestamp = Ys_time.now () in
-      Printf.ksprintf
-        (fun message ->
-           Lwt_log.ign_warning_f ?exn "%s" message ;
-           ignore_result (Logs.insert source timestamp message)) fmt
-
-    let log_error = fun ?exn fmt ->
-      let source = sprintf "context-error-%d" society in
-      let timestamp = Ys_time.now () in
-      Printf.ksprintf
-        (fun message ->
-           Lwt_log.ign_error_f ?exn "%s" message ;
-           ignore_result (Logs.insert source timestamp message)) fmt
-
-    (* messaging utilities *)
-
-    let send_message member subject content =
-      let origin = Object_message.Stage Stage_Specifics.stage in
-      lwt uid =
-        match_lwt Object_message.Store.create
-                    ~society
-                    ~origin
-                    ~content
-                    ~subject
-                    ~destination:(Object_message.Member member)
-                    () with
-        | `Object_already_exists (_, uid) -> return uid
-        | `Object_created message -> return message.Object_message.uid
-      in
-      lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-      return_unit
-
-    let message_member ~member ~subject ~content =
-      let flat_content = ref "" in
-      Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
-      send_message member subject !flat_content
-
-    let message_supervisor ~subject ~content =
-      lwt leader = $society(society)->leader in
-      message_member leader subject content
-
-    let forward_to_supervisor ~message ~subject =
-      lwt content = $message(message)->content in
-      lwt leader = $society(society)->leader in
-      send_message leader subject content
 
     (* getting talent & tagging people *)
 
@@ -107,7 +238,7 @@ let context_factory_sandbox society =
               Some (`Member tags) -> tags
             | _ -> []
           in
-          Ys_uid.Edges.add_unique (`Member (Ys_list.merge tags existing_tags), member) edges) in
+          Ys_uid.Edges.add_unique (`Member (Ys_list.merge ("active" :: tags) existing_tags), member) edges) in
       return_unit
 
     let untag_member ~member ~tags =
@@ -137,8 +268,10 @@ let context_factory_sandbox society =
     let get_message_content ~message =
       $message(message)->content
 
-    let get_message_senders ~message =
-      return []
+    let get_message_sender ~message =
+      match_lwt $message(message)->origin with
+      | Object_message.Stage _ -> failwith "this email was sent by a stage"
+      | Object_message.Member member -> return member
 
     (* timers *)
 
@@ -149,158 +282,29 @@ let context_factory_sandbox society =
 
     let cancel_timers = fun ~query -> return_unit
 
-    (* now we finally have the context that we'll feed to the specific stage *)
-
-    let context = {
-      stage ;
-
-      log_info ;
-      log_warning ;
-      log_error ;
-
-      set_timer ;
-      cancel_timers ;
-
-      message_member ;
-      message_supervisor ;
-      forward_to_supervisor ;
-
-      search_members ;
-      tag_member ;
-      untag_member ;
-
-      set ;
-      get ;
-
-      get_message_content ;
-      get_message_senders ;
-    }
-
-  end in (module Factory: STAGE_CONTEXT_FACTORY)
-
-let context_factory_production society =
-  let module Factory (Stage_Specifics : STAGE_SPECIFICS) =
-  struct
-
-    include Stage_Specifics
-
-    let log_info = fun fmt ->
-      let source = sprintf "context-info-%d" society in
-      let timestamp = Ys_time.now () in
-      Printf.ksprintf
-        (fun message ->
-           Lwt_log.ign_info_f "%s" message ;
-           ignore_result (Logs.insert source timestamp message)) fmt
-
-    let log_warning = fun ?exn fmt ->
-      let source = sprintf "context-warning-%d" society in
-      let timestamp = Ys_time.now () in
-      Printf.ksprintf
-        (fun message ->
-           Lwt_log.ign_warning_f ?exn "%s" message ;
-           ignore_result (Logs.insert source timestamp message)) fmt
-
-    let log_error = fun ?exn fmt ->
-      let source = sprintf "context-error-%d" society in
-      let timestamp = Ys_time.now () in
-      Printf.ksprintf
-        (fun message ->
-           Lwt_log.ign_error_f ?exn "%s" message ;
-           ignore_result (Logs.insert source timestamp message)) fmt
-
-    (* messaging utilities *)
-
-    let send_message member subject content =
-      match next_mailbox with
-        None ->
-        log_error "can't send message to member %d, subject %s, there is no `Message transition on this stage" member subject ;
-        return_unit
-      | Some destination ->
-        let flat_content = ref "" in
-        Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
-
-        let origin = Object_message.Stage Stage_Specifics.stage in
-        lwt uid =
-          match_lwt Object_message.Store.create
-                      ~society
-                      ~origin
-                      ~content:!flat_content
-                      ~subject
-                      ~destination:(Object_message.Member member)
-                      () with
-          | `Object_already_exists (_, uid) -> return uid
-          | `Object_created message -> return message.Object_message.uid
-        in
-        lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-        lwt _ = Notify.api_send_message society destination subject member content in
-        return_unit
-
-    let message_member ~member ~subject ~content =
-      send_message member subject content
-
-    let message_supervisor ~subject ~content =
-      lwt leader = $society(society)->leader in
-      message_member leader subject content
-
-    let forward_to_supervisor ~message ~subject =
-      lwt content = $message(message)->content in
-      lwt leader = $society(society)->leader in
-      send_message leader subject [ pcdata content ]
-
-    (* getting talent & tagging people *)
-
-    let search_members ?max ~query () =
-      Object_society.Store.search_members society query
-
-    let tag_member ~member ~tags =
-      Lwt_log.ign_info_f "tagging member %d in society %d" member society ;
-      lwt _ = $society(society)<-members %% (fun edges ->
-          let existing_tags =
-            match Ys_uid.Edges.find member edges with
-              Some (`Member tags) -> tags
-            | _ -> []
-          in
-          Ys_uid.Edges.add_unique (`Member (Ys_list.merge tags existing_tags), member) edges) in
-      return_unit
-
-    let untag_member ~member ~tags =
-      Lwt_log.ign_info_f "untagging member %d in society %d" member society ;
-      lwt _ = $society(society)<-members %% (fun edges ->
-
-          let existing_tags =
-            match Ys_uid.Edges.find member edges with
-              Some (`Member tags) -> tags
-            | _ -> []
-          in
-          Ys_uid.Edges.add_unique (`Member (Ys_list.remove existing_tags tags), member) edges)
+    let rec get_original_message ~message =
+      let rec aux message =
+        match_lwt $message(message)->references with
+          [] -> return_none
+        | references ->
+          Lwt_list.fold_left_s
+            (fun acc reference ->
+               match_lwt Object_message.Store.find_by_reference reference with
+               | None -> return acc
+               | Some message ->
+                 match_lwt $message(message)->origin with
+                   Object_message.Stage _ -> aux message
+                 | Object_message.Member _ ->
+                   match_lwt aux message with
+                     None -> return (Some message)
+                   | Some message -> return (Some message))
+            None
+            references
       in
-      return_unit
+      match_lwt aux message with
+        None -> return message
+      | Some message -> return message
 
-    (* setting up cron jobs *)
-
-    let set ~key ~value =
-      $society(society)<-data %% (fun data -> (key, value) :: List.remove_assoc key data)
-
-    let get ~key =
-      lwt data = $society(society)->data in
-      return
-        (try Some (List.assoc key data) with Not_found -> None)
-
-    (* message primitives *)
-    let get_message_content ~message =
-      $message(message)->content
-
-    let get_message_senders ~message =
-      return []
-
-    (* timers *)
-
-    let set_timer = fun ?label ~duration output ->
-      let call = Stage_Specifics.outbound_dispatcher duration output in
-      ignore_result ($society(society)<-stack %% (fun s -> call :: s)) ;
-      return_unit
-
-    let cancel_timers = fun ~query -> return_unit
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
@@ -326,10 +330,17 @@ let context_factory_production society =
       get ;
 
       get_message_content ;
-      get_message_senders ;
+      get_message_sender ;
+      get_original_message ;
     }
 
-  end in (module Factory: STAGE_CONTEXT_FACTORY)
+  end in
+  let module FactoryWithMode = Factory(Mode_Specifics) in
+  (module FactoryWithMode: STAGE_CONTEXT_FACTORY)
+
+let context_factory_sandbox = context_factory `Sandbox
+let context_factory_production = context_factory `Production
+
 
 (* the step-by-step execution *)
 

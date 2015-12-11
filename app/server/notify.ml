@@ -66,7 +66,7 @@ module Throttler =
 
 type message = {
   locator : locator ;
-  references : uid option ; (* the parent in case we are forwarding the email *)
+  references : string option ; (* the parent in case we are forwarding the email *)
   in_reply_to : string option ; (* this is the message Id we're replying from *)
   reply_to : (string * string) option ;
   subject : string ;
@@ -235,6 +235,12 @@ let create_message message =
       :: header
   in
 
+  lwt header =
+    match message.references with
+      None -> return header
+    | Some reference ->
+      return (("References", reference) :: header)
+  in
 
   let mail_header =
     new Netmime.basic_mime_header header in
@@ -440,5 +446,22 @@ let api_send_message society destination subject member content =
            reply_to = Some (shortlink, destination) ;
            subject = Printf.sprintf "[Accretio] %s" subject ;
            content
+         })
+    locators
+
+let api_forward_message reference society destination subject member original =
+  lwt locators = uids_to_locators [ member ] in
+  lwt shortlink = $society(society)->shortlink in
+  lwt content = $message(original)->content in
+  Lwt_list.iter_p
+    (fun locator ->
+       enqueue_message
+         {
+           locator ;
+           references = Some reference ;
+           in_reply_to = None ;
+           reply_to = Some (shortlink, destination) ;
+           subject = Printf.sprintf "[Accretio] %s" subject ;
+           content = [ pcdata content ] ;
          })
     locators

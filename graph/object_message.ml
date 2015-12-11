@@ -36,6 +36,12 @@ type transport =
 
 type interlocutor = Stage of string | Member of uid with bin_io
 
+type strings = string list with bin_io, default_value([])
+
+let create_reference content =
+  let hash = Digest.to_hex (Digest.string (Printf.sprintf "%Ld-%s" (Ys_time.now ()) content)) in
+  Printf.sprintf "<%s@accret.io>" hash
+
 type t = {
 
   uid : uid ;
@@ -52,9 +58,14 @@ type t = {
 
   transport : transport ;
 
+  reference : string ;
+  references : strings ;
+
 } with vertex
   (
     {
-      required = [ society ; origin ; content ; destination ]
+      aliases = [ `String reference ] ;
+      required = [ society ; origin ; content ; destination ; reference ] ;
+      uniques = [ reference ] ;
     }
   )

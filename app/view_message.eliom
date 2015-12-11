@@ -33,8 +33,10 @@ type t =
     created_on : int64 ;
     origin : interlocutor ;
     destination : interlocutor ;
+    reference : string ;
     subject : string ;
     content : string ;
+
   }
 
 }}
@@ -46,7 +48,7 @@ let to_interlocutor = function
 | Object_message.Member uid -> lwt view = View_member.to_view uid in return (Member view)
 
 let to_view uid =
-  lwt created_on, origin, destination, subject, content = $message(uid)->(created_on, origin, destination, subject, content) in
+  lwt created_on, origin, destination, reference, subject, content = $message(uid)->(created_on, origin, destination, reference, subject, content) in
   lwt origin = to_interlocutor origin in
   lwt destination = to_interlocutor destination in
 
@@ -56,6 +58,7 @@ let to_view uid =
       uid ;
       origin ;
       destination ;
+      reference ;
       subject ;
       content ;
     }
@@ -71,6 +74,9 @@ open Eliom_content.Html5.D
 let format view =
   div ~a:[ a_class [ "message" ]] [
     Ys_timeago.format ~a:[ a_class [ "message-created-on" ]] view.created_on ;
+    div ~a:[ a_class [ "message-reference" ]] [
+      pcdata view.reference
+    ] ;
     div ~a:[ a_class [ "message-origin" ]] (match view.origin with
         | Stage stage -> [ pcdata "From stage " ; pcdata stage ]
         | Member member -> [ pcdata "From member " ; View_member.format member ]) ;

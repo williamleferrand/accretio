@@ -422,8 +422,7 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                               Unsafe.$lid:"set_"^field$ uid v_new ;
                               Lwt.bind ($lid:"insert_"^field$ uid v_new) (fun () -> Lwt.return v_new) })  >>
                      | _ ->
-           <:expr<
-                  let _ = Lwt_log.ign_info_f "patch field with no alias" in let v_new = patch v_old in do { Unsafe.$lid:"set_"^field$ uid v_new ; Lwt.return v_new } >> $)) ;
+           <:expr< let v_new = patch v_old in do { Unsafe.$lid:"set_"^field$ uid v_new ; Lwt.return v_new } >> $)) ;
 
     value $lid:"patch_lwt_"^field$ uid patch =
         Lwt_mutex.with_lock
