@@ -26,7 +26,8 @@ Opam makes your life easier:
 opam pin add eliom.dev   https://github.com/ocsigen/eliom.git
 ```
 
-```opam pin add js_of_ocaml.dev  https://github.com/ocsigen/js_of_ocaml.git
+```
+opam pin add js_of_ocaml.dev  https://github.com/ocsigen/js_of_ocaml.git
 ```
 
 ```
