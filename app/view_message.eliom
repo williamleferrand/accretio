@@ -27,6 +27,7 @@ open Vault
 
 type interlocutor = Stage of string | Member of View_member.t
 
+type action = Pending | RoutedToStage of string
 type t =
   {
     uid : uid ;
@@ -36,7 +37,7 @@ type t =
     reference : string ;
     subject : string ;
     content : string ;
-
+    action : action ;
   }
 
 }}
@@ -48,10 +49,13 @@ let to_interlocutor = function
 | Object_message.Member uid -> lwt view = View_member.to_view uid in return (Member view)
 
 let to_view uid =
-  lwt created_on, origin, destination, reference, subject, content = $message(uid)->(created_on, origin, destination, reference, subject, content) in
+  lwt created_on, origin, destination, reference, subject, content, action = $message(uid)->(created_on, origin, destination, reference, subject, content, action) in
   lwt origin = to_interlocutor origin in
   lwt destination = to_interlocutor destination in
-
+  let action =
+    match action with
+      Object_message.Pending -> Pending
+    | Object_message.RoutedToStage stage -> RoutedToStage stage in
   return
     {
       created_on ;
@@ -61,6 +65,7 @@ let to_view uid =
       reference ;
       subject ;
       content ;
+      action ;
     }
 }}
 
@@ -81,7 +86,7 @@ let format view =
         | Stage stage -> [ pcdata "From stage " ; pcdata stage ]
         | Member member -> [ pcdata "From member " ; View_member.format member ]) ;
     div ~a:[ a_class [ "message-destination" ]] (match view.destination with
-      | Stage stage -> [ pcdata "To stage " ; pcdata stage ]
+        | Stage stage -> [ pcdata "To stage " ; pcdata stage ]
         | Member member -> [ pcdata "To member " ; View_member.format member ]) ;
     div ~a:[ a_class [ "message-subject" ]] [ pcdata "Subject: " ;  pcdata view.subject ] ;
     div ~a:[ a_class [ "message-content" ]] [

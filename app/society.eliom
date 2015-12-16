@@ -34,6 +34,7 @@ type bundle =
     automata : string ;
     triggers :  ([ `Unit | `Int | `Float | `String ] * string) list ;
     mailables : string list ;
+    email_actions : (string * string list) list ;
     (* society info *)
     members : (View_member.t * string list) list ;
     data : (string * string) list ;
@@ -60,10 +61,10 @@ let retrieve uid =
   lwt view = View_society.to_view uid in
   lwt members = retrieve_members uid in
   lwt data, playbook = $society(uid)->(data, playbook) in
-  let automata, triggers, mailables =
+  let automata, triggers, mailables, email_actions =
     let playbook = Registry.get playbook in
     let module P = (val playbook : Api.PLAYBOOK) in
-    P.automata, P.triggers, P.mailables
+    P.automata, P.triggers, P.mailables, P.email_actions
   in
   return
     {
@@ -72,6 +73,7 @@ let retrieve uid =
       automata ;
       triggers ;
       mailables ;
+      email_actions ;
       members ;
       data ;
     }
@@ -81,6 +83,7 @@ let retrieve = server_function ~name:"society-retrieve" Json.t<int> retrieve
 let update_mode (uid, mode) =
   protected_connected
     (fun session ->
+       Lwt_log.ign_info_f "updating mode for society %d" uid ;
        (* only the leader can change the status for now *)
        lwt leader = $society(uid)->leader in
        match session.member_uid = leader with
@@ -194,6 +197,7 @@ let update_member_tags = server_function ~name:"society-update-member-tags" Json
 let get_messages_inbox (society, since) =
   lwt inbox = $society(society)->inbox in
   let inbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) inbox in
+  let inbox = List.rev inbox in
   Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) inbox
 
 let get_messages_inbox = server_function ~name:"society-get-messages-inbox" Json.t<int * int64> get_messages_inbox
@@ -201,6 +205,7 @@ let get_messages_inbox = server_function ~name:"society-get-messages-inbox" Json
 let get_messages_outbox (society, since) =
   lwt outbox = $society(society)->outbox in
   let outbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) outbox in
+  let outbox = List.rev outbox in
   Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) outbox
 
 let get_messages_outbox = server_function ~name:"society-get-messages-outbox" Json.t<int * int64> get_messages_outbox
@@ -213,30 +218,35 @@ let reply_message (society, message, content) =
        let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
 
        match_lwt $message(message)->origin with
-        | Object_message.Member _ -> return (Some false)
+        | Object_message.Member member ->
+          (* we send the message out to the member ? *)
+          return (Some false)
         | Object_message.Stage stage ->
 
           lwt original_reference = $message(message)->reference in
           lwt origin = $message(message)->destination in
           Lwt_log.ign_info_f "message was emitted from stage %s" stage ;
-          let destination = List.assoc stage Playbook.mailing_helper in
 
           lwt uid =
             match_lwt Object_message.Store.create
                         ~origin
                         ~society
                         ~content
-                        ~destination:(Object_message.Stage destination)
+                        ~destination:(Object_message.Stage stage)
                         ~references:[ original_reference ]
                         ~reference:(Object_message.create_reference content)
                         () with
             | `Object_already_exists (_, uid) -> return uid
             | `Object_created message -> return message.Object_message.uid in
-          lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = true }), uid) in
-          let call = Ys_executor.({ stage = destination ; args = Executor.int_args uid ; schedule = Immediate }) in
-          lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
-          ignore_result (Executor.step society) ;
-          return (Some true))
+          lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
+
+          match_lwt Playbook.dispatch_message_automatically uid stage with
+          | None -> return (Some true)
+          | Some call ->
+            $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+            lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+            ignore_result (Executor.step society) ;
+            return (Some true))
 
 let reply_message = server_function ~name:"society-reply-message" Json.t<int * int * string> reply_message
 
@@ -244,8 +254,6 @@ let create_message_and_trigger_stage (society, sender, content, stage) =
   Lwt_log.ign_info_f "creating message for society %d, sender is %d, content is %s, stage is %s" society sender content stage ;
   lwt playbook = $society(society)->playbook in
   let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
-  let destination = List.assoc stage Playbook.mailing_helper in
-
   protected_connected
     (fun _ ->
        lwt uid =
@@ -253,16 +261,19 @@ let create_message_and_trigger_stage (society, sender, content, stage) =
                      ~origin:(Object_message.Member sender)
                      ~society
                      ~content
-                     ~destination:(Object_message.Stage destination)
+                     ~destination:(Object_message.Stage stage)
                      ~reference:(Object_message.create_reference content)
                      () with
          | `Object_already_exists (_, uid) -> return uid
          | `Object_created message -> return message.Object_message.uid in
-       lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = true }), uid) in
-       let call = Ys_executor.({ stage ; args = Executor.int_args uid ; schedule = Immediate }) in
-       lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
-       ignore_result (Executor.step society) ;
-       return (Some ()))
+       lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
+       match_lwt Playbook.dispatch_message_automatically uid stage with
+       | None -> return (Some ())
+       | Some call ->
+         $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+         lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+         ignore_result (Executor.step society) ;
+         return (Some ()))
 
 let create_message_and_trigger_stage = server_function ~name:"create-message-and-trigger-stage" Json.t<int * int * string * string> create_message_and_trigger_stage
 
@@ -290,6 +301,30 @@ let tick society =
        return (Some ()))
 
 let tick = server_function ~name:"society-tick" Json.t<int> tick
+
+
+(* dispatch message *)
+
+let dispatch_message_manually (message, destination) =
+  Lwt_log.ign_info_f "dispatch_message_manually message %d to destination %s" message destination ;
+  protected_connected
+    (fun _ ->
+       match_lwt $message(message)->destination with
+        | Object_message.Member _ -> return (Some false)
+        | Object_message.Stage stage ->
+          lwt society = $message(message)->society in
+          lwt playbook = $society(society)->playbook in
+          let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+          match Playbook.dispatch_message_manually message stage destination with
+            None ->
+            Lwt_log.ign_info_f "couldn't create a call for message %d, from stage %s to destination %s" message stage destination ;
+            return (Some false)
+          | Some call ->
+            $message(message)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+            lwt _ = Executor.push_and_execute society call in
+            return (Some true))
+
+let dispatch_message_manually = server_function ~name:"society-dispatch-message" Json.t<int * string> dispatch_message_manually
 
 }}
 
@@ -320,13 +355,11 @@ let attach society container fetcher viewer =
     fetch since
   in
   ignore_result
-    (lwt _ = Lwt_js.yield () in fetch (Ys_timeago.now ()))
+    (lwt _ = Lwt_js.yield () in fetch 0L)
 
 let attach_logs society logs =
   attach society logs (%get_logs) (fun (msg, ts, source) -> div ~a:[ a_class [ "log" ; source ]] [ Ys_timeago.format ts ; pcdata ": " ; pcdata msg ])
 
-let attach_inbox society inbox =
-  attach society inbox (%get_messages_inbox) View_message.format
 
 let attach_stack society holder =
   let rec fetch () =
@@ -364,6 +397,47 @@ let attach_outbox society outbox =
   attach society outbox (%get_messages_outbox) format
 
 let builder bundle =
+
+  let attach_inbox society inbox =
+    let format message =
+      let tagger =
+        match message.View_message.destination with
+          View_message.Member _ -> pcdata ""
+        | View_message.Stage stage ->
+          try
+            let options = List.assoc stage bundle.email_actions in
+          div ~a:[ a_class [ "tagger" ]]
+            (List.map
+               (fun option ->
+                  div [
+                    button
+                      ~button_type:`Button
+                      ~a:[ a_onclick (fun _ -> detach_rpc %dispatch_message_manually (message.View_message.uid, option) (fun _ -> ())) ]
+                      [ pcdata option ]
+                  ])
+               options)
+        with Not_found -> pcdata ""
+      in
+      let action =
+        div ~a:[ a_class [ "message-action" ]]
+          (match message.View_message.action with
+          | View_message.Pending -> [
+              pcdata "pending action"
+            ]
+          | View_message.RoutedToStage stage -> [
+              pcdata "routed to stage " ;
+              pcdata stage
+            ])
+      in
+      div ~a:[ a_class [ "message-inbox" ]] [
+        View_message.format message ;
+        action ;
+        tagger ;
+      ]
+    in
+    attach society inbox (%get_messages_inbox) format
+  in
+
   let view = bundle.view in
 
   (* toggling the mode should have an impact on the scheduler *)
@@ -371,7 +445,8 @@ let builder bundle =
   let mode =
     let mode, update_mode = S.create view.mode in
     let update_mode mode =
-      detach_rpc %update_mode (view.uid, mode) update_mode
+      Authentication.if_connected
+        (fun _ -> rpc %update_mode (view.uid, mode) update_mode)
     in
     let mode_toggle m l =
       button

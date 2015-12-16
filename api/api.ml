@@ -54,7 +54,6 @@ module type STAGE_SPECIFICS =
 
     type outbound
     val stage : string
-    val next_mailbox : string option
     val outbound_dispatcher : int -> outbound -> call
 
   end
@@ -73,6 +72,8 @@ sig
   (* the stepping *)
 
   val step : (module STAGE_CONTEXT_FACTORY) -> call -> call option Lwt.t
+  val dispatch_message_automatically : uid -> string -> call option Lwt.t
+  val dispatch_message_manually : uid -> string -> string -> call option
 
   (* some static content for the client *)
 
@@ -83,6 +84,7 @@ sig
 
   val triggers : ([ `Unit | `Int | `Float | `String ] * string) list
   val mailables : string list
-  val mailing_helper : (string * string) list
+
+  val email_actions : (string * string list) list
 
 end

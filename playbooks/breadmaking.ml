@@ -114,8 +114,9 @@ let mark_participant tags_add tags_remove context message =
   lwt _ = context.untag_member ~member ~tags:[ Printf.sprintf "%s_%d" tags_remove week ] in
   return `None
 
-let mark_participant_as_not_joining = mark_participant "not_joining" "joining"
-let mark_participant_as_joining = mark_participant "joining" "not_joining"
+let mark_participant_as_not_joining context message = mark_participant "not_joining" "joining" context message
+
+let mark_participant_as_joining context message = mark_participant "joining" "not_joining" context message
 
 let create_dashboard_this_week context () =
   let week = current_week () in
@@ -158,23 +159,28 @@ let tell_baker_there_are_no_participants context _ =
 let do_nothing context _ =
   return `None
 
+(* message handling strategies **********************************************)
+
+let simple_yes_no message =
+  lwt content = $message(message)->content in
+  let lexbuf = Lexing.from_string content in
+  match Parser.library_message_yes_no Lexer.library_message_yes_no lexbuf with
+  | `Yes -> return (Some (`Yes message))
+  | `No -> return (Some (`No message))
+  | `Unknown -> return_none
+
 (* the graph ****************************************************************)
 
 PLAYBOOK
 
-  check_if_baker_is_available_this_week ~> `Message of int ~> decode_baker_reply ~> `Unknown of int ~> tell_supervisor_email_parse_error ~> `Message of int ~> decode_baker_reply
-                                                              decode_baker_reply ~> `No of int ~> mark_baker_as_unavailable
-                                                              decode_baker_reply ~> `Yes of int ~> mark_baker_as_available
+  check_if_baker_is_available_this_week<simple_yes_no> ~> `No of email ~> mark_baker_as_unavailable
+  check_if_baker_is_available_this_week<simple_yes_no> ~> `Yes of email ~> mark_baker_as_available
 
-  mark_baker_as_available ~> `MessageParticipants ~> send_message_to_participants ~> `TellBakerThereAreNoParticipants ~> tell_baker_there_are_no_participants
+  mark_baker_as_available ~> `MessageParticipants ~> send_message_to_participants<simple_yes_no> ~> `TellBakerThereAreNoParticipants ~> tell_baker_there_are_no_participants
+                                                     send_message_to_participants<simple_yes_no> ~> `No of email ~> mark_participant_as_joining
+                                                     send_message_to_participants<simple_yes_no> ~> `Yes of email ~> mark_participant_as_not_joining
 
-  tell_supervisor_participant_email_parse_error ~> `Message of int ~> decode_participant_reply
 
-  send_message_to_participants ~> `Message of int ~> decode_participant_reply ~> `Unknown of int ~> tell_supervisor_participant_email_parse_error
-                                                     decode_participant_reply ~> `No of int ~> mark_participant_as_not_joining
-                                                     decode_participant_reply ~> `Yes of int ~> mark_participant_as_joining
-
-  create_dashboard_this_week ~> `Message of int ~> do_nothing
 
 
 CRON check_if_baker_is_available_this_week "0 0 * * 1 *"

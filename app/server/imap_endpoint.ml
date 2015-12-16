@@ -269,9 +269,10 @@ let process_email =
                 Lwt_log.ign_info_f "message already exists" ;
                 return (Some society)
               | `Object_created message ->
+                lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
                 Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
-                let call = Ys_executor.({ stage = target_stage ; args = Executor.int_args message.Object_message.uid ; schedule = Immediate }) in
-                lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+                (* let call = Ys_executor.({ stage = target_stage ; args = Executor.int_args message.Object_message.uid ; schedule = Immediate }) in
+                   lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in *)
                 return (Some society)
 
       with
@@ -287,8 +288,16 @@ let process_email =
 let process_emails emails =
   lwt targets = Lwt_list.map_s process_email emails in
   let targets = List.fold_left (fun acc -> function None -> acc | Some uid -> uid :: acc) [] targets in
-  (* do something with the targets *)
-  lwt _ = Lwt_list.iter_p Executor.step targets in
+  (* do something with the targets - but not executing them right away *)
+  (* lwt _ = Lwt_list.iter_p Executor.step targets in *)
+  lwt _ =
+    Lwt_list.iter_p
+      (fun society ->
+         lwt leader = $society(society)->leader in
+         Lwt_log.ign_info_f "asking %d to check society %d" leader society ;
+         return_unit)
+      targets
+  in
   return
     (List.fold_left
        (fun o1 (o2, _) -> if Uint32.compare o1 o2 > 0 then o1 else o2)

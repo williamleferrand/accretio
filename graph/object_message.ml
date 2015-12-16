@@ -38,6 +38,10 @@ type interlocutor = Stage of string | Member of uid with bin_io
 
 type strings = string list with bin_io, default_value([])
 
+type action =
+    Pending
+  | RoutedToStage of string with bin_io, default_value(Pending)
+
 let create_reference content =
   let hash = Digest.to_hex (Digest.string (Printf.sprintf "%Ld-%s" (Ys_time.now ()) content)) in
   Printf.sprintf "<%s@accret.io>" hash
@@ -60,6 +64,10 @@ type t = {
 
   reference : string ;
   references : strings ;
+
+  tags : strings ;
+
+  action : action ;
 
 } with vertex
   (
