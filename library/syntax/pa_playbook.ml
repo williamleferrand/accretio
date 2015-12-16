@@ -43,35 +43,37 @@ let compile_automata chains crons =
   List.iter (fun (stage, _) -> Hashtbl.add options stage [ `Tickable ]) crons ;
 
   List.iter
-    (fun ((label, op), _) ->
+    (fun (vertex, _) ->
        Hashtbl.add
          options
-         label
-         (op @
+         (Vertex.stage vertex)
+         ((Vertex.options vertex) @
             try
-              Hashtbl.find options label
+              Hashtbl.find options (Vertex.stage vertex)
             with Not_found -> []))
     chains ;
 
-  let get_options (label, _) =
+  let get_options label =
     try
       Hashtbl.find options label
     with Not_found -> []
   in
 
   let update vertex =
-    (fst vertex, get_options vertex)
+    Vertex.({ stage = Vertex.stage vertex ;
+              options = get_options (Vertex.stage vertex) })
   in
   (* then we fold over the graph & output the AST *)
 
   let automata =
     List.fold_left
       (fun acc (stage, _) ->
-         let options = get_options (stage, []) in
-         G.add_vertex acc (stage, options))
+         let options = get_options stage in
+         G.add_vertex acc { Vertex.stage ; options })
       G.empty
       crons
   in
+
   let automata =
     List.fold_left
       (fun acc (source, chain) ->
@@ -96,8 +98,7 @@ let compile_crons _loc crons =
     List.fold_left
       (fun acc (label, crontab) ->
          let crontab = <:expr< Cron.crontab_of_string $crontab$ >> in
-         <:expr< [ ($str:label$, $crontab$) :: $acc$ ] >>
-      )
+         <:expr< [ ($str:label$, $crontab$) :: $acc$ ] >>)
       <:expr< [] >>
       crons
   in
@@ -109,13 +110,22 @@ EXTEND Gram
   stage:
     [
       [
-        opts = OPT [ "*" -> `Tickable | "-" -> `Mailbox ] ; l = LIDENT ->
-        let opts = match opts with
+        options = OPT [ "*" -> `Tickable | "-" -> `Mailbox ] ;
+        stage = LIDENT ;
+        message_strategies = OPT [ "<" ; message_strategies = LIST0 [ strategy = LIDENT -> strategy ] SEP "," ; ">" -> message_strategies ] ->
+
+        let options = match options with
           | None -> []
           | Some `Tickable -> [ `Tickable ]
           | Some `Mailbox -> [ `Mailbox ]
         in
-        l, opts
+
+        let options= match message_strategies with
+            None -> options
+          | Some strats -> `MessageStrategies strats :: options
+        in
+
+        { Vertex.stage ; options }
       ]
     ] ;
 
@@ -161,17 +171,19 @@ EXTEND Gram
         let inbound_serializers = inbound_serializers _loc automata in
         let steps = steps _loc automata in
         let dispatch = dispatch _loc automata in
+        let dispatch_message_manually = dispatch_message_manually _loc automata in
+        let dispatch_message_automatically = dispatch_message_automatically _loc automata in
 
         let automata_description =
           let automata_serialized = graph_to_string automata in
           let triggers = triggers _loc automata in
           let mailables = mailables _loc automata in
-          let mailing_helper = mailing_helper _loc automata in
+          let email_actions = email_actions _loc automata in
           <:str_item<
                  value automata = $str:automata_serialized$ ;
                  value triggers = $triggers$ ;
                  value mailables = $mailables$ ;
-                 value mailing_helper = $mailing_helper$ ;
+                 value email_actions = $email_actions$ ;
           >>
         in
 
@@ -181,12 +193,13 @@ EXTEND Gram
              $inbound_serializers$ ;
              $steps$ ;
              $dispatch$ ;
+             $dispatch_message_manually$ ;
+             $dispatch_message_automatically$ ;
              $automata_description$ ;
              $crons$ ;
         >>
 
       ]
-
     ];
 
   END

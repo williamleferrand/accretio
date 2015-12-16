@@ -22,12 +22,23 @@ open Camlp4
 open PreCast
 open Ast
 
+module StringSet = Set.Make(String)
+
 module Vertex = struct
-  type t = string * [ `Tickable | `Mailbox ] list
-   let compare v1 v2 = Pervasives.compare (fst v1) (fst v2)
-   let hash v = Hashtbl.hash (fst v)
-   let equal v1 v2 = (fst v1) = (fst v2)
-   let lident v = fst v
+
+  type t =
+    {
+      stage: string ;
+      options : [ `Tickable | `Mailbox | `MessageStrategies of string list ] list ;
+    }
+
+   let compare v1 v2 = Pervasives.compare v1.stage v2.stage
+   let hash v = Hashtbl.hash v.stage
+   let equal v1 v2 = v1.stage = v2.stage
+
+   let options v = v.options
+   let stage v = v.stage
+
 end
 
 (* representation of an edge *)
@@ -44,7 +55,6 @@ end
 
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
 
-
 let extract_inbound_type _loc automata stage =
   let edges =
     G.fold_pred_e
@@ -57,10 +67,11 @@ let extract_inbound_type _loc automata stage =
       []
   in
   match edges with
+  | <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
   | <:ctyp< `$uid:constr$ of $t$ >> :: _ -> Some t
   | <:ctyp< `$uid:constr$ >> :: _ -> Some <:ctyp< unit >>
   | _ ->
-    match List.mem (`Tickable) (snd stage) with
+    match List.mem (`Tickable) (Vertex.options stage) with
       false -> None
     | true -> Some <:ctyp< unit >>
 
@@ -73,6 +84,7 @@ let outbound_types _loc automata =
            (fun edge acc ->
               match G.E.label edge with
                 <:ctyp< _ >> -> acc
+              | <:ctyp< `$uid:_$ of email >> -> acc
               | <:ctyp< `Message of int >> -> acc
               | _ as edge -> edge :: acc)
            automata
@@ -83,7 +95,7 @@ let outbound_types _loc automata =
 
        <:str_item<
          $acc$ ;
-         type $lid:"outbound_" ^ Vertex.lident stage$ = $t$ ;
+         type $lid:"outbound_" ^ Vertex.stage stage$ = $t$ ;
        >>)
     automata
     <:str_item< open Bin_prot.Std >>
@@ -94,11 +106,11 @@ let inbound_serializers _loc automata =
        (* we look at all the successors of this stage *)
        match extract_inbound_type _loc automata stage with
          None ->
-         Printf.eprintf "warning: stage %s isn't reachable, we can't infer the type\n" (Vertex.lident stage) ;
+         Printf.eprintf "warning: stage %s isn't reachable, we can't infer the type\n" (Vertex.stage stage) ;
          acc
        | Some t ->
 
-         let tp = TyDcl(_loc, Printf.sprintf "inbound_%s" (Vertex.lident stage), [], t, []) in
+         let tp = TyDcl(_loc, Printf.sprintf "inbound_%s" (Vertex.stage stage), [], t, []) in
 
          let bin_size = Pa_bin_prot2.Generate_bin_size.bin_size false tp in
          let bin_write = Pa_bin_prot2.Generate_bin_write.bin_write false tp  in
@@ -112,22 +124,25 @@ let inbound_serializers _loc automata =
               $bin_read$;
               $type_class$;
 
-              value $lid:"serialize_" ^ Vertex.lident stage$ v =
-                 let size = $lid:"bin_size_inbound_" ^ Vertex.lident stage$ v in
+              value $lid:"serialize_" ^ Vertex.stage stage$ v =
+                 let _ = Lwt_log.ign_info_f "calling serializer %s" $str:Vertex.stage stage$ in
+                 let size = $lid:"bin_size_inbound_" ^ Vertex.stage stage$ v in
                  let buf = Bin_prot.Common.create_buf size in
                  let s = Bytes.create size in
                  do {
-                   ignore ($lid:"bin_write_inbound_" ^ Vertex.lident stage$ buf v ~pos:0) ;
+                   ignore ($lid:"bin_write_inbound_" ^ Vertex.stage stage$ buf v ~pos:0) ;
                    Bin_prot.Common.blit_buf_string buf s size ;
+                   let _ = Lwt_log.ign_info_f "calling serializer %s returned" $str:Vertex.stage stage$ in
                    s
                  } ;
 
-              value $lid:"deserialize_" ^ Vertex.lident stage$ data =
+              value $lid:"deserialize_" ^ Vertex.stage stage$ data =
+                 let _ = Lwt_log.ign_info_f "calling deserializer %s" $str:Vertex.stage stage$ in
                  let len = String.length data in
                  let buf = Bin_prot.Common.create_buf len in
                  do {
                    Bin_prot.Common.blit_string_buf data buf ~len;
-                   $lid:"bin_read_inbound_" ^ Vertex.lident stage$ buf ~pos_ref:(ref 0)
+                   $lid:"bin_read_inbound_" ^ Vertex.stage stage$ buf ~pos_ref:(ref 0)
                  } ;
 
              >>
@@ -138,31 +153,46 @@ let inbound_serializers _loc automata =
 let outbound_dispatcher allow_none _loc automata stage schedule =
   G.fold_succ_e
     (fun edge acc ->
-       let dest = Vertex.lident (G.E.dst edge) in
+       let dest = Vertex.stage (G.E.dst edge) in
        match G.E.label edge with
+       | <:ctyp< `$uid:_$ of email >> -> acc (* messages can't be emitted from the stage *)
        | <:ctyp< `Message of int >> -> acc (* messages transitions can't be emitted from the stage itself *)
        | <:ctyp< `$uid:constr$ >> ->
           if allow_none then
            <:match_case< `$uid:constr$ ->
                                    let args = $lid:"serialize_" ^ dest$ () in
-                                   Some Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ }) >> :: acc
+                                   Some Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
          else
            <:match_case< `$uid:constr$ ->
                                    let args = $lid:"serialize_" ^ dest$ () in
-                                   Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ }) >> :: acc
+                                   Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
        | <:ctyp< `$uid:constr$ of $args$ >> ->
          if allow_none then
            <:match_case< `$uid:constr$ args ->
                                    let args = $lid:"serialize_" ^ dest$ args in
-                                   Some Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ }) >> :: acc
+                                   Some Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
          else
            <:match_case< `$uid:constr$ args ->
                                    let args = $lid:"serialize_" ^ dest$ args in
-                                   Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ }) >> :: acc
+                                   Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
        | _ -> acc)
     automata
     stage
     (if allow_none then [ <:match_case< `None -> None >> ] else [])
+
+let outbound_dispatcher_message _loc automata stage schedule =
+  G.fold_succ_e
+    (fun edge acc ->
+       let dest = Vertex.stage (G.E.dst edge) in
+       match G.E.label edge with
+       | <:ctyp< `$uid:constr$ of email >> ->
+         <:match_case< `$uid:constr$ message->
+                                  let args = $lid:"serialize_" ^ dest$ message in
+                                   Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
+       | _ -> acc)
+    automata
+    stage
+    []
 
 let steps _loc automata =
   G.fold_vertex
@@ -171,23 +201,23 @@ let steps _loc automata =
          None -> acc
        | Some t ->
          (* here we have the guarantee that the inbound type has been declared *)
-         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.lident stage) in
+         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage) in
          let dispatcher = outbound_dispatcher true _loc automata stage <:expr< Immediate >> in
 
          <:str_item<
            $acc$ ;
-           value $lid:"step_" ^ Vertex.lident stage$ context args_serialized =
+           value $lid:"step_" ^ Vertex.stage stage$ context args_serialized =
               Lwt.catch
                  (fun () ->
                     do {
-                       context.log_info "calling stage %s" $str:Vertex.lident stage$ ;
-                       let args = $lid:"deserialize_" ^ Vertex.lident stage$ args_serialized in
+                       context.log_info "calling stage %s" $str:Vertex.stage stage$ ;
+                       let args = $lid:"deserialize_" ^ Vertex.stage stage$ args_serialized in
                        Lwt.bind
-                          ($lid:Vertex.lident stage$ context args)
+                          ($lid:Vertex.stage stage$ context args)
                           (fun r -> Lwt.return (match r with [ $list:dispatcher$ ])) })
                  (fun exn ->
                     do {
-                       context.log_error ~exn "exception caught in stage %s: %s" $str:Vertex.lident stage$ (Printexc.to_string exn) ;
+                       context.log_error ~exn "exception caught in stage %s: %s" $str:Vertex.stage stage$ (Printexc.to_string exn) ;
                        Lwt.return_none })
 
          >>)
@@ -202,24 +232,13 @@ let dispatch _loc automata =
            None -> acc
          | Some _ ->
            let dispatcher = outbound_dispatcher false _loc automata stage <:expr< Delayed timeout >> in
-           let next_mailbox =
-             G.fold_succ_e
-               (fun edge acc ->
-                  match G.E.label edge with
-                  <:ctyp< `Message of int >> -> <:expr< Some $str:Vertex.lident (G.E.dst edge)$ >>
-                  | _ -> acc)
-               automata
-               stage
-               <:expr< None >>
-           in
 
-           <:match_case< $str:Vertex.lident stage$ ->
+           <:match_case< $str:Vertex.stage stage$ ->
 
                         let module Stage_Specifics =
                           struct
-                            value stage = $str:Vertex.lident stage$ ;
-                            type outbound = $lid:"outbound_"^ Vertex.lident stage$ ;
-                            value next_mailbox = $next_mailbox$ ;
+                            value stage = $str:Vertex.stage stage$ ;
+                            type outbound = $lid:"outbound_"^ Vertex.stage stage$ ;
                             value outbound_dispatcher timeout = fun [ $list:dispatcher$ ] ;
                           end in
 
@@ -227,7 +246,7 @@ let dispatch _loc automata =
 
                         let context = Context.context in
 
-                        $lid:"step_" ^ Vertex.lident stage$ context call.Ys_executor.args >> :: acc
+                        $lid:"step_" ^ Vertex.stage stage$ context call.Ys_executor.args >> :: acc
       )
       automata
       [ <:match_case< _ -> failwith "unknown stage" >> ] in
@@ -242,7 +261,7 @@ let triggers _loc automata =
        (* we can only guess the input format from the inbound edges *)
        (* if there is no inbound edge, we can hope that the inbound type is unit, as it must be a cronable stage *)
        let default =
-         match List.mem (`Tickable) (snd stage) with
+         match List.mem (`Tickable) (Vertex.options stage) with
            true -> `Unit
          | false -> `Unknown in
        let input_type =
@@ -251,13 +270,14 @@ let triggers _loc automata =
               match G.E.label transition with
               | <:ctyp< `$uid:constr$ >> -> `Unit
               | <:ctyp< `$uid:constr$ of int >> -> `Int
+              | <:ctyp< `$uid:constr$ of email >> -> `Int
               | <:ctyp< `$uid:constr$ of float >> -> `Float
               | <:ctyp< `$uid:constr$ of string >> -> `String
               | _ -> `Unknown)
            automata
            stage
            default in
-       let stage = Vertex.lident stage in
+       let stage = Vertex.stage stage in
        match input_type with
        | `Unknown -> acc
        | `Unit -> <:expr< [ (`Unit, $str:stage$) :: $acc$ ] >>
@@ -270,45 +290,130 @@ let triggers _loc automata =
 let mailables _loc automata =
   let stages = G.fold_vertex
       (fun stage acc ->
-         let is_mailable = G.fold_pred_e
+         let is_mailable = G.fold_succ_e
              (fun transition acc ->
                 match G.E.label transition with
-                  <:ctyp< `Message of int >> -> true
+                  <:ctyp< `$uid:_$ of email >> -> true
                 | _ -> acc)
              automata
              stage
              false
          in
          if is_mailable then
-           Vertex.lident stage :: acc
+           Vertex.stage stage :: acc
          else acc)
       automata
       [] in
-
   List.fold_left
     (fun acc s -> <:expr< [ $str:s$ :: $acc$ ] >>)
     <:expr< [] >>
     stages
 
-(* we need to keep track of the next mailbox outside of the context for the sandbox *)
-let mailing_helper _loc automata =
-   let stages = G.fold_vertex
-      (fun stage acc ->
-        G.fold_pred_e
-          (fun transition acc ->
-             match G.E.label transition with
-               <:ctyp< `Message of int >> -> (Vertex.lident (G.E.src transition), Vertex.lident stage) :: acc
-             | _ -> acc)
-          automata
-          stage
-          acc)
-      automata
-      [] in
-
-  List.fold_left
-    (fun acc (src, dst) -> <:expr< [ ($str:src$, $str:dst$) :: $acc$ ] >>)
+let email_actions _loc automata =
+  G.fold_vertex
+    (fun stage acc ->
+       let options =
+         G.fold_succ_e
+           (fun transition acc ->
+              match G.E.label transition with
+                <:ctyp< `$uid:label$ of email >> -> label :: acc
+              | _ -> acc)
+           automata
+           stage
+           []
+       in
+       match options with
+         [] -> acc
+       | _ as options ->
+         let options = List.fold_left (fun acc s -> <:expr< [ $str:s$ :: $acc$ ] >>) <:expr< [] >> options in
+         <:expr< [ ($str:Vertex.stage stage$, $options$) :: $acc$ ] >>
+    )
+    automata
     <:expr< [] >>
-    stages
+
+let dispatch_message_manually _loc automata =
+  let cases =
+    G.fold_vertex
+      (fun stage acc ->
+         let options =
+           G.fold_succ_e
+             (fun transition acc ->
+                match G.E.label transition with
+                  <:ctyp< `$uid:label$ of email >> -> (label, Vertex.stage (G.E.dst transition)) :: acc
+                | _ -> acc)
+             automata
+             stage
+             []
+         in
+         match options with
+           [] -> acc
+         | _ as options ->
+           let options =
+             List.map
+               (fun (tag, destination) ->
+                  <:match_case< $str:tag$ -> Some (Ys_executor.({
+                               stage = $str:destination$ ;
+                               args = $lid:"serialize_" ^ destination$ message ;
+                               schedule = Immediate ;
+                               created_on = Ys_time.now ()  })) >>
+               )
+               options
+           in
+           let options = options @ [ <:match_case< _ -> None >> ] in
+           <:match_case< $str:Vertex.stage stage$ ->
+             match tag with [ $list:options$ ]
+           >> :: acc
+      )
+      automata
+      [ <:match_case< _ -> None >> ]
+  in
+  <:str_item< value dispatch_message_manually message stage tag =
+             let _ = Lwt_log.ign_info_f "dispatch_message_manually: %d , stage is %s, tag is %s" message stage tag in
+    match stage with [ $list:cases$ ]
+  >>
+
+let dispatch_message_automatically _loc automata =
+  let cases =
+    G.fold_vertex
+      (fun stage acc ->
+         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage) in
+         let dispatcher = outbound_dispatcher_message _loc automata stage <:expr< Immediate >> in
+
+         let strategies =
+           List.fold_left
+             (fun acc -> function
+                | `MessageStrategies strats ->
+                  List.fold_left (fun acc strat -> StringSet.add strat acc) acc strats
+                | _ -> acc)
+             StringSet.empty
+             (Vertex.options stage)
+         in
+         let strategies = StringSet.elements strategies in
+         let apply_strategies =
+           List.fold_left
+             (fun acc strategy ->
+                <:expr<
+                       Lwt.bind
+                       ($lid:strategy$ message)
+                       (fun
+                         [ None -> $acc$
+                         | Some reply ->
+                       let _ = Lwt_log.ign_info_f "found a reply" in
+                            (* then we should be able to turn reply into a call *)
+                           Lwt.return (Some (match reply with [ $list:dispatcher$ ])) ]) >>)
+             <:expr< Lwt.return_none >>
+             strategies
+         in
+         <:match_case< $str:Vertex.stage stage$ ->
+                      let _ = Lwt_log.ign_info_f "the message is being routed from stage %s" $str:Vertex.stage stage$ in
+                      $apply_strategies$ >> :: acc)
+      automata
+      [ <:match_case< _ -> Lwt.return_none >> ]
+  in
+  <:str_item< value dispatch_message_automatically message stage =
+let _ = Lwt_log.ign_info_f "dispatch_message_automatically: %d , stage is %s" message stage in
+    match stage with [ $list:cases$ ]
+  >>
 
 module Dot = Graph.Graphviz.Dot(struct
 
@@ -318,13 +423,13 @@ module Dot = Graph.Graphviz.Dot(struct
       match E.label edge with
       | ctyp -> [ `Label (Edge.to_string ctyp) ; `Arrowhead `Normal ; `Color 4711 ]
 
-
     let default_edge_attributes _ = []
     let get_subgraph _ = None
-    let vertex_attributes v = [ `Shape `Ellipse ; `HtmlLabel (Vertex.lident v) ]
-    let vertex_name v = Vertex.lident v
+    let vertex_attributes v = [ `Shape `Ellipse ; `HtmlLabel (Vertex.stage v) ]
+    let vertex_name v = Vertex.stage v
     let default_vertex_attributes _ = []
     let graph_attributes _ = [ `Margin 0.0 ]
+
   end)
 
 let graph_to_string graph =

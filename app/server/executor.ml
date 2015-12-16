@@ -107,15 +107,10 @@ let context_factory mode society =
           message_member leader subject content
 
         let forward_to_supervisor ~message ~subject =
-          match next_mailbox with
-            None ->
-            log_error "can't forward message %d to supervisor, subject %s, there is no `Message transition on this stage" message subject ;
-            return_unit
-          | Some _ ->
-            lwt content = $message(message)->content in
-            lwt leader = $society(society)->leader in
-            lwt reference = $message(message)->reference in
-            send_message ~reference:(Some reference) leader subject content
+          lwt content = $message(message)->content in
+          lwt leader = $society(society)->leader in
+          lwt reference = $message(message)->reference in
+          send_message ~reference:(Some reference) leader subject content
 
       end
       in (module Mode_Specifics: MODE_SPECIFICS)
@@ -150,11 +145,6 @@ let context_factory mode society =
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let send_message ?(reference=None) member subject content =
-          match next_mailbox with
-            None ->
-            log_error "can't send message to member %d, subject %s, there is no `Message transition on this stage" member subject ;
-            return_unit
-          | Some destination ->
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
@@ -173,7 +163,7 @@ let context_factory mode society =
               | `Object_created message -> return message.Object_message.uid
             in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            lwt _ = Notify.api_send_message society destination subject member content in
+            lwt _ = Notify.api_send_message society stage subject member content in
             return_unit
 
         let message_member ~member ~subject ~content =
@@ -184,15 +174,9 @@ let context_factory mode society =
           message_member leader subject content
 
         let forward_to_supervisor ~message ~subject =
-          match next_mailbox with
-            None ->
-            log_error "can't forward message %d to supervisor, subject %s, there is no `Message transition on this stage" message subject ;
-            return_unit
-          | Some destination ->
             lwt leader = $society(society)->leader in
             lwt reference, content = $message(message)->(reference, content) in
-
-            lwt _ = Notify.api_forward_message reference society destination subject leader message in
+            lwt _ = Notify.api_forward_message reference society stage subject leader message in
 
             lwt uid =
               match_lwt Object_message.Store.create
@@ -209,7 +193,6 @@ let context_factory mode society =
             in
 
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-
             return_unit
 
       end
@@ -415,7 +398,8 @@ let stack_and_trigger_unit society stage =
     {
       stage ;
       args = unit_args ;
-      schedule = Immediate
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
     }
 
 let int_args i =
@@ -432,6 +416,7 @@ let stack_and_trigger_int society stage args =
       stage ;
       args = int_args args ;
       schedule = Immediate ;
+      created_on = Ys_time.now () ;
     }
 
 let stack_and_trigger_float society stage args =
@@ -445,6 +430,7 @@ let stack_and_trigger_float society stage args =
       stage ;
       args = s ;
       schedule = Immediate ;
+      created_on = Ys_time.now () ;
     }
 
 let stack_and_trigger_string society stage args =
@@ -458,6 +444,7 @@ let stack_and_trigger_string society stage args =
       stage ;
       args = s ;
       schedule = Immediate ;
+      created_on = Ys_time.now () ;
     }
 
 (* this is a naive cron executor *)
@@ -495,7 +482,7 @@ let check_all_crons () =
                    | false -> stack
                    | true ->
                      need_to_be_waken_up := true ;
-                     Ys_executor.({ stage ; args = unit_args ; schedule = Immediate }) :: stack
+                     Ys_executor.({ stage ; args = unit_args ; schedule = Immediate ; created_on = Ys_time.now () }) :: stack
                 )
                 stack
                 Playbook.crontabs) in

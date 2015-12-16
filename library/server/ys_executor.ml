@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+open Ys_types
 
 open Bin_prot.Std
 
@@ -27,4 +28,5 @@ type call =
     stage : string ;
     args : string ;
     schedule : schedule ;
+    created_on : timestamp ;
   } with bin_io
