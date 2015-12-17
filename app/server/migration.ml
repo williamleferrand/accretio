@@ -22,7 +22,20 @@
 
 open Lwt
 
+
+let reset_all_boxes () =
+  Lwt_log.ign_info_f "resetting all in/out boxes" ;
+  Object_society.Store.fold_flat_lwt
+    (fun _ uid ->
+       $society(uid)<-inbox = [] ;
+       $society(uid)<-outbox = [] ;
+       return_none)
+    ()
+    None
+    (-1)
+
 let run () =
+  lwt _ = reset_all_boxes () in
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in
      lwt _ = inspect_parents () in
