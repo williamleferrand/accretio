@@ -1,6 +1,6 @@
 @import url(//fonts.googleapis.com/css?family=Pontano+Sans);
 @import url(https://fonts.googleapis.com/css?family=Molengo);
-/* line 5, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 5, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
 a, abbr, acronym, address, big, cite, code,
@@ -22,45 +22,45 @@ time, mark, audio, video {
   vertical-align: baseline;
 }
 
-/* line 22, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 22, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 html {
   line-height: 1;
 }
 
-/* line 24, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 24, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 ol, ul {
   list-style: none;
 }
 
-/* line 26, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 26, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 table {
   border-collapse: collapse;
   border-spacing: 0;
 }
 
-/* line 28, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 28, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 caption, th, td {
   text-align: left;
   font-weight: normal;
   vertical-align: middle;
 }
 
-/* line 30, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 30, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 q, blockquote {
   quotes: none;
 }
-/* line 103, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 103, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 q:before, q:after, blockquote:before, blockquote:after {
   content: "";
   content: none;
 }
 
-/* line 32, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 32, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 a img {
   border: none;
 }
 
-/* line 116, ../../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
+/* line 116, ../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/reset/_utilities.scss */
 article, aside, details, figcaption, figure, footer, header, hgroup, main, menu, nav, section, summary {
   display: block;
 }
@@ -1163,25 +1163,33 @@ h2 {
 /* line 44, ../sass/_society.scss */
 .society .society-upper .mailboxes {
   overflow-y: scroll;
-  background-color: pink;
   width: 25%;
   max-height: 250px;
 }
-/* line 49, ../sass/_society.scss */
+/* line 48, ../sass/_society.scss */
 .society .society-upper .mailboxes .inbox, .society .society-upper .mailboxes .outbox {
   padding: 0 0 0 10px;
 }
-/* line 56, ../sass/_society.scss */
+/* line 51, ../sass/_society.scss */
+.society .society-upper .mailboxes .inbox {
+  background-color: black;
+  color: white;
+}
+/* line 55, ../sass/_society.scss */
+.society .society-upper .mailboxes .outbox {
+  background-color: pink;
+}
+/* line 62, ../sass/_society.scss */
 .society .society-lower > div {
   padding: 10px;
   margin-bottom: 10px;
 }
-/* line 59, ../sass/_society.scss */
+/* line 65, ../sass/_society.scss */
 .society .society-lower > div h2 {
   padding: 10px 0;
   font-size: 24px;
 }
-/* line 63, ../sass/_society.scss */
+/* line 69, ../sass/_society.scss */
 .society .society-lower > div input[type="number"], .society .society-lower > div input[type="text"] {
   padding: 10px;
   font-size: 14px;
@@ -1194,55 +1202,55 @@ h2 {
   margin-right: 10px;
   display: inline;
 }
-/* line 78, ../sass/_society.scss */
+/* line 84, ../sass/_society.scss */
 .society .society-lower .triggers {
   background-color: orange;
 }
-/* line 80, ../sass/_society.scss */
+/* line 86, ../sass/_society.scss */
 .society .society-lower .triggers .trigger {
   width: 550px;
   padding-bottom: 10px;
   padding-right: 10px;
   float: left;
 }
-/* line 88, ../sass/_society.scss */
+/* line 94, ../sass/_society.scss */
 .society .society-lower .members {
-  background-color: blue;
+  background-color: #CECECE;
 }
-/* line 91, ../sass/_society.scss */
+/* line 97, ../sass/_society.scss */
 .society .society-lower .members .add-member {
   float: left;
 }
-/* line 95, ../sass/_society.scss */
+/* line 101, ../sass/_society.scss */
 .society .society-lower .members .member {
   float: left;
   margin-left: 20px;
 }
-/* line 98, ../sass/_society.scss */
+/* line 104, ../sass/_society.scss */
 .society .society-lower .members .member .member-email {
   margin: 0 5px;
 }
-/* line 101, ../sass/_society.scss */
+/* line 107, ../sass/_society.scss */
 .society .society-lower .members .member button {
   margin-right: 10px;
 }
-/* line 109, ../sass/_society.scss */
+/* line 115, ../sass/_society.scss */
 .society .society-lower .messenger {
   background-color: yellow;
 }
-/* line 111, ../sass/_society.scss */
+/* line 117, ../sass/_society.scss */
 .society .society-lower .messenger button {
   margin-left: 10px;
 }
-/* line 114, ../sass/_society.scss */
+/* line 120, ../sass/_society.scss */
 .society .society-lower .messenger .messenger-controls {
   margin-top: 10px;
 }
-/* line 119, ../sass/_society.scss */
+/* line 125, ../sass/_society.scss */
 .society .society-lower .data {
   background-color: purple;
 }
-/* line 121, ../sass/_society.scss */
+/* line 127, ../sass/_society.scss */
 .society .society-lower .data .data-item {
   margin-left: 20px;
   padding: 3px 0;
