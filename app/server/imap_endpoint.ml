@@ -271,9 +271,14 @@ let process_email =
               | `Object_created message ->
                 lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
                 Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
-                (* let call = Ys_executor.({ stage = target_stage ; args = Executor.int_args message.Object_message.uid ; schedule = Immediate }) in
-                   lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in *)
-                return (Some society)
+
+                match_lwt Playbook.dispatch_message_automatically message.Object_message.uid target_stage with
+                | None -> return (Some society)
+                | Some call ->
+                  $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+                  lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+                  ignore_result (Executor.step society) ;
+                  return (Some society)
 
       with
       | exn ->
