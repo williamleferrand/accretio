@@ -38,7 +38,7 @@ let reset_all_boxes () =
     (-1)
 
 let run () =
-   lwt _ = reset_all_boxes () in
+  (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in
      lwt _ = inspect_parents () in

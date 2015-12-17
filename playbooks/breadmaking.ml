@@ -163,8 +163,8 @@ PLAYBOOK
   mark_baker_as_available ~> `AskBakerForCustomMessage ~> ask_baker_for_custom_message
 
   ask_baker_for_custom_message<forward> ~> `Message of email ~> send_message_to_participants<simple_yes_no> ~> `TellBakerThereAreNoParticipants ~> tell_baker_there_are_no_participants
-                                                       send_message_to_participants<simple_yes_no> ~> `No of email ~> mark_participant_as_joining
-                                                       send_message_to_participants<simple_yes_no> ~> `Yes of email ~> mark_participant_as_not_joining
+                                                       send_message_to_participants<simple_yes_no> ~> `Yes of email ~> mark_participant_as_joining
+                                                       send_message_to_participants<simple_yes_no> ~> `No of email ~> mark_participant_as_not_joining
 
 
 
