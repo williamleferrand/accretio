@@ -30,6 +30,7 @@ let reset_all_boxes () =
        $society(uid)<-inbox = [] ;
        $society(uid)<-outbox = [] ;
        $society(uid)<-stack = [] ;
+       $society(uid)<-history = [] ;
        Lwt_log.ign_info_f "society %d inboxes / outboxes reset" uid ;
        return_none)
     ()
@@ -37,7 +38,7 @@ let reset_all_boxes () =
     (-1)
 
 let run () =
-  lwt _ = reset_all_boxes () in
+   lwt _ = reset_all_boxes () in
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in
      lwt _ = inspect_parents () in
