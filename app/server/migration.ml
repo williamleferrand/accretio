@@ -29,6 +29,8 @@ let reset_all_boxes () =
     (fun _ uid ->
        $society(uid)<-inbox = [] ;
        $society(uid)<-outbox = [] ;
+       $society(uid)<-stack = [] ;
+       Lwt_log.ign_info_f "society %d inboxes / outboxes reset" uid ;
        return_none)
     ()
     None
