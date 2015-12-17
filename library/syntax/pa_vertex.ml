@@ -366,7 +366,7 @@ let rec generate_get_functions _loc required builders = function
                    with Not_found ->
                      match List.mem field required with
                         true ->
-                        <:expr< raise (Required_field_is_missing $str:field$) >>
+                         <:expr< let _ = Lwt_log.ign_info_f "field %s is missing for object %d" $str:field$ uid in raise (Required_field_is_missing (uid, $str:field$)) >>
                       | false ->
                         <:expr< Lwt.return $wrap_with_modules _loc (<:expr< $lid:"default_" ^ lid$ >>) modules$ >> $
              | Some data ->
@@ -623,7 +623,7 @@ let rec generate_raw_functions _loc required builders = function
                    with Not_found ->
                       match List.mem field required with
                          | true ->
-                           <:expr< raise (Required_field_is_missing $str:field$) >>
+                           <:expr< let _ = Lwt_log.ign_info_f "field %s is missing for object %d" $str:field$ uid in raise (Required_field_is_missing (uid, $str:field$)) >>
                          | false ->
                            <:expr< Lwt.return $wrap_with_modules _loc (<:expr< $lid:"default_" ^ lid$ >>) modules$ >> $
              | Some data ->
@@ -832,7 +832,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
     type key = Ys_uid.uid ;
     type $lid:"value"$ = t ;
 
-    exception Required_field_is_missing of string ;
+    exception Required_field_is_missing of (uid * string) ;
 
     value db =
         let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ in

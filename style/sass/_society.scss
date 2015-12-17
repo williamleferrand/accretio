@@ -43,11 +43,17 @@
         }
         .mailboxes {
             overflow-y: scroll ;
-            background-color: pink ;
             width: 25% ;
             max-height: 250px;
             .inbox, .outbox {
                 padding: 0 0 0 10px;
+            }
+            .inbox {
+                background-color: black ;
+                color: white ;
+            }
+            .outbox {
+                background-color: pink ;
             }
         }
     }
@@ -86,7 +92,7 @@
         }
 
         .members {
-            background-color: blue;
+            background-color: #CECECE;
 
             .add-member {
                 float: left ;

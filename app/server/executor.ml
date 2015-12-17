@@ -94,7 +94,8 @@ let context_factory mode society =
             | `Object_already_exists (_, uid) -> return uid
             | `Object_created message -> return message.Object_message.uid
           in
-          lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
+          lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = false })), uid) in
+          log_info "message attached from member %d to society %d" member society ;
           return_unit
 
         let message_member ~member ~subject ~content =

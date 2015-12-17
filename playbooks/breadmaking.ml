@@ -36,9 +36,6 @@ let check_if_baker_is_available_this_week context () =
       ] in
   return `None
 
-let decode_baker_reply context message =
-  Library.decode_message_yes_no context ~message
-
 let mark_baker_as_unavailable context message =
   lwt member = context.get_original_message ~message in
   lwt member = context.get_message_sender ~message in
@@ -47,29 +44,27 @@ let mark_baker_as_unavailable context message =
   lwt _ = context.untag_member ~member ~tags:[ Printf.sprintf "available_%d" week ] in
   return `None
 
-let tell_supervisor_email_parse_error context message =
-  lwt content = context.get_message_content message in
-  lwt _ =
-    context.message_supervisor
-      ~subject:"Error when parsing email"
-      ~content:[
-        pcdata "Hi," ; br () ;
-        br () ;
-        pcdata "I couldn't decode automatically message " ; pcdata (string_of_int message) ; pcdata ": " ; br () ;
-        br () ;
-        pcdata content
-      ] in
-  return `None
-
 let mark_baker_as_available context message =
   lwt member = context.get_original_message ~message in
   lwt member = context.get_message_sender ~message in
   let week = current_week () in
   lwt _ = context.tag_member ~member ~tags:[ Printf.sprintf "available_%d" week ] in
   lwt _ = context.untag_member ~member ~tags:[ Printf.sprintf "unavailable_%d" week ] in
-  return `MessageParticipants
+  return `AskBakerForCustomMessage
 
-let send_message_to_participants context _ =
+let ask_baker_for_custom_message context () =
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Please customize the weekly message"
+      ~content:[
+        pcdata "Hi," ; br () ;
+        br () ;
+        pcdata "Glad to hear that you can bake. What custom message do you want to send to your followers?"
+      ] in
+  return `None
+
+let send_message_to_participants context message =
+  lwt content = context.get_message_content ~message in
   lwt members = context.search_members "active -baker" () in
   context.log_info "sending message to %d participants" (List.length members) ;
   match members with
@@ -84,24 +79,12 @@ let send_message_to_participants context _ =
            ~content:[
              pcdata "Hi," ; br () ;
              br () ;
-             pcdata "I hope you're having a great week! I'm planning to bake some bread this weekend, are you interested in getting some? When would you be home so that Colette & I can deliver?" ; br () ;
+             pcdata content ;
              br () ;
              pcdata "Cheers," ; br () ;
              pcdata "William"
            ])
       members
-  in
-  return `None
-
-let decode_participant_reply context message =
-   Library.decode_message_yes_no context ~message
-
-let tell_supervisor_participant_email_parse_error context message =
-  lwt content = context.get_message_content message in
-  lwt _ =
-    context.forward_to_supervisor
-      ~subject:"Error when parsing email"
-      ~message
   in
   return `None
 
@@ -156,9 +139,6 @@ let tell_baker_there_are_no_participants context _ =
       ] in
   return `None
 
-let do_nothing context _ =
-  return `None
-
 (* message handling strategies **********************************************)
 
 let simple_yes_no message =
@@ -169,6 +149,9 @@ let simple_yes_no message =
   | `No -> return (Some (`No message))
   | `Unknown -> return_none
 
+let forward message =
+  return (Some (`Message message))
+
 (* the graph ****************************************************************)
 
 PLAYBOOK
@@ -176,9 +159,12 @@ PLAYBOOK
   check_if_baker_is_available_this_week<simple_yes_no> ~> `No of email ~> mark_baker_as_unavailable
   check_if_baker_is_available_this_week<simple_yes_no> ~> `Yes of email ~> mark_baker_as_available
 
-  mark_baker_as_available ~> `MessageParticipants ~> send_message_to_participants<simple_yes_no> ~> `TellBakerThereAreNoParticipants ~> tell_baker_there_are_no_participants
-                                                     send_message_to_participants<simple_yes_no> ~> `No of email ~> mark_participant_as_joining
-                                                     send_message_to_participants<simple_yes_no> ~> `Yes of email ~> mark_participant_as_not_joining
+
+  mark_baker_as_available ~> `AskBakerForCustomMessage ~> ask_baker_for_custom_message
+
+  ask_baker_for_custom_message<forward> ~> `Message of email ~> send_message_to_participants<simple_yes_no> ~> `TellBakerThereAreNoParticipants ~> tell_baker_there_are_no_participants
+                                                       send_message_to_participants<simple_yes_no> ~> `No of email ~> mark_participant_as_joining
+                                                       send_message_to_participants<simple_yes_no> ~> `Yes of email ~> mark_participant_as_not_joining
 
 
 
