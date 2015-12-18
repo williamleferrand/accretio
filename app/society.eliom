@@ -222,14 +222,52 @@ let reply_message (society, message, content) =
        Lwt_log.ign_info_f "replying to message %d with content %s" message content ;
        lwt playbook = $society(society)->playbook in
        let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+       lwt original_reference, subject = $message(message)->(reference, subject) in
 
        match_lwt $message(message)->origin with
         | Object_message.Member member ->
-          (* we send the message out to the member ? *)
-          return (Some false)
+          (* we send the message out to the member, and we expect it to get routed back to the generic mailbox *)
+          lwt uid =
+            match_lwt Object_message.Store.create
+                        ~origin:(Object_message.CatchAll)
+                        ~society
+                        ~content
+                        ~subject:("Re: " ^ subject)
+                        ~destination:(Object_message.Member member)
+                        ~references:[ original_reference ]
+                        ~reference:(Object_message.create_reference content)
+                        () with
+            | `Object_already_exists (_, uid) -> return uid
+            | `Object_created message -> return message.Object_message.uid in
+          lwt _ = $society(society)<-outbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
+          (* I would love to find a way to use the context here *)
+          (* instead of checking if we're a sandbox or not *)
+          lwt _ =
+            match_lwt $society(society)->mode with
+            | Object_society.Sandbox -> return_unit
+            | _ -> Notify.send_message uid
+          in
+          return (Some true)
+        | Object_message.CatchAll ->
+          lwt origin = $message(message)->destination in
+
+          lwt uid =
+            match_lwt Object_message.Store.create
+                        ~origin
+                        ~society
+                        ~content
+                        ~destination:Object_message.CatchAll
+                        ~references:[ original_reference ]
+                        ~reference:(Object_message.create_reference content)
+                        () with
+            | `Object_already_exists (_, uid) -> return uid
+            | `Object_created message -> return message.Object_message.uid in
+          lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
+          return (Some true)
+
         | Object_message.Stage stage ->
 
-          lwt original_reference = $message(message)->reference in
+
           lwt origin = $message(message)->destination in
           Lwt_log.ign_info_f "message was emitted from stage %s" stage ;
 
@@ -317,6 +355,7 @@ let dispatch_message_manually (message, destination) =
     (fun _ ->
        match_lwt $message(message)->destination with
         | Object_message.Member _ -> return (Some false)
+        | Object_message.CatchAll -> return (Some false)
         | Object_message.Stage stage ->
           lwt society = $message(message)->society in
           lwt playbook = $society(society)->playbook in
@@ -408,7 +447,8 @@ let builder bundle =
     let format message =
       let tagger =
         match message.View_message.destination with
-          View_message.Member _ -> pcdata ""
+          View_message.Member _
+        | View_message.CatchAll -> pcdata ""
         | View_message.Stage stage ->
           try
             let options = List.assoc stage bundle.email_actions in
@@ -435,10 +475,28 @@ let builder bundle =
               pcdata stage
             ])
       in
+      let textarea_reply = Raw.textarea (pcdata "") in
+      let reply _ =
+        match Ys_dom.get_value_textarea textarea_reply with
+          "" -> Help.warning "Please say something"
+        | _ as reply ->
+          Authentication.if_connected
+            (fun _ -> rpc %reply_message (society, message.View_message.uid, reply) (fun _ -> Ys_dom.set_value_textarea textarea_reply ""))
+      in
+      let reply =
+        button
+          ~button_type:`Button
+          ~a:[ a_onclick reply ]
+          [ pcdata "Reply" ]
+      in
       div ~a:[ a_class [ "message-inbox" ]] [
         View_message.format message ;
         action ;
         tagger ;
+        div ~a:[ a_class [ "message-reply" ]] [
+          textarea_reply ;
+          reply ;
+        ]
       ]
     in
     attach society inbox (%get_messages_inbox) format

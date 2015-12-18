@@ -255,6 +255,7 @@ let context_factory mode society =
     let get_message_sender ~message =
       match_lwt $message(message)->origin with
       | Object_message.Stage _ -> failwith "this email was sent by a stage"
+      | Object_message.CatchAll -> failwith "this email was sent from the catchall"
       | Object_message.Member member -> return member
 
     (* timers *)
@@ -278,6 +279,7 @@ let context_factory mode society =
                | Some message ->
                  match_lwt $message(message)->origin with
                    Object_message.Stage _ -> aux message
+                 | Object_message.CatchAll -> aux message
                  | Object_message.Member _ ->
                    match_lwt aux message with
                      None -> return (Some message)
