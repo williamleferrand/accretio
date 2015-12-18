@@ -465,3 +465,53 @@ let api_forward_message reference society destination subject member original =
            content = [ pcdata content ] ;
          })
     locators
+
+let check_society society =
+  lwt leader, name = $society(society)->(leader, name) in
+  lwt locators = uids_to_locators [ leader ] in
+  let url = (Ys_config.get_string "url-prefix")^"/society/"^(string_of_int society) in
+   Lwt_list.iter_p
+    (fun locator ->
+       enqueue_message
+         {
+           locator ;
+           references = None ;
+           in_reply_to = None ;
+           reply_to = None ;
+           subject = Printf.sprintf "[Accretio] check society '%s'" name ;
+           content =
+             [
+               pcdata "Hi," ; br () ;
+               br () ;
+               pcdata "Please check your society using the following link" ; br () ;
+               br () ;
+               Raw.a ~a:[ a_href (uri_of_string  (fun () -> url)) ] [ pcdata url ] ; br ();
+               br () ;
+               pcdata "Thanks," ; br () ;
+             ]
+         })
+    locators
+
+
+let send_message message =
+  match_lwt $message(message)->destination with
+  | Object_message.Member member ->
+    lwt locators = uids_to_locators [ member ] in
+    lwt subject, content, reference, society = $message(message)->(subject, content, reference, society) in
+    lwt shortlink = $society(society)->shortlink in
+    Lwt_list.iter_p
+    (fun locator ->
+       enqueue_message
+         {
+           locator ;
+           references = Some reference ;
+           in_reply_to = None ;
+           reply_to = Some (shortlink, "") ;
+           subject ;
+           content =
+             [
+               pcdata content
+             ]
+         })
+    locators
+| _ -> return_unit

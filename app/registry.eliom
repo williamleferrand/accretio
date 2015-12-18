@@ -93,3 +93,4 @@ let _ =
   register (module Bakers) ;
   register (module Demo) ;
   register (module Breadmaking) ;
+  register (module Serc_weekly) ;
