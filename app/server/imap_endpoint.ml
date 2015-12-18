@@ -163,7 +163,7 @@ let process_email =
 
             lwt playbook = $society(society)->playbook in
             let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
-            match List.mem target_stage Playbook.mailables with
+            match target_stage = "" || List.mem target_stage Playbook.mailables with
             | false -> Lwt_log.ign_error_f "message %d attempted to wakeup stage %s in society %d, playbook %d, but it isn't mailable" (Uint32.to_int offset) target_stage society playbook ;
               return_none
             | true ->
@@ -252,7 +252,11 @@ let process_email =
 
               let transport = Object_message.(Email { offset = Uint32.to_int offset }) in
               let origin = Object_message.(Member sender) in
-              let destination = Object_message.(Stage target_stage) in
+              let destination =
+                if target_stage = "" then
+                  Object_message.CatchAll
+                else
+                  Object_message.(Stage target_stage) in
 
               match_lwt
                 Object_message.Store.create
@@ -271,9 +275,16 @@ let process_email =
               | `Object_created message ->
                 lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
                 Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
-                (* let call = Ys_executor.({ stage = target_stage ; args = Executor.int_args message.Object_message.uid ; schedule = Immediate }) in
-                   lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in *)
-                return (Some society)
+
+                if target_stage = "" then
+                  return (Some society)
+                else
+                  match_lwt Playbook.dispatch_message_automatically message.Object_message.uid target_stage with
+                  | None -> return (Some society)
+                  | Some call ->
+                    $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+                    lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+                    return (Some society)
 
       with
       | exn ->
@@ -288,8 +299,10 @@ let process_email =
 let process_emails emails =
   lwt targets = Lwt_list.map_s process_email emails in
   let targets = List.fold_left (fun acc -> function None -> acc | Some uid -> uid :: acc) [] targets in
-  (* do something with the targets - but not executing them right away *)
-  (* lwt _ = Lwt_list.iter_p Executor.step targets in *)
+  lwt _ = Lwt_list.iter_p Executor.step targets in
+  (* this is a little bit liberal *)
+  lwt _ = Lwt_list.iter_p Notify.check_society targets in
+
   lwt _ =
     Lwt_list.iter_p
       (fun society ->

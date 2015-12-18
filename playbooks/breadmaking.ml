@@ -7,6 +7,8 @@ open Api
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
+open Message_parsers
+
 let author = "william@accret.io"
 let name = "Breadmaking circle"
 let description = "Baking bread for the neighbors"
@@ -139,18 +141,6 @@ let tell_baker_there_are_no_participants context _ =
       ] in
   return `None
 
-(* message handling strategies **********************************************)
-
-let simple_yes_no message =
-  lwt content = $message(message)->content in
-  let lexbuf = Lexing.from_string content in
-  match Parser.library_message_yes_no Lexer.library_message_yes_no lexbuf with
-  | `Yes -> return (Some (`Yes message))
-  | `No -> return (Some (`No message))
-  | `Unknown -> return_none
-
-let forward message =
-  return (Some (`Message message))
 
 (* the graph ****************************************************************)
 

@@ -1,0 +1,21 @@
+(* NOAA API json types *)
+
+type temperature = {
+     t : string ;
+     v : string ;
+     f : string ;
+}
+
+type metadata = {
+     id : string ;
+     name : string ;
+     lat : string ;
+     lon : string ;
+}
+
+type 'a results = {
+     metadata: metadata ;
+     data : 'a list ;
+}
+
+type temperatureResults = temperature results

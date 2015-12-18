@@ -85,10 +85,9 @@ let write_to_disk file frame =
     lwt _ = Ocsigen_stream.finalize stream `Success in
     Lwt.return h
 
-
 let read_response ?max frame =
   lwt s = read_stream_bound ?max frame.frame_content in
-  Lwt.return (s,frame.frame_header.Http_header.headers)
+  Lwt.return (s, frame.frame_header.Http_header.headers)
 
 let rec do_safe_call ?max f =
   try_lwt
@@ -109,16 +108,15 @@ let rec do_safe_call_file file f =
   | exc -> fail exc
 
 (***** GET REQUEST *****)
+
 let get ?max ?https ?port ?(headers=[]) ~host ~uri () =
   let headers = generate_headers headers in
   do_safe_call ?max (Ocsigen_http_client.get ~headers ?https ?port ~host ~uri)
-
 
 let rec get_safe ?(headers=[]) ~host ~uri () =
   try_lwt
     get ~headers ~host ~uri ()
   with _ -> Lwt_log.ign_info_f "request to %s failed trying in one second" uri ; Lwt_unix.sleep 1.0 >>= get_safe ~headers ~host ~uri
-
 
 let get_url ?max ?headers url () =
   let (https, host, port, uri) = fragment_url url in
@@ -130,6 +128,7 @@ let get_file ?(headers=[]) url file =
   do_safe_call_file file (Ocsigen_http_client.get ~headers ?https ?port ~host ~uri)
 
 (***** POST REQUEST *****)
+
 let post_string ?https ?port ?(headers=[]) ~host ~uri ~content ?(content_type=("application","x-www-form-urlencoded")) () =
   let headers = generate_headers headers in
   let content = Netencoding.Url.mk_url_encoded_parameters content in
@@ -139,11 +138,9 @@ let post_string_raw ?https ?port ?(headers=[]) ~host ~uri ~content ?(content_typ
   let headers = generate_headers headers in
   do_safe_call (Ocsigen_http_client.post_string ?https ?port ~headers ~host ~uri ~content ~content_type)
 
-
 let post_string_url ?headers ?content_type ~content url () =
   let (https, host, port, uri) = fragment_url url in
   post_string ?https ?port ?headers ~host ~uri ~content ?content_type ()
-
 
 let remove_newline =
   Pcre.replace ~rex:(Pcre.regexp "\n") ~templ:""
