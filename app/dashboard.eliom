@@ -52,7 +52,9 @@ open Eliom_content.Html5.D
 open View_society
 
 let builder = function
-  | None -> pcdata "something went wrong"
+  | None ->
+    Service.goto Service.Landing ;
+    div []
   | Some societies ->
     let societies = RList.init societies in
     let societies = RList.map_in_div View_society.format societies in

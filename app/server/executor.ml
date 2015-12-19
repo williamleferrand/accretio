@@ -21,6 +21,7 @@
 open Printf
 open Lwt
 
+open CalendarLib
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
@@ -28,6 +29,8 @@ open Ys_uid
 open Ys_executor
 
 open Api
+
+module SetInt64 = Set.Make(Int64)
 
 (* the context factory -- there is a little bit a first class module magic
    so that pa_playbook can craft a context specific to each module *)
@@ -60,7 +63,7 @@ let context_factory mode society =
           let timestamp = Ys_time.now () in
           Printf.ksprintf
             (fun message ->
-               Lwt_log.ign_info_f "%s" message ;
+               Lwt_log.ign_info_f "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let log_warning = fun ?exn fmt ->
@@ -68,7 +71,7 @@ let context_factory mode society =
           let timestamp = Ys_time.now () in
           Printf.ksprintf
             (fun message ->
-               Lwt_log.ign_warning_f ?exn "%s" message ;
+               Lwt_log.ign_warning_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let log_error = fun ?exn fmt ->
@@ -76,7 +79,7 @@ let context_factory mode society =
           let timestamp = Ys_time.now () in
           Printf.ksprintf
             (fun message ->
-               Lwt_log.ign_error_f ?exn "%s" message ;
+               Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let send_message ?(reference=None) member subject content =
@@ -126,7 +129,7 @@ let context_factory mode society =
           let timestamp = Ys_time.now () in
           Printf.ksprintf
             (fun message ->
-               Lwt_log.ign_info_f "%s" message ;
+               Lwt_log.ign_info_f "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let log_warning = fun ?exn fmt ->
@@ -134,7 +137,7 @@ let context_factory mode society =
           let timestamp = Ys_time.now () in
           Printf.ksprintf
             (fun message ->
-               Lwt_log.ign_warning_f ?exn "%s" message ;
+               Lwt_log.ign_warning_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let log_error = fun ?exn fmt ->
@@ -142,7 +145,7 @@ let context_factory mode society =
           let timestamp = Ys_time.now () in
           Printf.ksprintf
             (fun message ->
-               Lwt_log.ign_error_f ?exn "%s" message ;
+               Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
         let send_message ?(reference=None) member subject content =
@@ -249,6 +252,7 @@ let context_factory mode society =
         (try Some (List.assoc key data) with Not_found -> None)
 
     (* message primitives *)
+
     let get_message_content ~message =
       $message(message)->content
 
@@ -261,11 +265,37 @@ let context_factory mode society =
     (* timers *)
 
     let set_timer = fun ?label ~duration output ->
-      let call = Stage_Specifics.outbound_dispatcher duration output in
-      ignore_result ($society(society)<-stack %% (fun s -> call :: s)) ;
-      return_unit
+      try_lwt
+        log_info "setting a timer" ;
+        let y, m, d, s = Calendar.Period.ymds duration in
+        let duration = s + (d * 24 * 3600) in
+        let call = Stage_Specifics.outbound_dispatcher duration output in
+        log_info "we have the call" ;
+        (* this *will* deadlock if we patch the stack, we need to use the sidecar *)
+        lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
+        log_info "the call is set" ;
+        (* that's ugly, but it gives us sphinx features right away *)
+        match label with
+          None -> return_unit
+        | Some label ->
+          log_info "setting timer %s" label ;
+          lwt _ = $society(society)<-timers += (`Label label, Int64.to_int call.created_on) in
+          return_unit
+      with exn -> log_error ~exn "error when setting the timer" ; return_unit
 
-    let cancel_timers = fun ~query -> return_unit
+    let cancel_timers = fun ~query ->
+      lwt timers = Object_society.Store.search_timers society query in
+      log_info "cancelling %d timers using query '%s'" (List.length timers) query ;
+      let timers =
+        List.fold_left
+          (fun acc timestamp ->
+             SetInt64.add (Int64.of_int timestamp) acc)
+          SetInt64.empty
+          timers
+      in
+      lwt _ = $society(society)<-timers %% (List.filter (fun (`Label _, timer) -> not (SetInt64.mem (Int64.of_int timer) timers))) in
+      lwt _ = $society(society)<-tombstones %% (fun timestamps -> SetInt64.elements timers @ timestamps) in
+      return_unit
 
     let rec get_original_message ~message =
       let rec aux message =
@@ -347,28 +377,67 @@ let step society =
   let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)
   let module Playbook = (val playbook : Api.PLAYBOOK) in
 
+  let is_due call =
+    match call.schedule with
+    | Delayed delay when Int64.add call.created_on (Int64.of_int delay) > Ys_time.now () ->
+      Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+      false
+    | Delayed delay ->
+      Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+      true
+    | _ -> true
+  in
+
   let run =
     function
       [] ->
       Lwt_log.ign_info_f "society %d has an empty stack" society ;
       return []
-    | call :: tail ->
-
-      Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
-
-      lwt result = Playbook.step context_factory call in
-      lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
-      match result with
-        None -> return tail
-      | Some followup -> return (followup :: tail)
-
+    | _ as stack ->
+      let rec look_for_first_call_due = function
+          [] -> return []
+        | call :: tail ->
+          match is_due call with
+            false ->
+            lwt stack = look_for_first_call_due tail in
+            return (call :: stack)
+          | true ->
+            Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
+            lwt result = Playbook.step context_factory call in
+            lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
+            match result with
+              None -> return tail
+            | Some followup -> return (followup :: tail)
+      in
+      look_for_first_call_due stack
   in
 
   let rec unstack () =
-    match_lwt $society(society)<-stack %%% run with
-      [] -> return_unit
-    | _ -> unstack ()
+    (* this looks weird but it's made so that it leverages the per-field mutexes defined by pa_vertex *)
+    lwt _ = $society(society)<-stack %%% run in
+    lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
+        lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
+        return [])
+    in
+    lwt _ = $society(society)<-stack %%% (fun stack ->
+        lwt tombstones = $society(society)->tombstones in
+        let timers =
+          List.fold_left
+            (fun acc timestamp ->
+               SetInt64.add timestamp acc)
+            SetInt64.empty
+            tombstones
+    in
+    return
+      (List.filter
+         (fun call -> not (SetInt64.mem call.created_on timers))
+         stack)
+    )
   in
+  match_lwt $society(society)->stack with
+  | stack when List.exists is_due stack -> unstack ()
+  | _ -> return_unit
+in
 
   unstack ()
 
@@ -471,13 +540,14 @@ let check_all_crons () =
     Object_society.Store.fold_flat_lwt
     (fun acc uid ->
       match_lwt $society(uid)->mode with
-        | Object_society.Sandbox -> return (Some acc) (* don't wake up cron jobs for sandboxed societies *)
+        | Object_society.Sandbox -> return (Some (uid :: acc)) (* don't wake up cron jobs for sandboxed societies *)
         | _ ->
           lwt playbook = $society(uid)->playbook in
           let playbook = Registry.get playbook in
           let module Playbook = (val playbook: Api.PLAYBOOK) in
           (* let's check each crontabs & stack up the calls if needed *)
-          let need_to_be_waken_up = ref false in
+          (* we run them all because we need to check the timeouts *)
+          let need_to_be_waken_up = ref true in
           lwt _ = $society(uid)<-stack %% (fun stack ->
               List.fold_left
                 (fun stack (stage, crontab) ->

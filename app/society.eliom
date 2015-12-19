@@ -182,7 +182,7 @@ let remove_member (uid, member) =
 let remove_member = server_function ~name:"society-remove-member" Json.t<int * int> remove_member
 
 let update_member_tags (uid, member, tags) =
-  let tags = "active" :: tags in
+  let tags = "active" :: (List.filter (fun s -> s <> "active") tags) in
   protected_connected
     (fun _ ->
        lwt _ = $society(uid)<-members -= member in
@@ -649,10 +649,11 @@ let builder bundle =
 
     let format_member (member, tags) =
 
-      let tag_input = input ~a:[ a_placeholder "Comma separated tags" ; a_value (String.concat ", " tags) ] ~input_type:`Text () in
+      let tag_input = input ~a:[ a_placeholder "Comma separated tags" ; a_value (String.concat "," tags) ] ~input_type:`Text () in
       let tag_update _ =
         let tags = Ys_dom.get_value tag_input in
         let tags = Regexp.split (Regexp.regexp ",") tags in
+        let tags = List.filter (fun s -> s <> "") tags in
         Authentication.if_connected
           (fun _ -> rpc %update_member_tags (view.uid, member.View_member.uid, tags) (RList.update members))
       in
@@ -692,6 +693,7 @@ let builder bundle =
         | _ as emails ->
           let tags = Ys_dom.get_value input_tags in
           let tags : string list = Regexp.split (Regexp.regexp ",") tags in
+          let tags = List.filter (fun s -> s <> "") tags in
           Authentication.if_connected
             (fun _ -> rpc %add_members (view.uid, emails, tags) (fun m -> RList.update members m ; Ys_dom.set_value input_email "" ; Ys_dom.set_value input_tags ""))
       in

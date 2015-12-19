@@ -173,6 +173,10 @@ register_page_no_param
       | Anonymous -> return Service.Landing
       | Connected _ -> return Service.Dashboard)
   () ;
+register_page_no_param
+  ~path:[ "library" ]
+  ~extract_service:(fun _ -> return Service.Library)
+  () ;
 
 
 Lwt_log.ign_info "Mu has started"

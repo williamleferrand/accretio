@@ -22,7 +22,7 @@ type 'output context =
 
     (* delayed transitions *)
 
-    set_timer : ?label:string -> duration:int -> 'output -> unit Lwt.t ;
+    set_timer : ?label:string -> duration:Calendar.Period.t -> 'output -> unit Lwt.t ;
     cancel_timers : query:string -> unit Lwt.t ;
 
     (* messaging utilities *)

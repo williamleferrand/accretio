@@ -48,6 +48,8 @@ type slip =
 type stack = call list with bin_io, default_value([])
 type history = (call * call option) list with bin_io, default_value([])
 
+type int64s = int64 list with bin_io, default_value([])
+
 type t = {
 
   uid : uid ;
@@ -69,6 +71,9 @@ type t = {
   outbox : [ `Message of slip ] edges ;
 
   stack : stack ;
+  sidecar : stack ; (* to be written by the api method, before being merged into the main stack *)
+  tombstones : int64s ;
+
   history : history ;
 
   timers : [ `Label of string ] edges ; (* these are fake edges *)
