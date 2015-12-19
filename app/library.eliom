@@ -37,34 +37,38 @@ let get_playbooks_ () =
        lwt views, _ =
          Object_playbook.Store.fold_flat_lwt
            (fun views uid ->
-              Lwt_log.ign_info_f "inspecting playbook %d" uid ;
-              match_lwt $playbook(uid)->(scope, owner) with
-                Ys_scope.Public, _ -> lwt view = View_playbook.to_view uid in return (Some (view :: views))
-              | _, owner when owner = session.member_uid -> lwt view = View_playbook.to_view uid in return (Some (view :: views))
-              | _, owner ->
-                Lwt_log.ign_info_f "skipping playbook owned by %d" owner ;
-                return (Some views))
-           []
-           None
-           (-1)
-       in
-       return views
-
+              match Registry.mem uid with
+                false -> return (Some views)
+              | true ->
+                Lwt_log.ign_info_f "inspecting playbook %d" uid ;
+                match_lwt $playbook(uid)->(scope, owner) with
+                  Ys_scope.Public, _ -> lwt view = View_playbook.to_view uid in return (Some (view :: views))
+                | _, owner when owner = session.member_uid -> lwt view = View_playbook.to_view uid in return (Some (view :: views))
+                | _, owner ->
+                  Lwt_log.ign_info_f "skipping playbook owned by %d" owner ;
+                  return (Some views))
+             []
+             None
+             (-1)
+         in
+         return views
     )
     (fun () ->
        Lwt_log.ign_info_f "getting all public playbooks" ;
        lwt views, _ =
-         Object_society.Store.fold_flat_lwt
+         Object_playbook.Store.fold_flat_lwt
            (fun views uid ->
-              match_lwt $playbook(uid)->scope with
-                Ys_scope.Public -> lwt view = View_playbook.to_view uid in return (Some (view :: views))
-              | _ -> return (Some views))
-        []
-        None
-        (-1)
-    in
-    return views
-)
+              match Registry.mem uid with
+                false -> return (Some views)
+              | true ->
+                match_lwt $playbook(uid)->scope with
+                  Ys_scope.Public -> lwt view = View_playbook.to_view uid in return (Some (view :: views))
+                | _ -> return (Some views))
+          []
+          None
+          (-1)
+      in
+      return views)
 
 let get_playbooks = server_function ~name:"dashboard-get-playbooks" Json.t<unit> get_playbooks_
 
@@ -80,9 +84,10 @@ open View_society
 
 let builder playbooks =
   let playbooks = RList.init playbooks in
-  let playbooks = RList.map_in_div View_playbook.format playbooks in
+  let playbooks = RList.map_in_div ~a:[ a_class [ "playbooks" ]] View_playbook.format playbooks in
   div ~a:[ a_class [ "library" ]] [
-      playbooks
+    h1 [ pcdata "Library" ] ;
+    playbooks
   ]
 
 let dom =

@@ -109,7 +109,7 @@ input[type="text"], input[type="password"], textarea {
     background-color: white;
     border-radius: 25px;
 
-    color: $green ;
+    color: $grey ;
     font-size: 22px;
     line-height: 46px;
     border: none;
@@ -128,6 +128,11 @@ input[type="text"], input[type="password"], textarea {
     padding: 0 10px;
 }
 
+h1 {
+    font-size: 32px;
+    font-family: 'Molengo', sans-serif;
+    text-align: center ;
+}
 
 h2 {
     margin: 0 0 20px 0;

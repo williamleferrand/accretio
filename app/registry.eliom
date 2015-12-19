@@ -35,6 +35,8 @@ let get uid =
   with Not_found ->
     Lwt_log.ign_info_f "playbook %d is missing" uid ;
     raise Not_found
+let mem uid =
+  Hashtbl.mem playbooks uid
 
 let find_or_create_author email =
   match_lwt Object_member.Store.find_by_email email with
