@@ -17,38 +17,4 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-
-open Lwt
-open Bin_prot.Std
-
-open Ys_default
-open Ys_types
-open Ys_uid
-
-type t = {
-
-  uid : uid ;
-
-  created_on : timestamp ;
-  owner : uid ;
-  scope : Ys_scope.t ;
-
-  hash : string ;
-
-  name : string ;
-  description : string ;
-
-  societies : [ `Society ] edges ;
-
-  (* old fields *)
-  source : string ;
-
-} with vertex
-  (
-    {
-      aliases = [ `PlainText description ; `PlainText name ; `String hash ] ;
-      required = [ owner ; name ; description ; hash ; scope ] ;
-      uniques = [ hash ] ;
-      builders = [ (scope, (fun _ -> return Ys_scope.Private)) ] ;
-    }
-  )
+type t = Public | Private with bin_io
