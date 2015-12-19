@@ -25,6 +25,8 @@ open Sessions
 open Ys_uid
 open Vault
 
+type scope = Public | Private
+
 type t =
   {
     uid : uid ;
@@ -32,21 +34,29 @@ type t =
     name : string ;
     description : string ;
     hash : string ;
+    scope : scope ;
   }
 
 }}
 
 {server{
 
+
 let to_view uid =
-  lwt owner, name, description, hash = $playbook(uid)->(owner, name, description, hash) in
+  lwt owner, name, description, hash, scope = $playbook(uid)->(owner, name, description, hash, scope) in
   lwt owner = View_member.to_view owner in
+  let scope =
+    match scope with
+      Ys_scope.Public -> Public
+    | Ys_scope.Private -> Private
+  in
   return {
     uid ;
     owner ;
     name ;
     description ;
     hash ;
+    scope ;
   }
 
 }}

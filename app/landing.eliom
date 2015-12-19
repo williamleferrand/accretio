@@ -29,15 +29,12 @@ open Vault
 
 {server{
 
-let popular_playbooks = [ 1 ]
+let fetch_public_playbooks () =
+  lwt playbooks = Library.get_playbooks_ () in
+  return (Demo.automata, playbooks)
 
-let fetch_popular_playbooks () =
-  Lwt_log.ign_info_f "fetch popular playbooks" ;
-  lwt popular = Lwt_list.map_p View_playbook.to_view popular_playbooks in
-  return (Demo.automata, popular)
-
-let fetch_popular_playbooks =
-  server_function ~name:"landing-fetch-popular-playbooks" Json.t<unit> fetch_popular_playbooks
+let fetch_public_playbooks =
+  server_function ~name:"landing-fetch-popular-playbooks" Json.t<unit> fetch_public_playbooks
 
 }}
 
@@ -71,7 +68,7 @@ let builder (demo, playbooks) =
   ]
 
 
-let dom = Template.apply %fetch_popular_playbooks builder
+let dom = Template.apply %fetch_public_playbooks builder
 
 
 }}

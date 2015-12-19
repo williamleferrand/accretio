@@ -41,15 +41,15 @@ let dom () =
 
       (* div ~a:[ a_onclick Loader.reset ; a_class [ "left"; "menu" ]] [] ; *)
 
-      (* div ~a:[ a_onclick (fun _ -> Service.goto Service.Dashboard) ;
+      div ~a:[ a_onclick (fun _ -> Service.goto Service.Library) ;
                a_class [ "left" ; "menu"; "icon-google-circles" ] ] [] ;
-
+      (*
        div ~a:[ a_onclick (fun _ -> Service.goto (Service.Search None)) ;
                a_class [ "left" ; "menu"; "icon-search" ] ] [] ;
 
       *)
 
-      (* R.node (Authentication.connection_status_header ()) ; *)
+       R.node (Authentication.connection_status_header ()) ;
 
      (* div ~a:[ a_class [  "left" ; "menu" ; "icon-lifebuoy" ] ;
              a_onclick (fun _ -> Service.goto Service.Feedback) ] [] *)

@@ -77,6 +77,7 @@ let compile_automata chains crons =
   let automata =
     List.fold_left
       (fun acc (source, chain) ->
+         let acc = G.add_vertex acc (update source) in
          snd
            (List.fold_left
               (fun (source, acc) (transition, destination) ->
@@ -132,9 +133,9 @@ EXTEND Gram
   chain:
     [
       [
-        source = stage ; c = LIST1 [ "~>" ; edge = row_field ; "~>" ; dest = stage -> (edge, dest) ] ->
+        source = stage ; c = LIST0 [ "~>" ; edge = row_field ; "~>" ; dest = stage -> (edge, dest) ] ->
         (source, c)
-      | source = stage ; c = LIST1 [ "<~" ; edge = row_field ; "<~" ; dest = stage -> (edge, dest) ]  ->
+      | source = stage ; c = LIST0 [ "<~" ; edge = row_field ; "<~" ; dest = stage -> (edge, dest) ]  ->
         (* now we need to flip that list *)
         let rec flip source acc =
           function

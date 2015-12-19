@@ -36,39 +36,35 @@ type bundle =
 open Vault
 
 let retrieve uid =
-  lwt playbook = View_playbook.to_view uid in
-  lwt societies = $playbook(uid)->societies in
-  lwt societies =
+  lwt authorized =
     solve_acl
       ACLConnected
       (fun session ->
-         Lwt_list.filter_p
-           (fun (`Society, uid) ->
-              return_true
-           )
-           societies)
+         match_lwt $playbook(uid)->(scope, owner) with
+           Ys_scope.Public, _ -> return_true
+         | _, owner when owner = session.member_uid -> return_true
+         | _ -> return_false)
       (fun () ->
-         Lwt_list.filter_p
-           (fun (`Society, uid) ->
-              return_true
-           )
-           societies)
+         match_lwt $playbook(uid)->scope with
+           Ys_scope.Private-> return_false
+         | Ys_scope.Public -> return_true)
   in
-  lwt societies =
-    Lwt_list.map_p
-      View_society.to_view
-      (List.map snd societies) in
-  let automata =
-    let playbook = Registry.get uid in
-    let module P = (val playbook : Api.PLAYBOOK) in
-    P.automata
-  in
-  return
-    {
-      playbook ;
-      societies ;
-      automata ;
-    }
+  match authorized with
+    false -> return_none
+  | true ->
+    lwt playbook = View_playbook.to_view uid in
+    lwt societies = $playbook(uid)->societies in
+    let automata =
+      let playbook = Registry.get uid in
+      let module P = (val playbook : Api.PLAYBOOK) in
+      P.automata
+    in
+    return
+      (Some {
+          playbook ;
+          societies = [] ;
+          automata ;
+        })
 
 let retrieve = server_function ~name:"playbook-retrieve" Json.t<int> retrieve
 
@@ -100,6 +96,21 @@ let create_society (playbook, name, description) : Ys_uid.uid option Lwt.t =
 
 let create_society = server_function ~name:"playbook-create-society" Json.t<int * string * string> create_society
 
+let make_public playbook =
+  protected_connected
+    (fun session ->
+       $playbook(playbook)<-scope = Ys_scope.Public ;
+       return (Some View_playbook.Public))
+
+let make_private playbook =
+  protected_connected
+    (fun session ->
+       $playbook(playbook)<-scope = Ys_scope.Private ;
+       return (Some View_playbook.Private))
+
+let make_public = server_function ~name:"playbook-make-public" Json.t<int> make_public
+let make_private = server_function ~name:"playbook-make-private" Json.t<int> make_private
+
 }}
 
 {client{
@@ -110,56 +121,82 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 open View_playbook
 
-let builder view =
-  let playbook = view.playbook in
-  let societies = view.societies in
-  (* todo : maybe we should pull the automata from the server & not carry the modules on the client side *)
-  let graph = div ~a:[ a_class [ "playbook-automata" ]] [] in
-  let svg = Ys_viz.render graph view.automata in
-
-  let create_society =
-    let name = input ~input_type:`Text ~a:[ a_placeholder "name" ] () in
-    let description = Raw.textarea ~a:[ a_placeholder "description" ] (pcdata "") in
-    let create _ =
-      match Ys_dom.get_value name, Ys_dom.get_value_textarea description with
-      "", _ -> Help.warning "Please specify a name"
-      | _, "" -> Help.warning "Please add a description"
-      | name, description ->
-        Authentication.if_connected
-          (fun _ ->
-             rpc
-             %create_society
-                 (view.playbook.uid, name, description)
-                 (fun uid -> Service.goto (Service.Society uid)))
-    in
-    let create =
-      button
-        ~button_type:`Button
-        ~a:[ a_onclick create ]
-        [ pcdata "Create" ]
-    in
-    div ~a:[ a_class [ "society" ]] [
-      name ;
-      description ;
-      create ;
+let builder  = function
+  | None ->
+    div [
+      pcdata "This playbook is private"
     ]
-  in
+  | Some view ->
+    let playbook = view.playbook in
+    (* todo : maybe we should pull the automata from the server & not carry the modules on the client side *)
+    let graph = div ~a:[ a_class [ "playbook-automata" ]] [] in
+    let _ = Ys_viz.render graph view.automata in
 
-  let societies =
-    div ~a:[ a_class [ "societies" ]]
-      (create_society :: List.map View_society.format view.societies)
-  in
+    let create_society =
+      let name = input ~input_type:`Text ~a:[ a_placeholder "name" ] () in
+      let description = Raw.textarea ~a:[ a_placeholder "description" ] (pcdata "") in
+      let create _ =
+        match Ys_dom.get_value name, Ys_dom.get_value_textarea description with
+          "", _ -> Help.warning "Please specify a name"
+        | _, "" -> Help.warning "Please add a description"
+        | name, description ->
+          Authentication.if_connected
+            (fun _ ->
+               rpc
+               %create_society
+                   (view.playbook.uid, name, description)
+                   (fun uid -> Service.goto (Service.Society uid)))
+      in
+      let create =
+        button
+          ~button_type:`Button
+          ~a:[ a_onclick create ]
+          [ pcdata "Create" ]
+      in
+      div ~a:[ a_class [ "society" ]] [
+        name ;
+        description ;
+        create ;
+      ]
+    in
 
-  div ~a:[ a_class [ "playbook" ]] [
-    div ~a:[ a_class [ "playbook-description" ]] [
-      pcdata playbook.View_playbook.description ;
-    ] ;
 
-    graph ;
+    let playbook_controls =
+      let scope, update_scope = S.create playbook.scope in
+      let make_public _ =
+        Authentication.if_connected
+          (fun _ -> rpc %make_public playbook.uid update_scope)
+      in
+      let make_private _ =
+        Authentication.if_connected
+          (fun _ -> rpc %make_private playbook.uid update_scope)
+      in
+      div ~a:[ a_class [ "playbook-controls" ]] [
+        button
+          ~button_type:`Button
+          ~a:[ a_onclick (fun _ -> make_public ()) ;
+               R.a_class (S.map (function Public -> [ "active" ] | _ -> []) scope) ]
+          [ pcdata "Public" ] ;
+        button
+          ~button_type:`Button
+          ~a:[ a_onclick (fun _ -> make_private ()) ;
+               R.a_class (S.map (function Private -> [ "active" ] | _ -> []) scope) ]
+          [ pcdata "Private" ] ;
+      ]
+    in
+    div ~a:[ a_class [ "playbook" ]] [
+      playbook_controls ;
+      div ~a:[ a_class [ "playbook-name" ]] [
+        pcdata playbook.View_playbook.name ;
+      ] ;
+      div ~a:[ a_class [ "playbook-description" ]] [
+        pcdata playbook.View_playbook.description ;
+      ] ;
 
-    h2 [ pcdata "Societies" ] ;
-    societies ;
-  ]
+      graph ;
+
+      create_society ;
+    ]
 
 let dom = Template.apply %retrieve builder
 

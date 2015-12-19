@@ -49,7 +49,7 @@ let find_or_create_author email =
 
 let find_or_create_playbook playbook =
   let module Playbook = (val playbook : Api.PLAYBOOK) in
-  let digest = Digest.to_hex (Digest.string Playbook.automata) in
+  (* let digest = Digest.to_hex (Digest.string Playbook.automata) in *)
   let hash = sprintf "%d-%s" Playbook.version Playbook.name (* digest *) in
   match_lwt Object_playbook.Store.find_by_hash hash with
   | Some uid ->
@@ -61,6 +61,7 @@ let find_or_create_playbook playbook =
                 ~owner
                 ~name:Playbook.name
                 ~description:Playbook.description
+                ~scope:Ys_scope.Private
                 ~hash
                 () with
     | `Object_created playbook ->
@@ -90,7 +91,9 @@ let load_playbook file =
 
 
 let _ =
-  register (module Bakers) ;
-  register (module Demo) ;
-  register (module Breadmaking) ;
-  register (module Serc_weekly) ;
+  ignore_result
+    (lwt _ = register (module Demo) in
+     lwt _ = register (module Breadmaking) in
+     lwt _ = register (module Serc_weekly) in
+     lwt _ = register (module Children_circle) in
+     return_unit)

@@ -91,6 +91,7 @@ let dispatch service : 'a option React.signal =
   | AdminI18n -> wrap (Admin.dom_i18n ())
   | Playbook uid -> Playbook.dom uid
   | Dashboard -> Dashboard.dom ()
+  | Library -> Library.dom ()
   | Create -> Create.dom ()
   | Landing -> Landing.dom ()
   | Society uid -> Society.dom uid
