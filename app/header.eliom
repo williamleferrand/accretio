@@ -42,7 +42,7 @@ let dom () =
       (* div ~a:[ a_onclick Loader.reset ; a_class [ "left"; "menu" ]] [] ; *)
 
       div ~a:[ a_onclick (fun _ -> Service.goto Service.Library) ;
-               a_class [ "left" ; "menu"; "icon-google-circles" ] ] [] ;
+               a_class [ "left" ; "menu"; "icon-list" ] ] [] ;
       (*
        div ~a:[ a_onclick (fun _ -> Service.goto (Service.Search None)) ;
                a_class [ "left" ; "menu"; "icon-search" ] ] [] ;

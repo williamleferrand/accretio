@@ -673,7 +673,7 @@ let connection_status_header () =
         profile *)
 
         div [
-          div ~a:[ a_class [ "left" ; "menu" ; "icon-google-circles" ] ;
+          div ~a:[ a_class [ "left" ; "menu" ; "icon-flow-cascade" ] ;
                    a_onclick (fun _ -> Service.goto Service.Dashboard) ] []
         ])
     Sessions.session

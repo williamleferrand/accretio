@@ -334,7 +334,14 @@ input[type="text"], input[type="password"], textarea {
   padding: 0 10px;
 }
 
-/* line 132, ../sass/_nutshell.scss */
+/* line 131, ../sass/_nutshell.scss */
+h1 {
+  font-size: 32px;
+  font-family: 'Molengo', sans-serif;
+  text-align: center;
+}
+
+/* line 137, ../sass/_nutshell.scss */
 h2 {
   margin: 0 0 20px 0;
   padding: 10px 0px;
@@ -374,12 +381,12 @@ h2 {
   text-align: center;
   background-color: white;
   border-radius: 25px;
-  color: #2a9827;
+  color: #3d3d3d;
   font-size: 22px;
   line-height: 46px;
   border: none;
   padding: 0;
-  background-color: #2a9827;
+  background-color: #3d3d3d;
   color: white;
   margin-right: 10px;
   margin-bottom: 10px;
@@ -660,22 +667,13 @@ h2 {
   font-family: 'Molengo', sans-serif;
   text-align: center;
 }
-/* line 12, ../sass/_landing.scss */
-.landing svg g polygon {
-  fill: white;
-}
-/* line 15, ../sass/_landing.scss */
-.landing svg g text {
-  font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
-  font-size: 12px;
-}
 @media screen and (min-width: 800px) {
-  /* line 25, ../sass/_landing.scss */
+  /* line 12, ../sass/_landing.scss */
   .landing .landing-pitch {
     margin: 24px auto 0 auto;
     width: 800px;
   }
-  /* line 29, ../sass/_landing.scss */
+  /* line 16, ../sass/_landing.scss */
   .landing .landing-pitch .pitch {
     float: left;
     width: 400px;
@@ -683,58 +681,59 @@ h2 {
     padding-top: 16px;
     line-height: 24px;
   }
-  /* line 36, ../sass/_landing.scss */
+  /* line 23, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo {
     float: left;
   }
-  /* line 38, ../sass/_landing.scss */
+  /* line 25, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo svg {
     width: 400px;
   }
 }
 @media screen and (max-width: 799px) {
-  /* line 48, ../sass/_landing.scss */
+  /* line 35, ../sass/_landing.scss */
   .landing .landing-pitch {
     margin: 0 auto 20px auto;
   }
-  /* line 50, ../sass/_landing.scss */
+  /* line 37, ../sass/_landing.scss */
   .landing .landing-pitch .pitch {
     text-align: center;
     font-size: 20px;
     margin: 24px 0 0 0;
     line-height: 24px;
   }
-  /* line 56, ../sass/_landing.scss */
+  /* line 43, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo {
     display: none;
   }
-  /* line 58, ../sass/_landing.scss */
+  /* line 45, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo svg {
     width: 100%;
     height: auto !important;
   }
 }
-/* line 69, ../sass/_landing.scss */
+/* line 56, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook {
-  margin: 0 0 10px 0;
-  padding: 10px;
+  margin: 0 0 20px 0;
+  border-radius: 5px;
+  padding: 20px;
   background-color: #3d3d3d;
   color: white;
   cursor: pointer;
 }
-/* line 75, ../sass/_landing.scss */
+/* line 63, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook .name {
   font-size: 18px;
   border-bottom: 1px solid white;
-  padding: 0 0 10px 0;
-  margin: 0 0 10px 0;
+  padding: 0 0 15px 0;
+  margin: 0 0 15px 0;
 }
-/* line 81, ../sass/_landing.scss */
+/* line 69, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook .description {
   font-size: 14px;
 }
 @media screen and (min-width: 800px) {
-  /* line 87, ../sass/_landing.scss */
+  /* line 75, ../sass/_landing.scss */
   .landing .landing-popular .playbooks .playbook {
     width: 400px;
     margin: 0 10px 10px 0;
@@ -896,7 +895,7 @@ h2 {
   text-align: center;
   background-color: white;
   border-radius: 25px;
-  color: #2a9827;
+  color: #3d3d3d;
   font-size: 22px;
   line-height: 46px;
   border: none;
@@ -1269,20 +1268,84 @@ h2 {
 }
 
 /* line 3, ../sass/_playbook.scss */
-.playbook .playbook-description {
+.playbook .playbook-controls {
+  padding: 10px 10px 0 0;
+  text-align: center;
+  margin-bottom: 40px;
+}
+/* line 6, ../sass/_playbook.scss */
+.playbook .playbook-controls button {
+  margin: 0 10px;
+}
+/* line 11, ../sass/_playbook.scss */
+.playbook .playbook-name {
   font-size: 32px;
   font-family: 'Molengo', sans-serif;
   text-align: center;
   margin: 0 0 24px 0;
 }
-/* line 11, ../sass/_playbook.scss */
+/* line 18, ../sass/_playbook.scss */
+.playbook .playbook-description {
+  font-size: 22px;
+  text-align: center;
+  margin: 0 0 24px 0;
+}
+/* line 24, ../sass/_playbook.scss */
+.playbook .playbook-automata {
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
+/* line 26, ../sass/_playbook.scss */
 .playbook .playbook-automata svg {
   width: 100%;
 }
-/* line 18, ../sass/_playbook.scss */
-.playbook .societies .society {
-  margin: 0 0 10px 0;
-  padding: 10px;
+/* line 33, ../sass/_playbook.scss */
+.playbook .create-society {
+  border-radius: 5px;
+  margin-top: 20px;
+  padding: 20px;
   background-color: #3d3d3d;
   color: white;
+}
+/* line 39, ../sass/_playbook.scss */
+.playbook .create-society input {
+  margin-bottom: 20px;
+}
+/* line 42, ../sass/_playbook.scss */
+.playbook .create-society button {
+  margin-top: 20px;
+  background-color: white;
+  color: #3d3d3d;
+}
+
+/* line 2, ../sass/_library.scss */
+.library .playbooks {
+  margin-top: 24px;
+}
+/* line 4, ../sass/_library.scss */
+.library .playbooks .playbook {
+  margin: 0 0 20px 0;
+  border-radius: 5px;
+  padding: 20px;
+  background-color: #3d3d3d;
+  color: white;
+  cursor: pointer;
+}
+/* line 11, ../sass/_library.scss */
+.library .playbooks .playbook .name {
+  font-size: 18px;
+  border-bottom: 1px solid white;
+  padding: 0 0 15px 0;
+  margin: 0 0 15px 0;
+}
+/* line 17, ../sass/_library.scss */
+.library .playbooks .playbook .description {
+  font-size: 14px;
+}
+@media screen and (min-width: 800px) {
+  /* line 23, ../sass/_library.scss */
+  .library .playbooks .playbook {
+    width: 400px;
+    margin: 0 10px 10px 0;
+  }
 }
