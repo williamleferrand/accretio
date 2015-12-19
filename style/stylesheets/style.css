@@ -1271,35 +1271,41 @@ h2 {
 .playbook .playbook-controls {
   padding: 10px 10px 0 0;
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 30px;
 }
 /* line 6, ../sass/_playbook.scss */
 .playbook .playbook-controls button {
-  margin: 0 10px;
+  margin: 0 5px;
 }
-/* line 11, ../sass/_playbook.scss */
+/* line 9, ../sass/_playbook.scss */
+.playbook .playbook-controls button.active {
+  background-color: white;
+  color: #3d3d3d;
+  border: 1px solid #3d3d3d;
+}
+/* line 16, ../sass/_playbook.scss */
 .playbook .playbook-name {
   font-size: 32px;
   font-family: 'Molengo', sans-serif;
   text-align: center;
   margin: 0 0 24px 0;
 }
-/* line 18, ../sass/_playbook.scss */
+/* line 23, ../sass/_playbook.scss */
 .playbook .playbook-description {
   font-size: 22px;
   text-align: center;
   margin: 0 0 24px 0;
 }
-/* line 24, ../sass/_playbook.scss */
+/* line 29, ../sass/_playbook.scss */
 .playbook .playbook-automata {
   margin-top: 40px;
   margin-bottom: 40px;
 }
-/* line 26, ../sass/_playbook.scss */
+/* line 31, ../sass/_playbook.scss */
 .playbook .playbook-automata svg {
   width: 100%;
 }
-/* line 33, ../sass/_playbook.scss */
+/* line 37, ../sass/_playbook.scss */
 .playbook .create-society {
   border-radius: 5px;
   margin-top: 20px;
@@ -1307,11 +1313,11 @@ h2 {
   background-color: #3d3d3d;
   color: white;
 }
-/* line 39, ../sass/_playbook.scss */
+/* line 43, ../sass/_playbook.scss */
 .playbook .create-society input {
   margin-bottom: 20px;
 }
-/* line 42, ../sass/_playbook.scss */
+/* line 46, ../sass/_playbook.scss */
 .playbook .create-society button {
   margin-top: 20px;
   background-color: white;
