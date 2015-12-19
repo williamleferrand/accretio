@@ -50,7 +50,7 @@ let builder (demo, playbooks) =
   Ys_viz.render graph_demo demo ;
 
   div ~a:[ a_class [ "landing" ]] [
-    div ~a:[ a_class [ "landing-title" ]] [
+    h1 [
       pcdata "Automate what makes you thrive"
     ] ;
     div ~a:[ a_class [ "landing-pitch" ; "clearfix" ]] [

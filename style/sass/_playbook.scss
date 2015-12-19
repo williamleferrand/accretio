@@ -1,28 +1,52 @@
 .playbook {
 
-    .playbook-description {
+    .playbook-controls {
+        padding: 10px 10px 0 0 ;
+        text-align: center;
+        button {
+            margin: 0 10px ;
+        }
+        margin-bottom: 40px;
+    }
+    .playbook-name {
         font-size: 32px;
         font-family: 'Molengo', sans-serif;
         text-align: center ;
         margin: 0 0 24px 0 ;
     }
 
+    .playbook-description {
+        font-size: 22px;
+        text-align: center ;
+        margin: 0 0 24px 0 ;
+    }
+
     .playbook-automata {
+        margin-top: 40px;
         svg {
             width: 100% ;
         }
+        margin-bottom: 40px;
     }
 
 
-    .societies {
-        .society {
-            margin: 0 0 10px 0 ;
-            padding: 10px;
-            background-color: $grey ;
-            color: white ;
+    .create-society {
+        border-radius: 5px;
+        margin-top: 20px ;
+        padding: 20px;
+        background-color: $grey ;
+        color: white ;
+        input {
+            margin-bottom: 20px ;
         }
-
+        button {
+            margin-top: 20px ;
+            background-color: white ;
+            color: $grey ;
+        }
     }
+
+
 
 
 }

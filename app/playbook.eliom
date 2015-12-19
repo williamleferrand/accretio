@@ -99,12 +99,14 @@ let create_society = server_function ~name:"playbook-create-society" Json.t<int 
 let make_public playbook =
   protected_connected
     (fun session ->
+       Lwt_log.ign_info_f "making playbook %d public" playbook ;
        $playbook(playbook)<-scope = Ys_scope.Public ;
        return (Some View_playbook.Public))
 
 let make_private playbook =
   protected_connected
     (fun session ->
+       Lwt_log.ign_info_f "making playbook %d private" playbook ;
        $playbook(playbook)<-scope = Ys_scope.Private ;
        return (Some View_playbook.Private))
 
@@ -153,7 +155,8 @@ let builder  = function
           ~a:[ a_onclick create ]
           [ pcdata "Create" ]
       in
-      div ~a:[ a_class [ "society" ]] [
+      div ~a:[ a_class [ "create-society" ]] [
+
         name ;
         description ;
         create ;
@@ -162,27 +165,33 @@ let builder  = function
 
 
     let playbook_controls =
-      let scope, update_scope = S.create playbook.scope in
-      let make_public _ =
-        Authentication.if_connected
-          (fun _ -> rpc %make_public playbook.uid update_scope)
-      in
-      let make_private _ =
-        Authentication.if_connected
-          (fun _ -> rpc %make_private playbook.uid update_scope)
-      in
-      div ~a:[ a_class [ "playbook-controls" ]] [
-        button
-          ~button_type:`Button
-          ~a:[ a_onclick (fun _ -> make_public ()) ;
-               R.a_class (S.map (function Public -> [ "active" ] | _ -> []) scope) ]
-          [ pcdata "Public" ] ;
-        button
-          ~button_type:`Button
-          ~a:[ a_onclick (fun _ -> make_private ()) ;
-               R.a_class (S.map (function Private -> [ "active" ] | _ -> []) scope) ]
-          [ pcdata "Private" ] ;
-      ]
+      R.node
+        (S.map
+           (function
+             | Connected session when session.member_uid = playbook.owner.uid ->
+               let scope, update_scope = S.create playbook.scope in
+               let make_public _ =
+                 Authentication.if_connected
+                   (fun _ -> rpc %make_public playbook.uid update_scope)
+               in
+               let make_private _ =
+                 Authentication.if_connected
+                   (fun _ -> rpc %make_private playbook.uid update_scope)
+               in
+               div ~a:[ a_class [ "playbook-controls" ]] [
+                 button
+                   ~button_type:`Button
+                   ~a:[ a_onclick (fun _ -> make_public ()) ;
+                        R.a_class (S.map (function Public -> [ "active" ] | _ -> []) scope) ]
+                   [ pcdata "Public" ] ;
+                 button
+                   ~button_type:`Button
+                   ~a:[ a_onclick (fun _ -> make_private ()) ;
+                        R.a_class (S.map (function Private -> [ "active" ] | _ -> []) scope) ]
+                   [ pcdata "Private" ] ;
+               ]
+             | _ -> pcdata "")
+           Sessions.session)
     in
     div ~a:[ a_class [ "playbook" ]] [
       playbook_controls ;
@@ -194,7 +203,9 @@ let builder  = function
       ] ;
 
       graph ;
-
+      h2 [
+        pcdata "Create a society running this playbook"
+        ] ;
       create_society ;
     ]
 
