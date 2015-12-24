@@ -12,6 +12,9 @@ exception CantDispatchEmail of int
 
 type 'output context =
   {
+    society : uid ;
+    direct_link : string ;
+
     stage : string ;
 
     (* logging utilities *)

@@ -89,7 +89,9 @@ let compile_automata _loc imports chains crons =
          let acc =
            G.fold_vertex
              (fun vertex acc ->
-                Hashtbl.add paths (Vertex.stage vertex) [ import ] ;
+                (match Vertex.path vertex with
+                   [] -> Hashtbl.add paths (Vertex.stage vertex) [ import ]
+                 | _ as path -> Hashtbl.add paths (Vertex.stage vertex) path) ;
                 G.add_vertex acc (update vertex))
              graph
              acc
@@ -137,7 +139,6 @@ let compile_automata _loc imports chains crons =
       chains
   in
   automata
-
 
 let compile_crons _loc crons =
   let crons =
@@ -216,7 +217,27 @@ EXTEND Gram
   str_item:
     [
       [
-        "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
+        "COMPONENT" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ->
+        Pa_type_conv.set_conv_path_if_not_set _loc ;
+         if !export then
+          begin
+            let automata = compile_automata _loc imports chains [] in
+
+            dump_automata _loc automata ;
+
+            <:str_item<>>
+          end
+        else
+          List.fold_left
+            (fun acc import ->
+               <:str_item<
+                 $acc$ ;
+                 open $uid:String.capitalize import$ ;
+               >>)
+            <:str_item< >>
+            imports
+
+        | "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
         Pa_type_conv.set_conv_path_if_not_set _loc ;
 
         (* it would be great if we could figure out if we are called by ocamldep or sth else .. *)
@@ -246,10 +267,7 @@ EXTEND Gram
 
             let crons = compile_crons _loc crons in
 
-
-
             dump_automata _loc automata ;
-
 
             <:str_item<
               $outbound_types$ ;

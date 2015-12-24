@@ -43,6 +43,8 @@ module Vertex = struct
    let call _loc v =
      Pa_tools.wrap_with_modules _loc <:expr< $lid:v.stage$ >> v.path
 
+   let path v = v.path
+
 end
 
 (* representation of an edge *)

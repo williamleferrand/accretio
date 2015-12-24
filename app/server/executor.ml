@@ -324,7 +324,12 @@ let context_factory mode society =
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
+    let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^(string_of_int society)
+
     let context = {
+      society ;
+      direct_link ;
+
       stage ;
 
       log_info ;

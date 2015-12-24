@@ -163,6 +163,7 @@ let confirm_event context message =
 PLAYBOOK
 
   #import demo
+  #import weekly_activity
 
   pickup_weekly_organizer ~> `AskSomeoneElse ~> pickup_weekly_organizer
   pickup_weekly_organizer ~> `NotJoining of email ~> mark_as_not_joining_and_ask_someone_else ~> `AskSomeoneElse ~> pickup_weekly_organizer
