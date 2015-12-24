@@ -159,14 +159,17 @@ let confirm_event context message =
 
 (* the playbook ***************************************************************)
 
+
 PLAYBOOK
+
+  #import demo
 
   pickup_weekly_organizer ~> `AskSomeoneElse ~> pickup_weekly_organizer
   pickup_weekly_organizer ~> `NotJoining of email ~> mark_as_not_joining_and_ask_someone_else ~> `AskSomeoneElse ~> pickup_weekly_organizer
   pickup_weekly_organizer ~> `JoiningButNotOrganizing of email ~> mark_as_joining_but_ask_someone_else ~> `AskSomeoneElse ~> pickup_weekly_organizer
   pickup_weekly_organizer ~> `JoiningAndOrganizing of email ~> mark_as_joining_and_forward_suggestion<forward> ~> `Message of email ~> forward_suggestion_to_all_members
 
-      forward_suggestion_to_all_members ~> `Joining of email ~> mark_as_joining
+      forward_suggestion_to_all_members ~> `Joining of email ~> mark_as_joining ~> `Check ~> pick_up_a_restaurant
       forward_suggestion_to_all_members ~> `NotJoining of email ~> mark_as_not_joining
 
 *confirm_event

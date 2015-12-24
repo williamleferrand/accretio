@@ -30,6 +30,7 @@ module Vertex = struct
     {
       stage: string ;
       options : [ `Tickable | `Mailbox | `MessageStrategies of string list ] list ;
+      path : string list ;
     }
 
    let compare v1 v2 = Pervasives.compare v1.stage v2.stage
@@ -38,6 +39,9 @@ module Vertex = struct
 
    let options v = v.options
    let stage v = v.stage
+
+   let call _loc v =
+     Pa_tools.wrap_with_modules _loc <:expr< $lid:v.stage$ >> v.path
 
 end
 
@@ -213,7 +217,7 @@ let steps _loc automata =
                        context.log_info "calling stage %s" $str:Vertex.stage stage$ ;
                        let args = $lid:"deserialize_" ^ Vertex.stage stage$ args_serialized in
                        Lwt.bind
-                          ($lid:Vertex.stage stage$ context args)
+                          ($Vertex.call _loc stage$ context args)
                           (fun r -> Lwt.return (match r with [ $list:dispatcher$ ])) })
                  (fun exn ->
                     do {
@@ -438,3 +442,21 @@ let graph_to_string graph =
   Dot.fprint_graph formatter graph;
   Format.pp_print_flush formatter () ;
   Buffer.contents buffer
+
+let dump_automata _loc automata =
+  let original_file = Loc.file_name _loc in
+  let original_prefix = Filename.chop_extension original_file in
+  Printf.eprintf "dumping the automata, prefix is %s\n" original_prefix ; flush stdout ;
+  let destination_file = original_prefix ^ ".automata" in
+  let oc = open_out_bin destination_file in
+  Marshal.to_channel oc automata [] ;
+  close_out oc
+
+let load_automata _loc import =
+  (* we expect the import to be in the same folder *)
+  let original_dir = Filename.dirname (Loc.file_name _loc) in
+  let binary_file = Filename.concat original_dir (import ^ ".automata") in
+  let ic = open_in_bin binary_file in
+  let graph = (Marshal.from_channel ic : G.t) in
+  close_in ic ;
+  graph

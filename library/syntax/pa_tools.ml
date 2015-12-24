@@ -41,7 +41,7 @@ let rec wrap_with_modules _loc expr =
   function
   | [] -> expr
   | m :: modules ->
-    let el1 = <:expr< $uid:m$ >> in
+    let el1 = <:expr< $uid:String.capitalize m$ >> in
     let el2 = wrap_with_modules _loc expr modules in
     <:expr< $el1$ . $el2$ >>
 
