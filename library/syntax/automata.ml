@@ -45,6 +45,9 @@ module Vertex = struct
 
    let path v = v.path
 
+   let is_mailable v =
+     List.exists (function `MessageStrategies _ -> true | _ -> false) v.options
+
 end
 
 (* representation of an edge *)
@@ -191,10 +194,10 @@ let outbound_dispatcher_message _loc automata stage schedule =
     (fun edge acc ->
        let dest = Vertex.stage (G.E.dst edge) in
        match G.E.label edge with
-       | <:ctyp< `$uid:constr$ of email >> ->
-         <:match_case< `$uid:constr$ message->
-                                  let args = $lid:"serialize_" ^ dest$ message in
-                                   Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
+       | <:ctyp< `$uid:constr$ of $args$ >> ->
+         <:match_case< `$uid:constr$ args ->
+                                  let args = $lid:"serialize_" ^ dest$ args in
+                                  Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
        | _ -> acc)
     automata
     stage
@@ -305,7 +308,7 @@ let mailables _loc automata =
              stage
              false
          in
-         if is_mailable then
+         if is_mailable || Vertex.is_mailable stage then
            Vertex.stage stage :: acc
          else acc)
       automata

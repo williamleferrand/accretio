@@ -145,7 +145,7 @@ let builder  = function
              div ~a:[ a_class [ "parameter" ]] [
                label [ pcdata parameter.label ] ;
                input ;
-             ], (parameter.label, input))
+             ], (parameter.key, input))
           playbook.parameters
       in
       let inputs = List.map snd parameters in

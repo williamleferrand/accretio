@@ -389,6 +389,7 @@ let step society =
 
   match_lwt check_missing_parameters society with
     _ :: _ as parameters ->
+    (* todo: this is a big error and should be reported inside the society logs as well *)
     Lwt_log.ign_info_f "society %d isn't ready, there are %d missing parameters" society (List.length parameters) ;
     return_unit
 

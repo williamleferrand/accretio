@@ -108,4 +108,5 @@ let _ =
      lwt _ = register (module Breadmaking) in
      lwt _ = register (module Serc_weekly) in
      lwt _ = register (module Children_circle) in
+     lwt _ = register (module Dinners_with_friends) in
      return_unit)

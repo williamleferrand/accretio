@@ -808,26 +808,33 @@ let builder bundle =
     div ~a:[ a_class [ "parameters" ]]
       (List.map
          (fun parameter ->
-            let input_value = input ~input_type:`Text ~a:[ a_placeholder "Value" ] () in
-            let add _ =
-              Authentication.if_connected
-                (fun _ ->
-                   rpc
-                   %set_value
-                   (view.uid, parameter.View_playbook.key, Some (Ys_dom.get_value input_value))
-                   (fun d -> RList.update data d))
-            in
-            let add =
-              button
-                ~button_type:`Button
-                ~a:[ a_onclick add ]
-                [ pcdata "Add" ]
-            in
-            div ~a:[ a_class [ "parameter" ]] [
-              label [ pcdata parameter.View_playbook.label ] ;
-              input_value ;
-              add
-            ])
+            R.node
+              (S.map
+                 (fun existing_data ->
+                    let current_value = try List.assoc parameter.View_playbook.label existing_data with _ -> "" in
+                    let input_value = input ~input_type:`Text ~a:[ a_placeholder "Value" ; a_value current_value ] () in
+                    let add _ =
+                      Authentication.if_connected
+                        (fun _ ->
+                           rpc
+                           %set_value
+                               (view.uid, parameter.View_playbook.key, Some (Ys_dom.get_value input_value))
+                               (fun d -> RList.update data d))
+                    in
+                    let add =
+                      button
+                        ~button_type:`Button
+                        ~a:[ a_onclick add ]
+                        [ pcdata "Add" ]
+                    in
+                    div ~a:[ a_class [ "parameter" ]] [
+                      label [ pcdata parameter.View_playbook.label ] ;
+                      input_value ;
+                      add
+                    ]
+                 )
+                 (RList.channel data))
+           )
          view.playbook.View_playbook.parameters)
 
   in

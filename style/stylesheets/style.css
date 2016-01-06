@@ -731,9 +731,10 @@ h2 {
 /* line 69, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook .description {
   font-size: 14px;
+  line-height: 16px;
 }
 @media screen and (min-width: 800px) {
-  /* line 75, ../sass/_landing.scss */
+  /* line 76, ../sass/_landing.scss */
   .landing .landing-popular .playbooks .playbook {
     width: 400px;
     margin: 0 10px 10px 0;
@@ -1347,9 +1348,10 @@ h2 {
 /* line 17, ../sass/_library.scss */
 .library .playbooks .playbook .description {
   font-size: 14px;
+  line-height: 16px;
 }
 @media screen and (min-width: 800px) {
-  /* line 23, ../sass/_library.scss */
+  /* line 24, ../sass/_library.scss */
   .library .playbooks .playbook {
     width: 400px;
     margin: 0 10px 10px 0;

@@ -23,7 +23,7 @@ open Message_parsers
 
 let author = "william@accret.io"
 let name = "Dinners with friends"
-let description = "This playbook organizes dinners for a group of friends, asking them for advice and booking restaurants"
+let description = "This playbook organizes dinners for groups of friends. It randomly asks members for suggestions, collects opinions from the group and make reservations."
 
 let version = 0
 
@@ -89,7 +89,7 @@ let ask_volunteer_for_yelp_link context member =
         ~content:[
           pcdata "Great, thanks!" ; br () ;
           br () ;
-          pcdata "What about suggesting a restaurant? Just sent me a yelp link and I'll forward it to the group!" ; br ()
+          pcdata "Where could we go? Just sent me a yelp link and I'll forward it to the group!" ; br ()
         ]
     in
   return `None
