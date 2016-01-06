@@ -173,6 +173,16 @@ let create_dashboard context () =
        ] in
    return `None
 
+let mark_sender_as_volunteer context message =
+  lwt member = context.get_message_sender ~message in
+  match_lwt context.get ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt _ = context.set ~key:(key_volunteer run_id) ~value:(string_of_int member) in
+    lwt _ = context.tag_member ~member ~tags: [ tag_volunteer run_id ; tag_joining run_id ] in
+    return (`Message message)
+
 
 (* the playbook ***************************************************************)
 
@@ -191,6 +201,8 @@ PLAYBOOK
    *schedule_dinner<content> ~> `Content of string ~> find_volunteer_with_tagline
                                                       look_for_candidate ~> `NoVolunteer ~> no_volunteer
                                                       return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members
+
+                                                      candidate_response ~> `Message of int ~> mark_sender_as_volunteer ~> `Message of email ~> review_yelp_link
 
 
        forward_yelp_link_to_all_members ~> `Yes of email ~> mark_member_as_joining

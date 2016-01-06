@@ -111,6 +111,17 @@ let return_volunteer context email =
   context.log_info "volunteer found, returning %d" member ;
   return (`Volunteer member)
 
+let candidate_response context message =
+  lwt member = context.get_message_sender ~message in
+  lwt _ =
+    match_lwt context.get ~key:key_run_id with
+      None -> return_unit
+    | Some run_id ->
+      let run_id = Int64.of_string run_id in
+      context.cancel_timers ~query:(tag_timer run_id member)
+   in
+   return (`Message message)
+
 
 COMPONENT
 
@@ -121,3 +132,4 @@ find_volunteer_with_tagline ~> `FindCandidate ~> look_for_candidate ~> `No of em
                                                                                                         candidate_didnt_replied ~> `AlertSupervisor ~> alert_supervisor
                                                  look_for_candidate ~> `Yes of email ~> return_volunteer
                                                                                         return_volunteer ~> `AlertSupervisor ~> alert_supervisor
+                                                 look_for_candidate ~> `Message of email ~> candidate_response
