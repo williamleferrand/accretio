@@ -27,6 +27,12 @@ open Vault
 
 type scope = Public | Private
 
+type parameter =
+  {
+    label : string ;
+    key : string ;
+  }
+
 type t =
   {
     uid : uid ;
@@ -35,6 +41,7 @@ type t =
     description : string ;
     hash : string ;
     scope : scope ;
+    parameters : parameter list ;
   }
 
 }}
@@ -43,12 +50,17 @@ type t =
 
 
 let to_view uid =
-  lwt owner, name, description, hash, scope = $playbook(uid)->(owner, name, description, hash, scope) in
+  lwt owner, name, description, hash, scope, parameters = $playbook(uid)->(owner, name, description, hash, scope, parameters) in
   lwt owner = View_member.to_view owner in
   let scope =
     match scope with
       Ys_scope.Public -> Public
     | Ys_scope.Private -> Private
+  in
+  let parameters =
+    List.map
+      (fun parameter -> { label = parameter.Object_playbook.label ; key = parameter.Object_playbook.key })
+      parameters
   in
   return {
     uid ;
@@ -57,6 +69,7 @@ let to_view uid =
     description ;
     hash ;
     scope ;
+    parameters ;
   }
 
 }}

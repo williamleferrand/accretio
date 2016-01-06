@@ -31,6 +31,7 @@ open Ys_executor
 open Api
 
 module SetInt64 = Set.Make(Int64)
+module SetString = Set.Make(String)
 
 (* the context factory -- there is a little bit a first class module magic
    so that pa_playbook can craft a context specific to each module *)
@@ -47,6 +48,26 @@ sig
   val forward_to_supervisor : message:uid -> subject:string -> unit Lwt.t
 
 end
+
+
+let check_missing_parameters society =
+  lwt playbook, data = $society(society)->(playbook, data) in
+  lwt parameters = $playbook(playbook)->parameters in
+  let data =
+    List.fold_left
+      (fun acc (key, _) -> SetString.add key acc)
+      SetString.empty
+      data
+  in
+  let missing_parameters =
+    List.fold_left
+      (fun acc parameter ->
+         if SetString.mem parameter.Object_playbook.key data then acc else parameter :: acc)
+      []
+      parameters
+  in
+  return missing_parameters
+
 
 let context_factory mode society =
 
@@ -211,7 +232,6 @@ let context_factory mode society =
     include Stage_Specifics
     include Mode_Specifics(Stage_Specifics)
 
-
     (* getting talent & tagging people *)
 
     let search_members ?max ~query () =
@@ -324,7 +344,12 @@ let context_factory mode society =
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
+    let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^(string_of_int society)
+
     let context = {
+      society ;
+      direct_link ;
+
       stage ;
 
       log_info ;
@@ -362,84 +387,92 @@ let context_factory_production = context_factory `Production
 
 let step society =
 
-  lwt playbook, mode = $society(society)->(playbook, mode) in
+  match_lwt check_missing_parameters society with
+    _ :: _ as parameters ->
+    (* todo: this is a big error and should be reported inside the society logs as well *)
+    Lwt_log.ign_info_f "society %d isn't ready, there are %d missing parameters" society (List.length parameters) ;
+    return_unit
 
-  let context_factory =
-    match mode with
-    | Object_society.Sandbox ->
-      Lwt_log.ign_info_f "society %d is running in mode sandbox" society ;
-      context_factory_sandbox society
-    | _ ->
-      Lwt_log.ign_info_f "society %d is running in mode production" society ;
-      context_factory_production society
-  in
+  | [] ->
 
-  let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)
-  let module Playbook = (val playbook : Api.PLAYBOOK) in
+    lwt playbook, mode = $society(society)->(playbook, mode) in
 
-  let is_due call =
-    match call.schedule with
-    | Delayed delay when Int64.add call.created_on (Int64.of_int delay) > Ys_time.now () ->
-      Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
-      false
-    | Delayed delay ->
-      Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
-      true
-    | _ -> true
-  in
+    let context_factory =
+      match mode with
+      | Object_society.Sandbox ->
+        Lwt_log.ign_info_f "society %d is running in mode sandbox" society ;
+        context_factory_sandbox society
+      | _ ->
+        Lwt_log.ign_info_f "society %d is running in mode production" society ;
+        context_factory_production society
+    in
 
-  let run =
-    function
-      [] ->
-      Lwt_log.ign_info_f "society %d has an empty stack" society ;
-      return []
-    | _ as stack ->
-      let rec look_for_first_call_due = function
-          [] -> return []
-        | call :: tail ->
-          match is_due call with
-            false ->
-            lwt stack = look_for_first_call_due tail in
-            return (call :: stack)
-          | true ->
-            Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
-            lwt result = Playbook.step context_factory call in
-            lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
-            match result with
-              None -> return tail
-            | Some followup -> return (followup :: tail)
+    let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)
+    let module Playbook = (val playbook : Api.PLAYBOOK) in
+
+    let is_due call =
+      match call.schedule with
+      | Delayed delay when Int64.add call.created_on (Int64.of_int delay) > Ys_time.now () ->
+        Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+        false
+      | Delayed delay ->
+        Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+        true
+      | _ -> true
+    in
+
+    let run =
+      function
+        [] ->
+        Lwt_log.ign_info_f "society %d has an empty stack" society ;
+        return []
+      | _ as stack ->
+        let rec look_for_first_call_due = function
+            [] -> return []
+          | call :: tail ->
+            match is_due call with
+              false ->
+              lwt stack = look_for_first_call_due tail in
+              return (call :: stack)
+            | true ->
+              Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
+              lwt result = Playbook.step context_factory call in
+              lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
+              match result with
+                None -> return tail
+              | Some followup -> return (followup :: tail)
+        in
+        look_for_first_call_due stack
+    in
+
+    let rec unstack () =
+      (* this looks weird but it's made so that it leverages the per-field mutexes defined by pa_vertex *)
+      lwt _ = $society(society)<-stack %%% run in
+      lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
+          lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
+          return [])
       in
-      look_for_first_call_due stack
-  in
-
-  let rec unstack () =
-    (* this looks weird but it's made so that it leverages the per-field mutexes defined by pa_vertex *)
-    lwt _ = $society(society)<-stack %%% run in
-    lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
-        lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
-        return [])
-    in
-    lwt _ = $society(society)<-stack %%% (fun stack ->
-        lwt tombstones = $society(society)->tombstones in
-        let timers =
-          List.fold_left
-            (fun acc timestamp ->
-               SetInt64.add timestamp acc)
-            SetInt64.empty
-            tombstones
-    in
-    return
-      (List.filter
-         (fun call -> not (SetInt64.mem call.created_on timers))
-         stack)
-    )
-  in
-  match_lwt $society(society)->stack with
-  | stack when List.exists is_due stack -> unstack ()
-  | _ -> return_unit
+      lwt _ = $society(society)<-stack %%% (fun stack ->
+          lwt tombstones = $society(society)->tombstones in
+      let timers =
+        List.fold_left
+          (fun acc timestamp ->
+             SetInt64.add timestamp acc)
+          SetInt64.empty
+          tombstones
+      in
+      return
+        (List.filter
+           (fun call -> not (SetInt64.mem call.created_on timers))
+           stack)
+)
+in
+match_lwt $society(society)->stack with
+| stack when List.exists is_due stack -> unstack ()
+| _ -> return_unit
 in
 
-  unstack ()
+unstack ()
 
 
 let push society call =

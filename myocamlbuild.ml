@@ -421,29 +421,26 @@ let dispatch_ys hook =
     rule "VERSION" ~prod:"VERSION" make_VERSION;
     rule "VERSION_NUM" ~prod: "VERSION_NUM" make_VERSION_NUM ;
 
-    let register_extension ?(extra=[]) label =
+    let register_extension ?(before=[]) ?(after=[]) label =
       let use = "use_"^label in
       let library = "library/syntax/pa_" ^ label ^ ".cma" in
       dep [ "ocamldep"; use ] ([ library ]) ;
       dep [ "infer_interface"; use ] ([ library ]) ;
-      flag [ "ocaml"; "compile"; use ] (S (extra @ [ A "-ppopt"; A library ])) ;
-      flag [ "ocaml"; "ocamldep"; use ] (S (extra @ [ A "-ppopt"; A library ])) ;
-      flag [ "ocaml"; "infer_interface"; use ] (S (extra @ [ A "-ppopt"; A library ])) ;
+      flag [ "ocaml"; "compile"; use ] (S (before @ [ A "-ppopt"; A library ] @ after)) ;
+      flag [ "ocaml"; "ocamldep"; use ] (S (before @ [ A "-ppopt"; A library ])) ;
+      flag [ "ocaml"; "infer_interface"; use ] (S (before @ [ A "-ppopt"; A library ] @ after)) ;
     in
 
     register_extension "graph" ;
 
     register_extension
-      ~extra:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ] "graph_client" ;
+      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ] "graph_client" ;
 
     register_extension "operators" ;
 
     register_extension
-      ~extra:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ] "playbooks" ;
-
-    register_extension
-      ~extra:[  A "-ppopt" ; Sh "`ocamlfind query ocamlgraph`/graph.cma" ;
-                A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ] "playbooks_client" ;
+      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ]
+      ~after:[ A "-ppopt" ; A "-export" ] "playbooks" ;
 
     (* copy the graph to the server *)
     rules_copy_graph "app" "graph" ;

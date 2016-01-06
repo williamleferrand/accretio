@@ -12,6 +12,9 @@ exception CantDispatchEmail of int
 
 type 'output context =
   {
+    society : uid ;
+    direct_link : string ;
+
     stage : string ;
 
     (* logging utilities *)
@@ -86,5 +89,7 @@ sig
   val mailables : string list
 
   val email_actions : (string * string list) list
+
+  val parameters : (string * string) list
 
 end
