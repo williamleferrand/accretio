@@ -25,6 +25,14 @@ open Ys_default
 open Ys_types
 open Ys_uid
 
+type parameter =
+  {
+    label : string ;
+    key : string ;
+  } with bin_io
+
+type parameters = parameter list with bin_io, default_value([])
+
 type t = {
 
   uid : uid ;
@@ -39,6 +47,8 @@ type t = {
   description : string ;
 
   societies : [ `Society ] edges ;
+
+  parameters : parameters ;
 
   (* old fields *)
   source : string ;

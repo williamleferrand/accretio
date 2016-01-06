@@ -24,38 +24,19 @@ let current_week () =
 
 (* stages *********************************************************************)
 
-let pickup_weekly_organizer context () =
-  let week = current_week () in
-  match_lwt context.search_members ~query:(sprintf "active -declined%d -asked%d" week week) () with
-    [] ->
-    context.log_info "no participants for week %d" week ;
-    return `None
-  | _ as participants ->
-    let member = List.nth participants (Random.int (List.length participants)) in
-    context.log_info
-      "picking up organizer for week %d, there are %d participants, asking %d"
-      week
-      (List.length participants)
-      member ;
-    lwt _ =
-      context.message_member
-        ~member
-        ~subject:"Would you like to suggest a children activity for this weekend?"
-        ~content:[
-          pcdata "Hello" ; br () ;
-          br () ;
-          pcdata "Are you available for a simple children activity this weekend?" ; br () ;
-          br () ;
-        ]
-    in
-    lwt _ =
-      context.set_timer
-        ~label:(sprintf "waiting%05d%d" week member)
-        ~duration:(Calendar.Period.lmake ~second:30 ())
-        `AskSomeoneElse
-    in
-    lwt _ = context.tag_member ~member ~tags:[ sprintf "asked%d" week ] in
-    return `None
+let solicit_weekly_organizer context member =
+  lwt _ =
+    context.message_member
+      ~member
+      ~subject:"Would you like to suggest a children activity for this weekend?"
+      ~content:[
+        pcdata "Hello" ; br () ;
+        br () ;
+        pcdata "Are you available for a simple children activity this weekend?" ; br () ;
+        br () ;
+      ]
+  in
+  return (`CandidateWasNotified member)
 
 let mark_as_not_joining_and_ask_someone_else context message =
   let week = current_week () in
@@ -159,15 +140,26 @@ let confirm_event context message =
 
 (* the playbook ***************************************************************)
 
+
 PLAYBOOK
 
-  pickup_weekly_organizer ~> `AskSomeoneElse ~> pickup_weekly_organizer
+  #import demo
+  #import weekly_activity
+
+  pickup_weekly_organizer ~> `Candidate of int ~> solicit_weekly_organizer ~> `CandidateWasNotified of int ~> candidate_was_notified
+                                                  solicit_weekly_organizer ~> `CandidateAccepted of email ~> candidate_accepted
+                                                  solicit_weekly_organizer ~> `CandidateDeclined of email ~> candidate_declined
+
+
+
+(*
   pickup_weekly_organizer ~> `NotJoining of email ~> mark_as_not_joining_and_ask_someone_else ~> `AskSomeoneElse ~> pickup_weekly_organizer
   pickup_weekly_organizer ~> `JoiningButNotOrganizing of email ~> mark_as_joining_but_ask_someone_else ~> `AskSomeoneElse ~> pickup_weekly_organizer
   pickup_weekly_organizer ~> `JoiningAndOrganizing of email ~> mark_as_joining_and_forward_suggestion<forward> ~> `Message of email ~> forward_suggestion_to_all_members
 
-      forward_suggestion_to_all_members ~> `Joining of email ~> mark_as_joining
+      forward_suggestion_to_all_members ~> `Joining of email ~> mark_as_joining ~> `Check ~> pick_up_a_restaurant
       forward_suggestion_to_all_members ~> `NotJoining of email ~> mark_as_not_joining
+*)
 
 *confirm_event
 

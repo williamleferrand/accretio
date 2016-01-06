@@ -31,14 +31,24 @@ let chain = Gram.Entry.mk "chain"
 let stage = Gram.Entry.mk "stage"
 let graph = Gram.Entry.mk "graph"
 let cron = Gram.Entry.mk "cron"
+let import = Gram.Entry.mk "import"
+let parameters = Gram.Entry.mk "parameters"
+
+let export = ref false
+
+
+let _ =
+  Printf.eprintf "registering options\n"; flush stdout ;
+  Camlp4.Options.add "-export" (Arg.Unit (fun _ -> export := true)) "export automata"
 
 (* creation of the automata *)
 
-let compile_automata chains crons =
+let compile_automata _loc imports chains crons =
 
   (* first we need to compile the options (ps: the code is dirty) *)
 
   let options = Hashtbl.create 0 in
+  let paths = Hashtbl.create 0 in
 
   List.iter (fun (stage, _) -> Hashtbl.add options stage [ `Tickable ]) crons ;
 
@@ -59,18 +69,56 @@ let compile_automata chains crons =
     with Not_found -> []
   in
 
+  let get_paths label =
+    try
+      Hashtbl.find paths label
+    with Not_found -> []
+  in
+
   let update vertex =
     Vertex.({ stage = Vertex.stage vertex ;
-              options = get_options (Vertex.stage vertex) })
+              options = get_options (Vertex.stage vertex) ;
+              path = get_paths (Vertex.stage vertex) })
   in
+
+  (* let's start by getting the imports *)
+
+  let automata =
+    List.fold_left
+      (fun acc import ->
+         let graph = Automata.load_automata _loc import in
+         let acc =
+           G.fold_vertex
+             (fun vertex acc ->
+                (match Vertex.path vertex with
+                   [] -> Hashtbl.add paths (Vertex.stage vertex) [ import ]
+                 | _ as path -> Hashtbl.add paths (Vertex.stage vertex) path) ;
+                G.add_vertex acc (update vertex))
+             graph
+             acc
+         in
+         let acc =
+           G.fold_edges_e
+             (fun edge acc ->
+                let edge = G.E.create (update (G.E.src edge)) (G.E.label edge) (update (G.E.dst edge)) in
+                G.add_edge_e acc edge)
+             graph
+             acc
+         in
+         acc
+      )
+      G.empty
+      imports
+  in
+
   (* then we fold over the graph & output the AST *)
 
   let automata =
     List.fold_left
       (fun acc (stage, _) ->
          let options = get_options stage in
-         G.add_vertex acc { Vertex.stage ; options })
-      G.empty
+         G.add_vertex acc { Vertex.stage ; options ; path = [] })
+      automata
       crons
   in
 
@@ -106,6 +154,11 @@ let compile_crons _loc crons =
   <:str_item< value crontabs = $crons$ >>
 
 
+let compile_parameters _loc = function
+    None -> <:str_item< value parameters = [] >>
+  | Some parameters -> <:str_item< value parameters = $List.fold_left (fun acc (label, key) -> <:expr< [ ($str:label$, $str:key$) :: $acc$ ] >>) <:expr< [] >> parameters$ >>
+
+
 EXTEND Gram
 
   stage:
@@ -126,7 +179,14 @@ EXTEND Gram
           | Some strats -> `MessageStrategies strats :: options
         in
 
-        { Vertex.stage ; options }
+        { Vertex.stage ; options ; path = [] }
+      ]
+    ] ;
+
+  import:
+    [
+      [
+        "#" ; "import" ; playbook = LIDENT -> playbook
       ]
     ] ;
 
@@ -161,46 +221,91 @@ EXTEND Gram
       ]
     ] ;
 
+  parameters:
+    [
+      [
+        "PARAMETERS" ; parameters = LIST0 [ "-" ; label = STRING ; "," ; key = STRING -> (label, key) ] ->
+        parameters
+      ]
+    ] ;
+
   str_item:
     [
       [
-        "PLAYBOOK" ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
+        parameters = OPT parameters ; "COMPONENT" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ->
+        Pa_type_conv.set_conv_path_if_not_set _loc ;
+         if !export then
+          begin
+            let automata = compile_automata _loc imports chains [] in
+            dump_automata _loc automata ;
+            <:str_item<>>
+          end
+        else
+          List.fold_left
+            (fun acc import ->
+               <:str_item<
+                 $acc$ ;
+                 open $uid:String.capitalize import$ ;
+               >>)
+            <:str_item< >>
+            imports
+
+        | parameters = OPT parameters ; "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
         Pa_type_conv.set_conv_path_if_not_set _loc ;
 
-        let automata = compile_automata chains crons in
-        let outbound_types = outbound_types _loc automata in
-        let inbound_serializers = inbound_serializers _loc automata in
-        let steps = steps _loc automata in
-        let dispatch = dispatch _loc automata in
-        let dispatch_message_manually = dispatch_message_manually _loc automata in
-        let dispatch_message_automatically = dispatch_message_automatically _loc automata in
+        (* it would be great if we could figure out if we are called by ocamldep or sth else .. *)
 
-        let automata_description =
-          let automata_serialized = graph_to_string automata in
-          let triggers = triggers _loc automata in
-          let mailables = mailables _loc automata in
-          let email_actions = email_actions _loc automata in
-          <:str_item<
+        if !export then
+          begin
+            let automata = compile_automata _loc imports chains crons in
+            let outbound_types = outbound_types _loc automata in
+            let inbound_serializers = inbound_serializers _loc automata in
+            let steps = steps _loc automata in
+            let dispatch = dispatch _loc automata in
+            let dispatch_message_manually = dispatch_message_manually _loc automata in
+            let dispatch_message_automatically = dispatch_message_automatically _loc automata in
+
+            let automata_description =
+              let automata_serialized = graph_to_string automata in
+              let triggers = triggers _loc automata in
+              let mailables = mailables _loc automata in
+              let email_actions = email_actions _loc automata in
+              <:str_item<
                  value automata = $str:automata_serialized$ ;
                  value triggers = $triggers$ ;
                  value mailables = $mailables$ ;
                  value email_actions = $email_actions$ ;
-          >>
-        in
+              >>
+            in
 
-        let crons = compile_crons _loc crons in
-        <:str_item<
-             $outbound_types$ ;
-             $inbound_serializers$ ;
-             $steps$ ;
-             $dispatch$ ;
-             $dispatch_message_manually$ ;
-             $dispatch_message_automatically$ ;
-             $automata_description$ ;
-             $crons$ ;
-        >>
+            let parameters = compile_parameters _loc parameters in
+            let crons = compile_crons _loc crons in
 
+            dump_automata _loc automata ;
+
+            <:str_item<
+              $parameters$ ;
+              $outbound_types$ ;
+              $inbound_serializers$ ;
+              $steps$ ;
+              $dispatch$ ;
+              $dispatch_message_manually$ ;
+              $dispatch_message_automatically$ ;
+              $automata_description$ ;
+              $crons$ ;
+
+            >>
+          end
+        else
+          List.fold_left
+            (fun acc import ->
+               <:str_item<
+                 $acc$ ;
+                 open $uid:String.capitalize import$ ;
+               >>)
+            <:str_item< open Cron >>
+            imports
       ]
-    ];
+    ] ;
 
   END

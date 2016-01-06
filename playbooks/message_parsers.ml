@@ -29,3 +29,7 @@ let simple_yes_no message =
 
 let forward message =
   return (Some (`Message message))
+
+let content message =
+  lwt content = $message(message)->content in
+  return (Some (`Content content))
