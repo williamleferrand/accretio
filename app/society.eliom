@@ -751,8 +751,9 @@ let builder bundle =
 
   (* the little data store *)
 
-  let data =
-    let data = RList.init bundle.data in
+  let data = RList.init bundle.data in
+
+  let data_dom =
     let add_data =
       let input_key = input ~input_type:`Text ~a:[ a_placeholder "Key" ] () in
       let input_value = input ~input_type:`Text ~a:[ a_placeholder "Value" ] () in
@@ -801,6 +802,35 @@ let builder bundle =
     ]
   in
 
+  (* parameters *)
+
+  let parameters =
+    div ~a:[ a_class [ "parameters" ]]
+      (List.map
+         (fun parameter ->
+            let input_value = input ~input_type:`Text ~a:[ a_placeholder "Value" ] () in
+            let add _ =
+              Authentication.if_connected
+                (fun _ ->
+                   rpc
+                   %set_value
+                   (view.uid, parameter.View_playbook.key, Some (Ys_dom.get_value input_value))
+                   (fun d -> RList.update data d))
+            in
+            let add =
+              button
+                ~button_type:`Button
+                ~a:[ a_onclick add ]
+                [ pcdata "Add" ]
+            in
+            div ~a:[ a_class [ "parameter" ]] [
+              label [ pcdata parameter.View_playbook.label ] ;
+              input_value ;
+              add
+            ])
+         view.playbook.View_playbook.parameters)
+
+  in
   (* the main dom *)
 
   div ~a:[ a_class [ "society" ]] [
@@ -820,7 +850,8 @@ let builder bundle =
       ] ;
       members ;
       messenger ;
-      data ;
+      parameters ;
+      data_dom ;
     ]
   ]
 

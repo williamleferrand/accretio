@@ -71,7 +71,7 @@ let retrieve = server_function ~name:"playbook-retrieve" Json.t<int> retrieve
 let _ =
   Ys_shortlink.register_checker Object_society.Store.find_by_shortlink
 
-let create_society (playbook, name, description) : Ys_uid.uid option Lwt.t =
+let create_society (playbook, name, description, data) : Ys_uid.uid option Lwt.t =
   protected_connected
     (fun session ->
        match_lwt Ys_shortlink.create () with
@@ -86,6 +86,7 @@ let create_society (playbook, name, description) : Ys_uid.uid option Lwt.t =
                    ~description
                    ~playbook
                    ~mode:Object_society.Sandbox
+                   ~data
                    () with
        | `Object_created society ->
          let uid = society.Object_society.uid in
@@ -94,7 +95,7 @@ let create_society (playbook, name, description) : Ys_uid.uid option Lwt.t =
          return (Some uid)
        | `Object_already_exists (_, uid) -> return (Some uid))
 
-let create_society = server_function ~name:"playbook-create-society" Json.t<int * string * string> create_society
+let create_society = server_function ~name:"playbook-create-society" Json.t<int * string * string * ((string * string) list)> create_society
 
 let make_public playbook =
   protected_connected
@@ -137,6 +138,20 @@ let builder  = function
     let create_society =
       let name = input ~input_type:`Text ~a:[ a_placeholder "name" ] () in
       let description = Raw.textarea ~a:[ a_placeholder "description" ] (pcdata "") in
+      let parameters =
+        List.map
+          (fun parameter ->
+             let input = input ~input_type:`Text ~a:[ a_placeholder "Value" ] () in
+             div ~a:[ a_class [ "parameter" ]] [
+               label [ pcdata parameter.label ] ;
+               input ;
+             ], (parameter.label, input))
+          playbook.parameters
+      in
+      let inputs = List.map snd parameters in
+      let parameters =
+        div ~a:[ a_class [ "parameters" ]] (List.map fst parameters)
+      in
       let create _ =
         match Ys_dom.get_value name, Ys_dom.get_value_textarea description with
           "", _ -> Help.warning "Please specify a name"
@@ -144,9 +159,10 @@ let builder  = function
         | name, description ->
           Authentication.if_connected
             (fun _ ->
+               let data = List.map (fun (label, input) -> label, Ys_dom.get_value input) inputs in
                rpc
                %create_society
-                   (view.playbook.uid, name, description)
+                   (view.playbook.uid, name, description, data)
                    (fun uid -> Service.goto (Service.Society uid)))
       in
       let create =
@@ -159,6 +175,7 @@ let builder  = function
 
         name ;
         description ;
+        parameters ;
         create ;
       ]
     in

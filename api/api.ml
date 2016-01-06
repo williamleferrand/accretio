@@ -90,4 +90,6 @@ sig
 
   val email_actions : (string * string list) list
 
+  val parameters : (string * string) list
+
 end

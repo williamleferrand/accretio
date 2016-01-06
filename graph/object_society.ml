@@ -79,6 +79,8 @@ type t = {
   timers : [ `Label of string ] edges ; (* these are fake edges *)
   shortlink : string ;
 
+  blacklist : [ `Unregistered | `Banned ] edges ;
+
 } with vertex
   (
     {

@@ -59,11 +59,18 @@ let find_or_create_playbook playbook =
     return uid
   | None ->
     lwt owner = find_or_create_author Playbook.author in
+    let parameters =
+      List.map
+        (fun (label, key) ->
+           Object_playbook.({ label ; key }))
+        Playbook.parameters
+    in
     match_lwt Object_playbook.Store.create
                 ~owner
                 ~name:Playbook.name
                 ~description:Playbook.description
                 ~scope:Ys_scope.Private
+                ~parameters
                 ~hash
                 () with
     | `Object_created playbook ->
@@ -80,6 +87,8 @@ let register playbook =
     return_unit
   with exn -> ign_error_f ~exn "couldn't register playbook" ; return_unit
 
+(*
+
 let load_playbook file =
   try
     Lwt_log.ign_info_f "loading module %s" file ;
@@ -91,6 +100,7 @@ let load_playbook file =
     Dynlink.Error error -> Lwt_log.ign_error_f "dynlink error: %s" (Dynlink.error_message error)
   | _ as exn -> Lwt_log.ign_error_f ~exn "dynlink error"
 
+*)
 
 let _ =
   ignore_result

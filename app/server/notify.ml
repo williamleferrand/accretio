@@ -93,7 +93,16 @@ let with_signature locator content =
                   pcdata "Too many messages? Turn on batch notifications at " ;
                   Raw.a ~a:[ a_href (uri_of_string  (fun () -> url_settings)) ] [ pcdata url_settings ] ; br () ;
                 ] *)
-  content
+
+
+  content @ [
+    br () ;
+    br () ;
+    pcdata "-----" ; br () ;
+    pcdata "Sent via accretio. To learn more about the project, see our " ;
+    Raw.a ~a:[ a_href (uri_of_string (fun () -> "https://medium.com/@wleferrand/the-global-village-23b7b467d1d8")) ] [ pcdata "Medium post" ] ;
+    pcdata " or visit us on github." ; br () ;
+  ]
 
 let with_batch_signature locator content =
   let url_settings = (Ys_config.get_string "url-prefix")^"/settings" in

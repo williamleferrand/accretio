@@ -31,9 +31,33 @@ let pickup_weekly_organizer context () =
       member ;
     return (`Candidate member)
 
+let candidate_was_notified context member =
+  let week = current_week () in
+  context.log_info "member %d was notified, setting up a timer" member ;
+  lwt _ =
+    context.set_timer
+      ~label:(sprintf "waiting%05d%d" week member)
+      ~duration:(Calendar.Period.lmake ~second:30 ())
+      `CandidateDidntReplied
+  in
+  lwt _ = context.tag_member ~member ~tags:[ sprintf "asked%d" week ] in
+  return `None
+
+
+let candidate_declined context message =
+  return `PickUpSomeoneElse
+
+let candidate_accepted context message =
+  lwt member = context.get_message_sender ~message in
+  return (`Organizer member)
+
 
 COMPONENT
 
   #import basics
 
   pickup_weekly_organizer ~> `NoOrganizerAvailable ~> alert_supervisor
+
+                              candidate_was_notified ~> `CandidateDidntReplied ~> pickup_weekly_organizer
+                              candidate_declined ~> `PickUpSomeoneElse ~> pickup_weekly_organizer
+                              candidate_accepted

@@ -32,6 +32,7 @@ let stage = Gram.Entry.mk "stage"
 let graph = Gram.Entry.mk "graph"
 let cron = Gram.Entry.mk "cron"
 let import = Gram.Entry.mk "import"
+let parameters = Gram.Entry.mk "parameters"
 
 let export = ref false
 
@@ -140,6 +141,7 @@ let compile_automata _loc imports chains crons =
   in
   automata
 
+
 let compile_crons _loc crons =
   let crons =
     List.fold_left
@@ -150,6 +152,11 @@ let compile_crons _loc crons =
       crons
   in
   <:str_item< value crontabs = $crons$ >>
+
+
+let compile_parameters _loc = function
+    None -> <:str_item< value parameters = [] >>
+  | Some parameters -> <:str_item< value parameters = $List.fold_left (fun acc (label, key) -> <:expr< [ ($str:label$, $str:key$) :: $acc$ ] >>) <:expr< [] >> parameters$ >>
 
 
 EXTEND Gram
@@ -214,17 +221,23 @@ EXTEND Gram
       ]
     ] ;
 
+  parameters:
+    [
+      [
+        "PARAMETERS" ; parameters = LIST0 [ "-" ; label = STRING ; "," ; key = STRING -> (label, key) ] ->
+        parameters
+      ]
+    ] ;
+
   str_item:
     [
       [
-        "COMPONENT" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ->
+        parameters = OPT parameters ; "COMPONENT" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ->
         Pa_type_conv.set_conv_path_if_not_set _loc ;
          if !export then
           begin
             let automata = compile_automata _loc imports chains [] in
-
             dump_automata _loc automata ;
-
             <:str_item<>>
           end
         else
@@ -237,7 +250,7 @@ EXTEND Gram
             <:str_item< >>
             imports
 
-        | "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
+        | parameters = OPT parameters ; "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
         Pa_type_conv.set_conv_path_if_not_set _loc ;
 
         (* it would be great if we could figure out if we are called by ocamldep or sth else .. *)
@@ -265,11 +278,13 @@ EXTEND Gram
               >>
             in
 
+            let parameters = compile_parameters _loc parameters in
             let crons = compile_crons _loc crons in
 
             dump_automata _loc automata ;
 
             <:str_item<
+              $parameters$ ;
               $outbound_types$ ;
               $inbound_serializers$ ;
               $steps$ ;
@@ -291,6 +306,6 @@ EXTEND Gram
             <:str_item< open Cron >>
             imports
       ]
-    ];
+    ] ;
 
   END
