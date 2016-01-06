@@ -202,8 +202,7 @@ PLAYBOOK
                                                       look_for_candidate ~> `NoVolunteer ~> no_volunteer
                                                       return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members
 
-                                                      candidate_response ~> `Message of int ~> mark_sender_as_volunteer ~> `Message of email ~> review_yelp_link
-
+       candidate_with_message ~> `Message of int ~> mark_sender_as_volunteer ~> `Message of int ~> review_yelp_link
 
        forward_yelp_link_to_all_members ~> `Yes of email ~> mark_member_as_joining
 
