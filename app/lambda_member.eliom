@@ -54,6 +54,11 @@ open Ys_react
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
+let format view =
+  div [
+    pcdata view.name
+  ]
+
 let format_transition view =
   div ~a:[ a_class [ "left" ]] [
     pcdata view.name

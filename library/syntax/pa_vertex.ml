@@ -95,7 +95,6 @@ let generate_aliases _loc uniques aliases =
         >>
 
       | PlainTextEdge (field, constr) ->
-        Printf.eprintf "creating specific insert for field %s\n" field ;
         let plain_text_table = field in
         <:str_item<
 

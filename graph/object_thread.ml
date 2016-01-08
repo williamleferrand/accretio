@@ -48,7 +48,7 @@ type t = {
   messages : messages ;
   number_of_messages : int ;
 
-  context : [ `Cohort ] edges ;
+  context : [ `Cohort | `Playbook ] edges ;
   followers : [ `Member | `Follower ] edges ;
 
 } with vertex

@@ -261,6 +261,15 @@ let context_factory mode society =
       in
       return_unit
 
+    let check_tag_member ~member ~tag =
+      Lwt_log.ign_info_f "checking if member %d has tag %s in society %d" member tag society ;
+      lwt members = $society(society)->members in
+      return
+        (List.exists
+           (function
+             | `Member tags, uid -> uid = member && List.mem tag tags
+             | `Candidate, uid -> false) members)
+
     (* setting up cron jobs *)
 
     let set ~key ~value =
@@ -366,6 +375,7 @@ let context_factory mode society =
       search_members ;
       tag_member ;
       untag_member ;
+      check_tag_member ;
 
       set ;
       get ;

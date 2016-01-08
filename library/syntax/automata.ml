@@ -94,7 +94,7 @@ let outbound_types _loc automata =
               match G.E.label edge with
                 <:ctyp< _ >> -> acc
               | <:ctyp< `$uid:_$ of email >> -> acc
-              | <:ctyp< `Message of int >> -> acc
+              (* | <:ctyp< `Message of int >> -> acc *)
               | _ as edge -> edge :: acc)
            automata
            stage
@@ -165,7 +165,7 @@ let outbound_dispatcher allow_none _loc automata stage schedule =
        let dest = Vertex.stage (G.E.dst edge) in
        match G.E.label edge with
        | <:ctyp< `$uid:_$ of email >> -> acc (* messages can't be emitted from the stage *)
-       | <:ctyp< `Message of int >> -> acc (* messages transitions can't be emitted from the stage itself *)
+       (* | <:ctyp< `Message of int >> -> acc (* messages transitions can't be emitted from the stage itself *) *)
        | <:ctyp< `$uid:constr$ >> ->
           if allow_none then
            <:match_case< `$uid:constr$ ->
@@ -210,7 +210,7 @@ let steps _loc automata =
          None -> acc
        | Some t ->
          (* here we have the guarantee that the inbound type has been declared *)
-         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage) in
+         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage ^ "(steps)") in
          let dispatcher = outbound_dispatcher true _loc automata stage <:expr< Immediate >> in
 
          <:str_item<
@@ -385,7 +385,7 @@ let dispatch_message_automatically _loc automata =
   let cases =
     G.fold_vertex
       (fun stage acc ->
-         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage) in
+         let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage ^ "(automatic dispatch)") in
          let dispatcher = outbound_dispatcher_message _loc automata stage <:expr< Immediate >> in
 
          let strategies =
