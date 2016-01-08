@@ -50,14 +50,17 @@ type t = {
 
   parameters : parameters ;
 
+  thread : uid ;
+
   (* old fields *)
   source : string ;
+
 
 } with vertex
   (
     {
       aliases = [ `PlainText description ; `PlainText name ; `String hash ] ;
-      required = [ owner ; name ; description ; hash ; scope ] ;
+      required = [ owner ; name ; description ; hash ; scope ; thread ] ;
       uniques = [ hash ] ;
       builders = [ (scope, (fun _ -> return Ys_scope.Private)) ] ;
     }

@@ -37,7 +37,29 @@ let reset_all_boxes () =
     None
     (-1)
 
+let create_playbook_threads () =
+  Lwt_log.ign_info_f "create playbook threads" ;
+  Object_playbook.Store.fold_flat_lwt
+    (fun _ uid ->
+       try_lwt
+         lwt thread = $playbook(uid)->thread in
+         return (Some ())
+       with _ ->
+         lwt owner, name = $playbook(uid)->(owner, name) in
+         match_lwt Object_thread.Store.create
+                     ~owner
+                     ~subject:name
+                     ~context:[ `Playbook, uid ]
+                     () with
+         | `Object_created thread ->
+           $playbook(uid)<-thread = thread.Object_thread.uid ;
+           return (Some ()))
+      ()
+      None
+      (-1)
+
 let run () =
+  lwt _ = create_playbook_threads () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in

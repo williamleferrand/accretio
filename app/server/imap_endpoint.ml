@@ -273,6 +273,7 @@ let process_email =
                 Lwt_log.ign_info_f "message already exists" ;
                 return (Some society)
               | `Object_created message ->
+                lwt _ = $member(sender)<-messages += (`Email, message.Object_message.uid) in
                 lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
                 Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
 
@@ -280,8 +281,11 @@ let process_email =
                   return (Some society)
                 else
                   match_lwt Playbook.dispatch_message_automatically message.Object_message.uid target_stage with
-                  | None -> return (Some society)
+                  | None ->
+                    Lwt_log.ign_info_f "dispatching the message automatically didn't succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
+                    return (Some society)
                   | Some call ->
+                    Lwt_log.ign_info_f "dispatching the message automatically succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
                     $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
                     lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
                     return (Some society)

@@ -26,6 +26,7 @@ open Vault
 type bundle =
   {
     playbook : View_playbook.t ;
+    thread : View_thread.t ;
     societies : View_society.t list ;
     automata : string ;
   }
@@ -53,7 +54,8 @@ let retrieve uid =
     false -> return_none
   | true ->
     lwt playbook = View_playbook.to_view uid in
-    lwt societies = $playbook(uid)->societies in
+    lwt societies, thread = $playbook(uid)->(societies, thread) in
+    lwt thread = View_thread.to_view thread in
     let automata =
       let playbook = Registry.get uid in
       let module P = (val playbook : Api.PLAYBOOK) in
@@ -62,6 +64,7 @@ let retrieve uid =
     return
       (Some {
           playbook ;
+          thread ;
           societies = [] ;
           automata ;
         })
@@ -180,12 +183,11 @@ let builder  = function
       ]
     in
 
-
     let playbook_controls =
       R.node
         (S.map
            (function
-             | Connected session when session.member_uid = playbook.owner.uid ->
+             | Connected session when session.member_uid = playbook.owner.View_member.uid ->
                let scope, update_scope = S.create playbook.scope in
                let make_public _ =
                  Authentication.if_connected
@@ -210,6 +212,7 @@ let builder  = function
              | _ -> pcdata "")
            Sessions.session)
     in
+    let thread = Lambda_thread.format view.thread in
     div ~a:[ a_class [ "playbook" ]] [
       playbook_controls ;
       div ~a:[ a_class [ "playbook-name" ]] [
@@ -224,6 +227,7 @@ let builder  = function
         pcdata "Create a society running this playbook"
         ] ;
       create_society ;
+      thread ;
     ]
 
 let dom = Template.apply %retrieve builder

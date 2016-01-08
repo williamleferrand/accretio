@@ -38,7 +38,6 @@ let export = ref false
 
 
 let _ =
-  Printf.eprintf "registering options\n"; flush stdout ;
   Camlp4.Options.add "-export" (Arg.Unit (fun _ -> export := true)) "export automata"
 
 (* creation of the automata *)

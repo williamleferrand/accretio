@@ -33,6 +33,7 @@ let key_run_id = "dinner-with-friends-run-id"
 let key_volunteer = sprintf "dinner-with-friends-volunteer-%Ld"
 let tag_volunteer = sprintf "volunteer%Ld"
 let tag_joining = sprintf "joining%Ld"
+let tag_notified = sprintf "notified%Ld"
 let key_date = "dinner-with-friend-date"
 
 (* the stages *****************************************************************)
@@ -80,7 +81,7 @@ let ask_volunteer_for_yelp_link context member =
   | Some run_id ->
     let run_id = Int64.of_string run_id in
     lwt _ = context.set ~key:(key_volunteer run_id) ~value:(string_of_int member) in
-    lwt _ = context.tag_member ~member ~tags: [ tag_volunteer run_id ; tag_joining run_id ] in
+    lwt _ = context.tag_member ~member ~tags:[ tag_volunteer run_id ; tag_joining run_id ] in
     context.log_info "asking %d for a yelp link" member ;
     lwt _ =
       context.message_member
@@ -118,21 +119,29 @@ let forward_yelp_link_to_all_members context message =
         lwt _ =
           Lwt_list.iter_s
             (fun member ->
-               context.message_member
-                 ~member
-                 ~subject:"Dinner with friends?"
-                 ~content:[
-                   pcdata "Hello!" ; br () ;
-                   br () ;
-                   pcdata volunteer ; pcdata " has a great suggestion for the next dinner: " ; br () ;
-                   br () ;
-                   Raw.a ~a:[ a_href (uri_of_string (fun () -> content)) ] [ pcdata content ] ; br () ;
-                   br () ;
-                   pcdata date ; br () ;
-                   br () ;
-                   pcdata "Are you in?" ; br () ;
-                 ])
-        participants
+               match_lwt context.check_tag_member ~member ~tag:(tag_notified run_id) with
+               | true ->
+                 context.log_info "skipping member %d in run %Ld" member run_id ;
+                 return_unit
+               | false ->
+                 lwt _ =
+                   context.message_member
+                     ~member
+                     ~subject:"Dinner with friends?"
+                     ~content:[
+                       pcdata "Hello!" ; br () ;
+                       br () ;
+                       pcdata volunteer ; pcdata " has a great suggestion for the next dinner: " ; br () ;
+                       br () ;
+                       Raw.a ~a:[ a_href (uri_of_string (fun () -> content)) ] [ pcdata content ] ; br () ;
+                       br () ;
+                       pcdata date ; br () ;
+                       br () ;
+                     pcdata "Are you in?" ; br () ;
+                     ]
+                 in
+                 context.tag_member ~member ~tags:[ tag_notified run_id ])
+            participants
         in
         return `None
 

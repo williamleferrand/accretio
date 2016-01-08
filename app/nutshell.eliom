@@ -45,19 +45,21 @@ let common ?(title="Accretio") mixpanel_id version =
         link ~rel: [ `Other "apple-touch-icon" ] ~href:(uri_of_string (fun () -> "/logoaccretio_blue.png")) () ;
 
         Ys_googlemaps.script () ;
-         script ~a:[ a_src (uri_of_string (fun () -> "/ie.js")) ] (pcdata "") ;
+        script ~a:[ a_src (uri_of_string (fun () -> "/ie.js")) ] (pcdata "") ;
         script ~a:[ a_src (uri_of_string (fun () -> "/moment.min.js")) ] (pcdata "") ;
         script ~a:[ a_src (uri_of_string (fun () -> "/moment-timezone.min.js")) ] (pcdata "") ;
 
         (* script ~a:[ a_src (uri_of_string (fun () -> "/masonry.pkgd.min.js")) ] (pcdata "") ; *)
         (* script ~a:[ a_src (uri_of_string (fun () -> "/typeahead.bundle.js")) ] (pcdata "") ; *)
-        script (pcdata "moment().format();") ;
-        (* script ~a:[ a_src (uri_of_string (fun () -> "/Autolinker.min.js")) ] (pcdata "") ;
-           script ~a:[ a_src (uri_of_string (fun () -> "/ZeroClipboard.js")) ] (pcdata "") ;
-           script ~a:[ a_src (uri_of_string (fun () -> "/fabric.js")) ] (pcdata "") ;
 
-        script ~a:[ a_src (uri_of_string (fun () -> "/darkroom.min.js")) ] (pcdata "") ;
-        script ~a:[ a_src (uri_of_string (fun () -> "/countdown.min.js")) ] (pcdata "") ; *)
+        script (pcdata "moment().format();") ;
+        script ~a:[ a_src (uri_of_string (fun () -> "/Autolinker.min.js")) ] (pcdata "") ;
+
+        (* script ~a:[ a_src (uri_of_string (fun () -> "/ZeroClipboard.js")) ] (pcdata "") ;
+           script ~a:[ a_src (uri_of_string (fun () -> "/fabric.js")) ] (pcdata "") ;
+           script ~a:[ a_src (uri_of_string (fun () -> "/darkroom.min.js")) ] (pcdata "") ;
+           script ~a:[ a_src (uri_of_string (fun () -> "/countdown.min.js")) ] (pcdata "") ; *)
+
         script ~a:[ a_src (uri_of_string (fun () -> "/viz.js")) ] (pcdata "") ;
         script ~a:[ a_src (uri_of_string (fun () -> "/js-static_" ^ version ^ ".min.js")) ] (pcdata "") ;
         link ~rel:[ `Stylesheet ] ~href:(uri_of_string (fun () -> "/style_" ^ version ^ ".css")) ();

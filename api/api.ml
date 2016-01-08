@@ -38,6 +38,7 @@ type 'output context =
     search_members : ?max:int -> query:string -> unit -> uid list Lwt.t ;
     tag_member : member:uid -> tags:string list -> unit Lwt.t ;
     untag_member : member:uid -> tags:string list -> unit Lwt.t ;
+    check_tag_member : member:uid -> tag:string -> bool Lwt.t ;
 
     (* local database *)
 
