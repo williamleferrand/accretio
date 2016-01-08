@@ -29,18 +29,19 @@ open View_thread
 {server{
 
 let thread_add_message session uid message =
+  Lwt_log.ign_info_f "thread_add_message in thread %d by member %d" uid session.member_uid ;
   lwt _ = $thread(uid)<-messages %% (fun messages -> message :: messages) in
   lwt _ = $thread(uid)<-number_of_messages %% (fun number -> number + 1) in
   lwt _ = $thread(uid)<-followers %% (fun followers -> (`Member, session.member_uid) :: List.filter (fun edge -> snd edge <> session.member_uid) followers) in
   lwt context = $thread(uid)->context in
-  lwt _ =
+  (* lwt _ =
     Lwt_list.iter_p
       (function (`Cohort, uid) ->
         lwt _ = $member(session.member_uid)<-mask +=! (`Cohort 1, uid) in
         (* $cohort(uid)<-members +=! (`Member, session.member_uid) *) return_unit)
-      context in
+      context in *)
   try_lwt
-    lwt _ = Notify.new_message uid message in
+    (* lwt _ = Notify.new_message uid message in *)
     lwt message = View_thread.convert_message message in
     let message =
       {
@@ -158,7 +159,7 @@ let factory circle close finalizer =
     ]
   ]
 
-let format cohort thread format_message =
+let format thread format_message =
 
   let messages =
     RListUnique.init
@@ -291,7 +292,7 @@ let format cohort thread format_message =
     add_message
   ]
 
-let format_regular cohort thread =
+let format thread =
 
   let format_message messages message =
     let content =
@@ -311,59 +312,11 @@ let format_regular cohort thread =
         ]
     in
     div ~a:[ a_class [ "thread-message" ]] [
-      Lambda_member.format_cohort cohort message.author ;
+      Lambda_member.format message.author ;
       content ;
     ]
   in
 
-  format cohort thread format_message
-
-let format_leader cohort thread =
-
-  let format_message messages message =
-    let content =
-      match message.content with
-      | Image image ->
-        span ~a:[ a_class [ "message-content" ]] [
-          match image.View_image.content with
-          | Object_image.File url -> img ~alt:"" ~src:(uri_of_string (fun () -> url)) ()
-          | Object_image.URIData data -> img ~alt:"" ~src:(uri_of_string (fun () -> data)) ()
-        ]
-      | Text text ->
-        let content = span [ pcdata text ] in
-        Ys_autolink.link_rich content ;
-
-        let delete _ =
-          Authentication.if_connected
-            ~mixpanel:("lambda-thread-delete-message", [ "thread-uid", Ys_uid.to_string thread.uid ;
-                                                         "message", text ])
-            (fun _ ->
-               rpc
-               %delete_message
-                   (thread.uid, message.author.View_member.uid, message.timestamp)
-                   (fun _ -> RListUnique.remove messages (message.author.View_member.uid, message.timestamp)))
-          in
-          let delete =
-            button
-              ~button_type:`Button
-                ~a:[ a_onclick delete ; a_class [ "cl";  "icon-cancel-circled" ]]
-                []
-            in
-            span ~a:[ a_class [ "message-content" ]] [
-              content ;
-              pcdata " - " ;
-              Ys_timeago.format message.timestamp ;
-              space () ;
-              delete
-            ]
-    in
-
-    div ~a:[ a_class [ "thread-message" ]] [
-      Lambda_member.format_cohort cohort message.author ;
-      content ;
-    ]
-  in
-
-  format cohort thread format_message
+  format thread format_message
 
 }}

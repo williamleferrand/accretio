@@ -65,20 +65,28 @@ let find_or_create_playbook playbook =
            Object_playbook.({ label ; key }))
         Playbook.parameters
     in
-    match_lwt Object_playbook.Store.create
+    match_lwt Object_thread.Store.create
                 ~owner
-                ~name:Playbook.name
-                ~description:Playbook.description
-                ~scope:Ys_scope.Private
-                ~parameters
-                ~hash
+                ~subject:Playbook.name
                 () with
-    | `Object_created playbook ->
-      ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash playbook.Object_playbook.uid ;
-      return playbook.Object_playbook.uid
-    | `Object_already_exists (_, uid) ->
-      ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
-      return uid
+    | `Object_created thread ->
+      match_lwt Object_playbook.Store.create
+                  ~owner
+                  ~name:Playbook.name
+                  ~description:Playbook.description
+                  ~scope:Ys_scope.Private
+                  ~parameters
+                  ~hash
+                  ~thread:thread.Object_thread.uid
+                () with
+      | `Object_created playbook ->
+        ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash playbook.Object_playbook.uid ;
+        lwt _ = $thread(thread.Object_thread.uid)<-context +=! (`Playbook, playbook.Object_playbook.uid) in
+        return playbook.Object_playbook.uid
+      | `Object_already_exists (_, uid) ->
+        ign_info_f "we might have created an orphan thread, %d" thread.Object_thread.uid ;
+        ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
+        return uid
 
 let register playbook =
   try_lwt
@@ -109,4 +117,5 @@ let _ =
      lwt _ = register (module Serc_weekly) in
      lwt _ = register (module Children_circle) in
      lwt _ = register (module Dinners_with_friends) in
+     lwt _ = register (module Accretio_grooming) in
      return_unit)

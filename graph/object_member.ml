@@ -99,6 +99,9 @@ type t = {
   societies : [ `Society ] edges ;
   skills : string ;
 
+  (* activity *)
+  messages : [ `Email ] edges ;
+
 } with vertex
   (
     {
