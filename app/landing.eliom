@@ -49,6 +49,15 @@ let builder (demo, playbooks) =
   let graph_demo = div ~a:[ a_class [ "graph-demo" ]] [] in
   Ys_viz.render graph_demo demo ;
 
+  let grid =
+    Ys_grid.create
+      ~a:[ a_class [ "playbooks" ; "clearfix" ]]
+      ~a_col:[ a_class [ "library-column" ]]
+      ~column_width:410
+      ~content:(S.const (List.map View_playbook.format playbooks))
+      ()
+  in
+
   div ~a:[ a_class [ "landing" ]] [
     h1 [
       (* pcdata "Open-source playbooks for social activities" *)
@@ -66,8 +75,10 @@ let builder (demo, playbooks) =
 
    div ~a:[ a_class [ "landing-popular" ]] [
       h2 [ pcdata "Popular playbooks" ] ;
-      div ~a:[ a_class [ "playbooks" ; "clearfix" ]]
-        (List.map View_playbook.format playbooks)
+      grid ;
+
+      (* div ~a:[ a_class [ "playbooks" ; "clearfix" ]]
+        (List.map View_playbook.format playbooks) *)
     ]
   ]
 

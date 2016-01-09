@@ -759,6 +759,10 @@ h2 {
     width: 400px;
     margin: 0 10px 10px 0;
   }
+  /* line 95, ../sass/_landing.scss */
+  .landing .landing-popular .playbooks .library-column {
+    float: left;
+  }
 }
 
 /* line 1, ../sass/_thanks.scss */
