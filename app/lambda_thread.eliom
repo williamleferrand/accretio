@@ -232,12 +232,12 @@ let format thread format_message =
 
              div ~a:[ a_class [ "box-section" ; "clearfix" ; "add-message" ]] [
 
-               div ~a:[ a_class [ "right" ]] [
+               (* div ~a:[ a_class [ "right" ]] [
                  button
                    ~button_type:`Button
                    ~a:[ a_class [ "icon-camera" ] ; a_onclick (fun _ -> update_state `Image) ]
                    []
-               ] ;
+               ] ; *)
                div ~a:[ a_class [ "right" ]] [ send ] ;
                div ~a:[ a_class [ "thread-input" ]] [
                  message_input

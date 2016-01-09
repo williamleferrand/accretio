@@ -139,16 +139,13 @@ let builder  = function
     let _ = Ys_viz.render graph view.automata in
 
     let create_society =
-      let name = input ~input_type:`Text ~a:[ a_placeholder "name" ] () in
-      let description = Raw.textarea ~a:[ a_placeholder "description" ] (pcdata "") in
+      let name = input ~input_type:`Text ~a:[ a_placeholder "name of your group" ] () in
+      let description = Raw.textarea ~a:[ a_placeholder "brief description" ] (pcdata "") in
       let parameters =
         List.map
           (fun parameter ->
-             let input = input ~input_type:`Text ~a:[ a_placeholder "Value" ] () in
-             div ~a:[ a_class [ "parameter" ]] [
-               label [ pcdata parameter.label ] ;
-               input ;
-             ], (parameter.key, input))
+             let input = input ~input_type:`Text ~a:[ a_placeholder (String.lowercase parameter.label) ] () in
+             input, (parameter.key, input))
           playbook.parameters
       in
       let inputs = List.map snd parameters in
@@ -160,7 +157,7 @@ let builder  = function
           "", _ -> Help.warning "Please specify a name"
         | _, "" -> Help.warning "Please add a description"
         | name, description ->
-          Authentication.if_connected
+          Authentication.if_connected ~mixpanel:("playbook-create-society", [ "name", name ; "description", description ])
             (fun _ ->
                let data = List.map (fun (label, input) -> label, Ys_dom.get_value input) inputs in
                rpc
@@ -174,12 +171,16 @@ let builder  = function
           ~a:[ a_onclick create ]
           [ pcdata "Create" ]
       in
-      div ~a:[ a_class [ "create-society" ]] [
-
-        name ;
-        description ;
-        parameters ;
-        create ;
+      div ~a:[ a_class [ "create-society"  ]] [
+        h2 [ pcdata "Start a new group driven by this playbook" ] ;
+        div ~a:[ a_class [ "create-society-form" ; "box" ]] [
+          name ;
+          description ;
+          parameters ;
+          div ~a:[ a_class [ "box-action" ]] [
+            create ;
+          ]
+        ]
       ]
     in
 
@@ -190,11 +191,11 @@ let builder  = function
              | Connected session when session.member_uid = playbook.owner.View_member.uid ->
                let scope, update_scope = S.create playbook.scope in
                let make_public _ =
-                 Authentication.if_connected
+                 Authentication.if_connected ~mixpanel:("playbook-make-public", [ "uid", Ys_uid.to_string playbook.uid ])
                    (fun _ -> rpc %make_public playbook.uid update_scope)
                in
                let make_private _ =
-                 Authentication.if_connected
+                 Authentication.if_connected ~mixpanel:("playbook-make-private", [ "uid", Ys_uid.to_string playbook.uid ])
                    (fun _ -> rpc %make_private playbook.uid update_scope)
                in
                div ~a:[ a_class [ "playbook-controls" ]] [
@@ -212,7 +213,12 @@ let builder  = function
              | _ -> pcdata "")
            Sessions.session)
     in
-    let thread = Lambda_thread.format view.thread in
+    let thread =
+      div ~a:[ a_class [ "thread" ]] [
+        h2 [ pcdata "Discuss" ] ;
+        Lambda_thread.format view.thread
+      ]
+    in
     div ~a:[ a_class [ "playbook" ]] [
       playbook_controls ;
       div ~a:[ a_class [ "playbook-name" ]] [
@@ -223,11 +229,9 @@ let builder  = function
       ] ;
 
       graph ;
-      h2 [
-        pcdata "Create a society running this playbook"
-        ] ;
-      create_society ;
       thread ;
+      create_society ;
+
     ]
 
 let dom = Template.apply %retrieve builder

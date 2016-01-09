@@ -55,7 +55,7 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 let format view =
-  div [
+  span ~a:[ a_class [ "lambda-member" ]] [
     pcdata view.name
   ]
 
