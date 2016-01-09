@@ -39,6 +39,7 @@ let search_for_missing_names context () =
   lwt _ =
     Object_member.Store.fold_flat_lwt
       (fun _ member ->
+         lwt _ = context.add_member ~member in
          lwt name, preferred_email = $member(member)->(name, preferred_email) in
          context.log_info "inspecting member %d, email:%s name:%s" member name preferred_email ;
          lwt has_interacted_with_accretio =
