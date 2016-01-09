@@ -569,9 +569,9 @@ let connection_box ~callback ?(cls=[]) () =
   in
 
   [
-    div ~a:[ a_class [ "authentication-box-fb" ]] [
+    (* div ~a:[ a_class [ "authentication-box-fb" ]] [
       connect_with_facebook ()
-    ] ;
+    ] ; *)
 
     div ~a:[ a_class [ "authentication-box" ]] [
       div ~a:[ a_class [ "authentication-field" ]] [
@@ -684,7 +684,7 @@ let connection_status_footer () =
       | Anonymous -> pcdata ""
       | Connected session ->
         span [ pcdata " - " ;
-               Raw.a ~a:[ a_onclick (fun _ -> ignore_result (log_off ())) ] [ pcdata "log out" ]
+               Raw.a ~a:[ a_onclick (fun _ -> ignore_result (log_off ())) ] [ pcdata "Log out" ]
              ])
     Sessions.session
 

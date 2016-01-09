@@ -35,19 +35,27 @@
     }
 
     .create-society {
-        border-radius: 5px;
-        margin-top: 20px ;
-        padding: 20px;
-        background-color: $grey ;
-        color: white ;
-        input {
-            margin-bottom: 20px ;
+        margin-top: 24px ;
+        .create-society-form {
+            border-radius: 5px;
+            padding: 18px;
+            background-color: $grey ;
+            color: white ;
+            input {
+                margin-bottom: 18px ;
+            }
+            textarea {
+                margin-bottom: 18px ;
+            }
+            button {
+                background-color: white ;
+                color: $grey ;
+            }
         }
-        button {
-            margin-top: 20px ;
-            background-color: white ;
-            color: $grey ;
-        }
+    }
+
+    .thread {
+        margin-top: 24px ;
     }
 
 

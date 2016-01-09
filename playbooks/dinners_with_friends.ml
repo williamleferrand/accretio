@@ -199,8 +199,8 @@ let mark_sender_as_volunteer context message =
 PARAMETERS
   (* - "How often?", "period"
    - "Geographical area?", "geography" *)
-   - "Minimum number of participants?", "min-participants"
-   - "Maximum number of participants?", "max-participants"
+   - "Minimum number of participants", "min-participants"
+   - "Maximum number of participants", "max-participants"
 
 
 PLAYBOOK

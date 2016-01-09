@@ -37,6 +37,7 @@ let dom () =
     Raw.a ~a:[ a_href "https://github.com/accretio" ] [ pcdata "Github" ] ;
     pcdata " - " ;
     Raw.a ~a:[ a_href "https://medium.com/@wleferrand" ] [ pcdata "Blog" ] ;
+    R.node (Authentication.connection_status_footer ())
   ]
 
 }}
