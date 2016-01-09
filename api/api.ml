@@ -51,6 +51,11 @@ type 'output context =
     get_message_sender : message:uid -> uid Lwt.t ;
     get_original_message : message:uid -> uid Lwt.t ;
 
+    (* member management *)
+
+    add_member : member:uid -> unit Lwt.t ;
+    remove_member : member:uid -> unit Lwt.t ;
+
   }
 
 module type STAGE_SPECIFICS =
