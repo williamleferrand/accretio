@@ -75,10 +75,7 @@ let builder (demo, playbooks) =
 
    div ~a:[ a_class [ "landing-popular" ]] [
       h2 [ pcdata "Popular playbooks" ] ;
-      grid ;
-
-      (* div ~a:[ a_class [ "playbooks" ; "clearfix" ]]
-        (List.map View_playbook.format playbooks) *)
+      div ~a:[ a_class [ "library" ]] [ grid ] ;
     ]
   ]
 
