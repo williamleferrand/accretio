@@ -51,16 +51,20 @@ let builder (demo, playbooks) =
 
   div ~a:[ a_class [ "landing" ]] [
     h1 [
+      (* pcdata "Open-source playbooks for social activities" *)
       pcdata "Automate what makes you thrive"
     ] ;
+
     div ~a:[ a_class [ "landing-pitch" ; "clearfix" ]] [
       div ~a:[ a_class [ "pitch" ]] [
-        pcdata "Use playbooks to describe, automate and share social processes"   ;
+        div [ pcdata "Playbooks are graphical recipes that describe the outline of an event" ] ;
+
+        div [ pcdata "Use them to organize complex activities via email with minimal manual supervision" ] ;
       ] ;
       graph_demo ;
     ] ;
 
-    div ~a:[ a_class [ "landing-popular" ]] [
+   div ~a:[ a_class [ "landing-popular" ]] [
       h2 [ pcdata "Popular playbooks" ] ;
       div ~a:[ a_class [ "playbooks" ; "clearfix" ]]
         (List.map View_playbook.format playbooks)

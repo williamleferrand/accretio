@@ -661,19 +661,23 @@ h2 {
   text-align: center;
 }
 
-/* line 4, ../sass/_landing.scss */
+/* line 3, ../sass/_landing.scss */
 .landing .landing-title {
   font-size: 32px;
   font-family: 'Molengo', sans-serif;
   text-align: center;
 }
+/* line 9, ../sass/_landing.scss */
+.landing h1 {
+  padding: 24px 0;
+}
 @media screen and (min-width: 800px) {
-  /* line 12, ../sass/_landing.scss */
+  /* line 15, ../sass/_landing.scss */
   .landing .landing-pitch {
-    margin: 24px auto 0 auto;
+    margin: 0 auto;
     width: 800px;
   }
-  /* line 16, ../sass/_landing.scss */
+  /* line 19, ../sass/_landing.scss */
   .landing .landing-pitch .pitch {
     float: left;
     width: 400px;
@@ -681,38 +685,54 @@ h2 {
     padding-top: 16px;
     line-height: 24px;
   }
-  /* line 23, ../sass/_landing.scss */
+  /* line 25, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div {
+    margin-bottom: 22px;
+  }
+  /* line 28, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div:last-child {
+    margin-bottom: 0;
+  }
+  /* line 32, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo {
     float: left;
   }
-  /* line 25, ../sass/_landing.scss */
+  /* line 34, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo svg {
     width: 400px;
   }
 }
 @media screen and (max-width: 799px) {
-  /* line 35, ../sass/_landing.scss */
+  /* line 44, ../sass/_landing.scss */
   .landing .landing-pitch {
     margin: 0 auto 20px auto;
   }
-  /* line 37, ../sass/_landing.scss */
+  /* line 46, ../sass/_landing.scss */
   .landing .landing-pitch .pitch {
     text-align: center;
     font-size: 20px;
-    margin: 24px 0 0 0;
+    margin: 0px 0 0 0;
     line-height: 24px;
   }
-  /* line 43, ../sass/_landing.scss */
+  /* line 51, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div {
+    margin-bottom: 22px;
+  }
+  /* line 54, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div:last-child {
+    margin-bottom: 0;
+  }
+  /* line 58, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo {
     display: none;
   }
-  /* line 45, ../sass/_landing.scss */
+  /* line 60, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo svg {
     width: 100%;
     height: auto !important;
   }
 }
-/* line 56, ../sass/_landing.scss */
+/* line 71, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook {
   margin: 0 0 20px 0;
   border-radius: 5px;
@@ -721,20 +741,20 @@ h2 {
   color: white;
   cursor: pointer;
 }
-/* line 63, ../sass/_landing.scss */
+/* line 78, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook .name {
   font-size: 18px;
   border-bottom: 1px solid white;
   padding: 0 0 15px 0;
   margin: 0 0 15px 0;
 }
-/* line 69, ../sass/_landing.scss */
+/* line 84, ../sass/_landing.scss */
 .landing .landing-popular .playbooks .playbook .description {
   font-size: 14px;
   line-height: 16px;
 }
 @media screen and (min-width: 800px) {
-  /* line 76, ../sass/_landing.scss */
+  /* line 91, ../sass/_landing.scss */
   .landing .landing-popular .playbooks .playbook {
     width: 400px;
     margin: 0 10px 10px 0;
