@@ -94,8 +94,8 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
   background-color: #ffae00;
   position: relative;
   color: white;
-  border-radius: 10px;
-  padding: 10px;
+  border-radius: 5px;
+  padding: 18px;
 }
 /* line 8, ../sass/_box.scss */
 .box h2, .box h3 {
@@ -111,7 +111,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 }
 /* line 21, ../sass/_box.scss */
 .box .box-section {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 /* line 25, ../sass/_box.scss */
 .box .box-section:last-child {
@@ -123,7 +123,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 }
 /* line 31, ../sass/_box.scss */
 .box .box-action button {
-  margin-left: 10px;
+  margin-left: 18px;
 }
 /* line 36, ../sass/_box.scss */
 .box .pitch {
@@ -143,7 +143,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
   background-color: #ffae00;
   position: relative;
   color: white;
-  border-radius: 10px;
+  border-radius: 5px;
   overflow: hidden;
 }
 /* line 8, ../sass/_box.scss */
@@ -160,7 +160,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 }
 /* line 21, ../sass/_box.scss */
 .box-with-header .box-section {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 /* line 25, ../sass/_box.scss */
 .box-with-header .box-section:last-child {
@@ -172,7 +172,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 }
 /* line 31, ../sass/_box.scss */
 .box-with-header .box-action button {
-  margin-left: 10px;
+  margin-left: 18px;
 }
 /* line 36, ../sass/_box.scss */
 .box-with-header .pitch {
@@ -433,7 +433,7 @@ h2 {
  */
 /* line 19, ../sass/_authentication.scss */
 .connection-box {
-  padding: 10px;
+  margin: 24px 10px;
 }
 /* line 22, ../sass/_authentication.scss */
 .connection-box .recovery-link {
@@ -443,7 +443,7 @@ h2 {
 /* line 27, ../sass/_authentication.scss */
 .connection-box .authentication-toggle {
   text-align: center;
-  padding: 10px;
+  padding: 12px;
 }
 /* line 31, ../sass/_authentication.scss */
 .connection-box .authentication-toggle .authentication-new-member {
@@ -503,9 +503,8 @@ h2 {
   background-color: #ffae00;
   position: relative;
   color: white;
-  border-radius: 10px;
+  border-radius: 5px;
   padding: 0px;
-  margin-top: 15px;
 }
 /* line 8, ../sass/_box.scss */
 .connection-box .authentication-box h2, .connection-box .authentication-box h3 {
@@ -521,7 +520,7 @@ h2 {
 }
 /* line 21, ../sass/_box.scss */
 .connection-box .authentication-box .box-section {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 /* line 25, ../sass/_box.scss */
 .connection-box .authentication-box .box-section:last-child {
@@ -533,7 +532,7 @@ h2 {
 }
 /* line 31, ../sass/_box.scss */
 .connection-box .authentication-box .box-action button {
-  margin-left: 10px;
+  margin-left: 18px;
 }
 /* line 36, ../sass/_box.scss */
 .connection-box .authentication-box .pitch {
@@ -641,11 +640,6 @@ h2 {
 /* line 32, ../sass/_admin.scss */
 .admin .field .content > * > * {
   margin-right: 10px;
-}
-
-/* line 1, ../sass/_popup.scss */
-.popup {
-  margin: 10px 10px 0 10px;
 }
 
 /* line 1, ../sass/_recover.scss */
@@ -780,7 +774,7 @@ h2 {
   background-color: #ffae00;
   position: relative;
   color: white;
-  border-radius: 10px;
+  border-radius: 5px;
   padding: 10px;
   background-color: #42aac8;
 }
@@ -798,7 +792,7 @@ h2 {
 }
 /* line 21, ../sass/_box.scss */
 .profile .profile-header .box-section {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 /* line 25, ../sass/_box.scss */
 .profile .profile-header .box-section:last-child {
@@ -810,7 +804,7 @@ h2 {
 }
 /* line 31, ../sass/_box.scss */
 .profile .profile-header .box-action button {
-  margin-left: 10px;
+  margin-left: 18px;
 }
 /* line 36, ../sass/_box.scss */
 .profile .profile-header .pitch {
@@ -933,7 +927,7 @@ h2 {
   background-color: #ffae00;
   position: relative;
   color: white;
-  border-radius: 10px;
+  border-radius: 5px;
   background-color: #42aac8;
   padding: 0 0 10px 10px;
 }
@@ -951,7 +945,7 @@ h2 {
 }
 /* line 21, ../sass/_box.scss */
 .profile .profile-panels .box-section {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 /* line 25, ../sass/_box.scss */
 .profile .profile-panels .box-section:last-child {
@@ -963,7 +957,7 @@ h2 {
 }
 /* line 31, ../sass/_box.scss */
 .profile .profile-panels .box-action button {
-  margin-left: 10px;
+  margin-left: 18px;
 }
 /* line 36, ../sass/_box.scss */
 .profile .profile-panels .pitch {
@@ -1329,21 +1323,31 @@ h2 {
 }
 /* line 37, ../sass/_playbook.scss */
 .playbook .create-society {
+  margin-top: 24px;
+}
+/* line 39, ../sass/_playbook.scss */
+.playbook .create-society .create-society-form {
   border-radius: 5px;
-  margin-top: 20px;
-  padding: 20px;
+  padding: 18px;
   background-color: #3d3d3d;
   color: white;
 }
-/* line 43, ../sass/_playbook.scss */
-.playbook .create-society input {
-  margin-bottom: 20px;
+/* line 44, ../sass/_playbook.scss */
+.playbook .create-society .create-society-form input {
+  margin-bottom: 18px;
 }
-/* line 46, ../sass/_playbook.scss */
-.playbook .create-society button {
-  margin-top: 20px;
+/* line 47, ../sass/_playbook.scss */
+.playbook .create-society .create-society-form textarea {
+  margin-bottom: 18px;
+}
+/* line 50, ../sass/_playbook.scss */
+.playbook .create-society .create-society-form button {
   background-color: white;
   color: #3d3d3d;
+}
+/* line 57, ../sass/_playbook.scss */
+.playbook .thread {
+  margin-top: 24px;
 }
 
 /* line 3, ../sass/_library.scss */
@@ -1354,7 +1358,7 @@ h2 {
 .library .playbooks .playbook {
   margin: 0 0 10px 0;
   border-radius: 5px;
-  padding: 20px;
+  padding: 18px;
   background-color: #3d3d3d;
   color: white;
   cursor: pointer;
@@ -1381,4 +1385,35 @@ h2 {
   .library .playbooks .library-column {
     float: left;
   }
+}
+
+/* line 6, ../sass/_lambda_thread.scss */
+.lambda-thread .thread-messages .thread-message {
+  line-height: 16px;
+  margin: 18px 0;
+}
+/* line 9, ../sass/_lambda_thread.scss */
+.lambda-thread .thread-messages .thread-message .lambda-member {
+  color: #3d3d3d;
+  margin-right: 10px;
+}
+/* line 13, ../sass/_lambda_thread.scss */
+.lambda-thread .thread-messages .thread-message .message-time {
+  font-style: italic;
+}
+/* line 18, ../sass/_lambda_thread.scss */
+.lambda-thread .thread-messages .thread-message:first-child {
+  margin-top: 0 !important;
+}
+/* line 23, ../sass/_lambda_thread.scss */
+.lambda-thread .add-message {
+  margin-top: 18px;
+}
+/* line 25, ../sass/_lambda_thread.scss */
+.lambda-thread .add-message .thread-input {
+  margin-right: 67px;
+}
+/* line 28, ../sass/_lambda_thread.scss */
+.lambda-thread .add-message .right {
+  margin-top: 3px;
 }

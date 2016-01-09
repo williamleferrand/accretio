@@ -1,0 +1,32 @@
+.lambda-thread {
+
+
+    .thread-messages {
+
+        .thread-message {
+            line-height: 16px ;
+            margin: 18px 0 ;
+            .lambda-member {
+                color: $grey ;
+                margin-right: 10px ;
+            }
+            .message-time {
+                font-style: italic ;
+            }
+        }
+
+        .thread-message:first-child {
+           margin-top: 0!important ;
+        }
+    }
+
+    .add-message {
+        margin-top: 18px;
+        .thread-input {
+            margin-right: 67px ;
+        }
+        .right {
+            margin-top:3px;
+}
+    }
+}
