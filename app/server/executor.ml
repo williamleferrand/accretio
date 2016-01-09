@@ -350,6 +350,17 @@ let context_factory mode society =
         None -> return message
       | Some message -> return message
 
+   let add_member ~member =
+     log_info "adding member %d" member ;
+     lwt _ = $society(society)<-members +=! (`Member [ "active" ], member) in
+     return_unit
+
+   let remove_member ~member =
+     log_info "removing member %d" member ;
+     lwt _ = $society(society)<-members -= member in
+     return_unit
+
+
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
@@ -383,6 +394,9 @@ let context_factory mode society =
       get_message_content ;
       get_message_sender ;
       get_original_message ;
+
+      add_member ;
+      remove_member ;
     }
 
   end in
