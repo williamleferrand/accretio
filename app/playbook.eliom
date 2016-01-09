@@ -157,7 +157,7 @@ let builder  = function
           "", _ -> Help.warning "Please specify a name"
         | _, "" -> Help.warning "Please add a description"
         | name, description ->
-          Authentication.if_connected
+          Authentication.if_connected ~mixpanel:("playbook-create-society", [ "name", name ; "description", description ])
             (fun _ ->
                let data = List.map (fun (label, input) -> label, Ys_dom.get_value input) inputs in
                rpc
@@ -191,11 +191,11 @@ let builder  = function
              | Connected session when session.member_uid = playbook.owner.View_member.uid ->
                let scope, update_scope = S.create playbook.scope in
                let make_public _ =
-                 Authentication.if_connected
+                 Authentication.if_connected ~mixpanel:("playbook-make-public", [ "uid", Ys_uid.to_string playbook.uid ])
                    (fun _ -> rpc %make_public playbook.uid update_scope)
                in
                let make_private _ =
-                 Authentication.if_connected
+                 Authentication.if_connected ~mixpanel:("playbook-make-private", [ "uid", Ys_uid.to_string playbook.uid ])
                    (fun _ -> rpc %make_private playbook.uid update_scope)
                in
                div ~a:[ a_class [ "playbook-controls" ]] [
