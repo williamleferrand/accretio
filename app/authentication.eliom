@@ -55,7 +55,7 @@ let create_and_join name email password =
     ~authentication:(Password (salt, hash salt password))
     () with
   | `Object_created member ->
-      lwt _ = Notify.send_welcome_message member.Object_member.uid in
+      (* lwt _ = Notify.send_welcome_message member.Object_member.uid in *)
       Lwt_log.ign_info_f "member created, uid is %s" (Ys_uid.to_string member.Object_member.uid) ;
       lwt session = Sessions.connect member.Object_member.uid in
       return (JoinSuccess session)
