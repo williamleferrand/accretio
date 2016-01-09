@@ -155,8 +155,6 @@ let enqueue_message ?(immediate = false) ?(force_delayed = false) message =
       Lwt_log.ign_info_f "pushing message immediately to %d %s %s" message.locator.uid message.locator.name message.locator.email ;
       pusher#push { message with content = with_signature message.locator message.content }
 
-
-
 let send_batches () =
   Lwt_mutex.with_lock
     batches_mutex
@@ -304,7 +302,9 @@ let send_welcome_message uid =
   enqueue_message ~immediate:true
     {
       subject = "Welcome!" ;
-      references = None ; in_reply_to = None ; reply_to = None ;
+      references = None ;
+      in_reply_to = None ;
+      reply_to = None ;
       locator ;
       content =
         [

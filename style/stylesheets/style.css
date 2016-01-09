@@ -339,12 +339,13 @@ h1 {
   font-size: 32px;
   font-family: 'Molengo', sans-serif;
   text-align: center;
+  padding: 24px 0;
 }
 
-/* line 137, ../sass/_nutshell.scss */
+/* line 138, ../sass/_nutshell.scss */
 h2 {
   margin: 0 0 20px 0;
-  padding: 10px 0px;
+  padding: 16px 0px;
   border-bottom: 1px solid #3d3d3d;
   font-size: 18px;
   font-family: 'Molengo', sans-serif;
@@ -652,28 +653,56 @@ h2 {
   margin: 10px;
 }
 
-/* line 1, ../sass/_dashboard.scss */
-.dashboard {
-  margin: 10px 0;
+/* line 3, ../sass/_dashboard.scss */
+.dashboard .societies {
+  padding-top: 16px;
 }
-/* line 4, ../sass/_dashboard.scss */
-.dashboard .dashboard-create-new-circle {
-  text-align: center;
+/* line 8, ../sass/_dashboard.scss */
+.dashboard .society {
+  margin: 0 0 10px 0;
+  border-radius: 5px;
+  padding: 20px;
+  background-color: #3d3d3d;
+  color: white;
+  cursor: pointer;
+}
+/* line 15, ../sass/_dashboard.scss */
+.dashboard .society .name {
+  font-size: 18px;
+  border-bottom: 1px solid white;
+  padding: 0 0 15px 0;
+  margin: 0 0 15px 0;
+}
+/* line 21, ../sass/_dashboard.scss */
+.dashboard .society .description {
+  font-size: 14px;
+  line-height: 16px;
+}
+@media screen and (min-width: 800px) {
+  /* line 28, ../sass/_dashboard.scss */
+  .dashboard .society {
+    width: 400px;
+    margin: 0 10px 10px 0;
+  }
+  /* line 32, ../sass/_dashboard.scss */
+  .dashboard .society-column {
+    float: left;
+  }
 }
 
-/* line 4, ../sass/_landing.scss */
+/* line 3, ../sass/_landing.scss */
 .landing .landing-title {
   font-size: 32px;
   font-family: 'Molengo', sans-serif;
   text-align: center;
 }
 @media screen and (min-width: 800px) {
-  /* line 12, ../sass/_landing.scss */
+  /* line 11, ../sass/_landing.scss */
   .landing .landing-pitch {
-    margin: 24px auto 0 auto;
+    margin: 0 auto;
     width: 800px;
   }
-  /* line 16, ../sass/_landing.scss */
+  /* line 15, ../sass/_landing.scss */
   .landing .landing-pitch .pitch {
     float: left;
     width: 400px;
@@ -681,64 +710,56 @@ h2 {
     padding-top: 16px;
     line-height: 24px;
   }
-  /* line 23, ../sass/_landing.scss */
+  /* line 21, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div {
+    margin-bottom: 22px;
+  }
+  /* line 24, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div:last-child {
+    margin-bottom: 0;
+  }
+  /* line 28, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo {
     float: left;
   }
-  /* line 25, ../sass/_landing.scss */
+  /* line 30, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo svg {
     width: 400px;
   }
 }
 @media screen and (max-width: 799px) {
-  /* line 35, ../sass/_landing.scss */
+  /* line 40, ../sass/_landing.scss */
   .landing .landing-pitch {
     margin: 0 auto 20px auto;
   }
-  /* line 37, ../sass/_landing.scss */
+  /* line 42, ../sass/_landing.scss */
   .landing .landing-pitch .pitch {
     text-align: center;
     font-size: 20px;
-    margin: 24px 0 0 0;
+    margin: 0px 0 0 0;
     line-height: 24px;
   }
-  /* line 43, ../sass/_landing.scss */
+  /* line 47, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div {
+    margin-bottom: 22px;
+  }
+  /* line 50, ../sass/_landing.scss */
+  .landing .landing-pitch .pitch > div:last-child {
+    margin-bottom: 0;
+  }
+  /* line 54, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo {
     display: none;
   }
-  /* line 45, ../sass/_landing.scss */
+  /* line 56, ../sass/_landing.scss */
   .landing .landing-pitch .graph-demo svg {
     width: 100%;
     height: auto !important;
   }
 }
-/* line 56, ../sass/_landing.scss */
-.landing .landing-popular .playbooks .playbook {
-  margin: 0 0 20px 0;
-  border-radius: 5px;
-  padding: 20px;
-  background-color: #3d3d3d;
-  color: white;
-  cursor: pointer;
-}
-/* line 63, ../sass/_landing.scss */
-.landing .landing-popular .playbooks .playbook .name {
-  font-size: 18px;
-  border-bottom: 1px solid white;
-  padding: 0 0 15px 0;
-  margin: 0 0 15px 0;
-}
-/* line 69, ../sass/_landing.scss */
-.landing .landing-popular .playbooks .playbook .description {
-  font-size: 14px;
-  line-height: 16px;
-}
-@media screen and (min-width: 800px) {
-  /* line 76, ../sass/_landing.scss */
-  .landing .landing-popular .playbooks .playbook {
-    width: 400px;
-    margin: 0 10px 10px 0;
-  }
+/* line 66, ../sass/_landing.scss */
+.landing .landing-popular .playbooks {
+  padding-top: 0 !important;
 }
 
 /* line 1, ../sass/_thanks.scss */
@@ -1325,35 +1346,39 @@ h2 {
   color: #3d3d3d;
 }
 
-/* line 2, ../sass/_library.scss */
+/* line 3, ../sass/_library.scss */
 .library .playbooks {
-  margin-top: 24px;
+  padding-top: 16px;
 }
-/* line 4, ../sass/_library.scss */
+/* line 5, ../sass/_library.scss */
 .library .playbooks .playbook {
-  margin: 0 0 20px 0;
+  margin: 0 0 10px 0;
   border-radius: 5px;
   padding: 20px;
   background-color: #3d3d3d;
   color: white;
   cursor: pointer;
 }
-/* line 11, ../sass/_library.scss */
+/* line 12, ../sass/_library.scss */
 .library .playbooks .playbook .name {
   font-size: 18px;
   border-bottom: 1px solid white;
   padding: 0 0 15px 0;
   margin: 0 0 15px 0;
 }
-/* line 17, ../sass/_library.scss */
+/* line 18, ../sass/_library.scss */
 .library .playbooks .playbook .description {
   font-size: 14px;
   line-height: 16px;
 }
 @media screen and (min-width: 800px) {
-  /* line 24, ../sass/_library.scss */
+  /* line 25, ../sass/_library.scss */
   .library .playbooks .playbook {
     width: 400px;
     margin: 0 10px 10px 0;
+  }
+  /* line 29, ../sass/_library.scss */
+  .library .playbooks .library-column {
+    float: left;
   }
 }

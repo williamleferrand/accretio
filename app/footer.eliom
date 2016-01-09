@@ -33,6 +33,10 @@ open React
 let dom () =
   footer ~a:[ a_class [ "footer" ]] [
     Raw.a ~a:[ a_href "mailto:hi@accret.io" ] [ pcdata "Contact" ] ;
+    pcdata " - " ;
+    Raw.a ~a:[ a_href "https://github.com/accretio" ] [ pcdata "Github" ] ;
+    pcdata " - " ;
+    Raw.a ~a:[ a_href "https://medium.com/@wleferrand" ] [ pcdata "Blog" ] ;
   ]
 
 }}

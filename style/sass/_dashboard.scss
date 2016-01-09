@@ -1,8 +1,36 @@
 .dashboard {
-    margin: 10px 0;
 
-    .dashboard-create-new-circle {
-        text-align: center ;
+    .societies {
+        padding-top: 16px ;
+
     }
 
+    .society {
+        margin: 0 0 10px 0 ;
+        border-radius: 5px;
+        padding: 20px;
+        background-color: $grey ;
+        color: white ;
+        cursor: pointer ;
+        .name  {
+            font-size: 18px ;
+            border-bottom: 1px solid white ;
+            padding: 0 0 15px 0 ;
+            margin: 0 0 15px 0 ;
+        }
+        .description {
+            font-size: 14px ;
+            line-height: 16px ;
+        }
+    }
+
+    @media screen and (min-width: 800px) {
+        .society {
+            width: 400px ;
+            margin: 0 10px 10px 0 ;
+        }
+        .society-column {
+            float: left ;
+        }
+    }
 }

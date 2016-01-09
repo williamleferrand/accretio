@@ -84,10 +84,18 @@ open View_society
 
 let builder playbooks =
   let playbooks = RList.init playbooks in
-  let playbooks = RList.map_in_div ~a:[ a_class [ "playbooks" ]] View_playbook.format playbooks in
+
+  let grid =
+    Ys_grid.create
+      ~a:[ a_class [ "playbooks" ; "clearfix" ]]
+      ~a_col:[ a_class [ "library-column" ]]
+      ~column_width:410
+      ~content:(S.map (fun playbooks -> List.map View_playbook.format playbooks) (RList.channel playbooks))
+      ()
+  in
   div ~a:[ a_class [ "library" ]] [
     h1 [ pcdata "Library" ] ;
-    playbooks
+    grid ;
   ]
 
 let dom =
