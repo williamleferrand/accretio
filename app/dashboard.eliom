@@ -57,9 +57,19 @@ let builder = function
     div []
   | Some societies ->
     let societies = RList.init societies in
-    let societies = RList.map_in_div View_society.format societies in
+
+    let grid =
+      Ys_grid.create
+        ~a:[ a_class [ "societies" ; "clearfix" ]]
+        ~a_col:[ a_class [ "society-column" ]]
+        ~column_width:410
+        ~content:(S.map (fun societies -> List.map View_society.format societies) (RList.channel societies))
+      ()
+    in
+
     div ~a:[ a_class [ "dashboard" ]] [
-      societies ;
+      h1 [ pcdata "Societies" ] ;
+      grid ;
     ]
 
 let dom =
