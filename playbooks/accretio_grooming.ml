@@ -72,6 +72,7 @@ let search_for_missing_names context () =
                      pcdata "I just noticed that you are a member of Accretio, but there is no name associated with your account. ";
                      pcdata "How do you want to be called by in the future?"; br ()
                    ]
+                   ()
                | true ->
                  context.message_member
                    ~member
@@ -82,6 +83,7 @@ let search_for_missing_names context () =
                      pcdata "I'm not sure I heard back from you about how you want to be called on Accretio. ";
                      pcdata "Do you want to pick up a name?"; br ()
                    ]
+                   ()
              in
              lwt _ = context.untag_member ~member ~tags:[ tag_force_ask ] in
              lwt _ = context.tag_member ~member ~tags:[ tag_already_asked ] in
@@ -99,6 +101,7 @@ let scrub_name context message =
     context.forward_to_supervisor
       ~message
       ~subject:"Please scrub the name"
+      ()
   in
   return `None
 
@@ -119,6 +122,7 @@ let thank_user context member =
       ~content:[
         pcdata "Thanks, I've updated your name!"
       ]
+      ()
   in
   return `None
 

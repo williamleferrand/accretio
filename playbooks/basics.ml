@@ -25,6 +25,7 @@ let alert_supervisor context () =
         Raw.a ~a:[ a_href (uri_of_string  (fun () -> context.direct_link)) ] [ pcdata context.direct_link ] ; br ();
         br () ;
       ]
+      ()
   in
   return `None
 

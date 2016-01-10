@@ -43,9 +43,9 @@ sig
   val log_warning : ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
-  val message_member : member:uid -> subject:string -> content:Html5_types.div_content_fun elt list -> unit Lwt.t
-  val message_supervisor : subject:string -> content:Html5_types.div_content_fun elt list -> unit Lwt.t
-  val forward_to_supervisor : message:uid -> subject:string -> unit Lwt.t
+  val message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
+  val message_supervisor : subject:string -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
+  val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> unit -> unit Lwt.t
 
 end
 
@@ -103,7 +103,7 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(reference=None) member subject content =
+        let send_message ?(reference=None) ?(data=[]) member subject content =
           let origin = Object_message.Stage Stage_Specifics.stage in
           lwt uid =
             match_lwt Object_message.Store.create
@@ -118,24 +118,43 @@ let context_factory mode society =
             | `Object_already_exists (_, uid) -> return uid
             | `Object_created message -> return message.Object_message.uid
           in
+          lwt reference =
+            match reference with
+            | None -> $message(uid)->reference
+            | Some reference ->
+              match_lwt Object_message.Store.find_by_reference reference with
+                None -> $message(uid)->reference
+              | Some message ->
+                match_lwt $message(message)->references with
+                  [] -> $message(uid)->reference
+                | reference :: _ -> return reference
+          in
+          lwt _ =
+            $society(society)<-data %% (fun store ->
+                List.fold_left
+                  (fun acc (key, value) ->
+                     (reference^"-"^key, value) :: acc)
+                  store
+                  data)
+          in
           lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = false })), uid) in
           log_info "message attached from member %d to society %d" member society ;
           return_unit
 
-        let message_member ~member ~subject ~content =
+        let message_member ~member ?(data=[]) ~subject ~content () =
           let flat_content = ref "" in
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
-          send_message member subject !flat_content
+          send_message ~data member subject !flat_content
 
-        let message_supervisor ~subject ~content =
+        let message_supervisor ~subject ?(data=[]) ~content () =
           lwt leader = $society(society)->leader in
-          message_member leader subject content
+          message_member ~member:leader ~subject ~data ~content ()
 
-        let forward_to_supervisor ~message ~subject =
+        let forward_to_supervisor ~message ?(data=[]) ~subject () =
           lwt content = $message(message)->content in
           lwt leader = $society(society)->leader in
           lwt reference = $message(message)->reference in
-          send_message ~reference:(Some reference) leader subject content
+          send_message ~data ~reference:(Some reference) leader subject content
 
       end
       in (module Mode_Specifics: MODE_SPECIFICS)
@@ -169,7 +188,7 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(reference=None) member subject content =
+        let send_message ?(reference=None) ?(data=[]) member subject content =
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
@@ -187,25 +206,33 @@ let context_factory mode society =
               | `Object_already_exists (_, uid) -> return uid
               | `Object_created message -> return message.Object_message.uid
             in
+            lwt reference = $message(uid)->reference in
+            lwt _ =
+              $society(society)<-data %% (fun store ->
+                  List.fold_left
+                    (fun acc (key, value) ->
+                       (reference^"-"^key, value) :: acc)
+                    store
+                    data)
+            in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            lwt _ = Notify.api_send_message society stage subject member content in
+            lwt _ = Notify.api_send_message reference society stage subject member content in
             return_unit
 
-        let message_member ~member ~subject ~content =
-          send_message member subject content
+        let message_member ~member ?(data=[]) ~subject ~content () =
+          send_message ~data member subject content
 
-        let message_supervisor ~subject ~content =
+        let message_supervisor ~subject ?(data=[]) ~content () =
           lwt leader = $society(society)->leader in
-          message_member leader subject content
+          message_member ~member:leader ~subject ~data ~content ()
 
-        let forward_to_supervisor ~message ~subject =
-            lwt leader = $society(society)->leader in
-            lwt reference, content = $message(message)->(reference, content) in
-            lwt _ = Notify.api_forward_message reference society stage subject leader message in
-
-            lwt uid =
-              match_lwt Object_message.Store.create
-                          ~society
+        let forward_to_supervisor ~message ?(data=[]) ~subject () =
+          lwt leader = $society(society)->leader in
+          lwt reference, content = $message(message)->(reference, content) in
+          lwt _ = Notify.api_forward_message reference society stage subject leader message in
+          lwt uid =
+            match_lwt Object_message.Store.create
+                        ~society
                           ~origin:(Object_message.Stage stage)
                           ~content
                           ~subject
@@ -215,10 +242,25 @@ let context_factory mode society =
                           () with
               | `Object_already_exists (_, uid) -> return uid
               | `Object_created message -> return message.Object_message.uid
-            in
-
-            lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            return_unit
+          in
+          (* TODO: I'm not sure that we want to attach the data at this level
+             as a matter of fact I'm pretty sure it's quite wrong, we probably
+             want to go back to the original message *)
+          lwt reference =
+            match_lwt $message(message)->references with
+             [] -> $message(uid)->reference
+            | reference :: _ -> return reference
+          in
+          lwt _ =
+            $society(society)<-data %% (fun store ->
+                List.fold_left
+                  (fun acc (key, value) ->
+                     (reference^"-"^key, value) :: acc)
+                  store
+                  data)
+          in
+          lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
+          return_unit
 
       end
       in (module Mode_Specifics: MODE_SPECIFICS)
@@ -350,6 +392,30 @@ let context_factory mode society =
         None -> return message
       | Some message -> return message
 
+   let get_message_data ~message ~key =
+     lwt original = get_original_message ~message in
+     Lwt_log.ign_info_f "get message data message:%d key:%s original_message:%d" message key original ;
+     (* we need to find the parent of this original message *)
+     lwt references = $message(original)->references in
+     lwt original_outbound_message_reference =
+       Lwt_list.fold_left_s
+         (fun acc reference ->
+            match_lwt Object_message.Store.find_by_reference reference with
+            | None -> return acc
+            | Some _ -> return (Some reference))
+         None
+         references
+     in
+
+     match original_outbound_message_reference with
+     | None ->
+       Lwt_log.ign_info_f "no original outbound reference for message %d, key %s" message key ;
+       return_none
+     | Some reference ->
+       Lwt_log.ign_info_f "original outbound reference for message %d, key %s is %s" message key reference ;
+       let key = reference^"-"^key in
+       get ~key
+
    let add_member ~member =
      log_info "adding member %d" member ;
      lwt _ = $society(society)<-members +=! (`Member [ "active" ], member) in
@@ -359,8 +425,6 @@ let context_factory mode society =
      log_info "removing member %d" member ;
      lwt _ = $society(society)<-members -= member in
      return_unit
-
-
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
@@ -397,6 +461,9 @@ let context_factory mode society =
 
       add_member ;
       remove_member ;
+
+      get_message_data ;
+
     }
 
   end in
