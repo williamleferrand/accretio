@@ -439,7 +439,7 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                 $lid:"patch_"^field$ uid (fun res -> Ys_uid.Edges.remove e2 res) ;
 
      value $lid:"attach_to_"^field^"_check_unicity"$ uid e2 =
-                $lid:"patch_"^field$ uid (fun res -> match Ys_uid.Edges.mem (snd e2) res with [ true -> res | false -> [ e2 :: res ]]) ;
+                $lid:"patch_"^field$ uid (fun res -> match Ys_uid.Edges.mem (snd e2) res with [ True -> res | False -> [ e2 :: res ]]) ;
 
 (*
       value $lid:"attach_to_"^field^"_check_unicity_all_keep"$ uid e2 =
