@@ -58,8 +58,23 @@ let create_playbook_threads () =
       None
       (-1)
 
+let reset_message_transport () =
+  Lwt_log.ign_info_f "resetting message transport" ;
+  Object_message.Store.fold_flat_lwt
+    (fun _ uid ->
+       try_lwt
+         lwt _ = $message(uid)->transport in
+         return (Some ())
+       with _ ->
+          $message(uid)<-transport = Object_message.NoTransport ;
+          return (Some ()))
+    ()
+    None
+    (-1)
+
 let run () =
   lwt _ = create_playbook_threads () in
+  lwt _ = reset_message_transport () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in

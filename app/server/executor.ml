@@ -45,6 +45,7 @@ sig
 
   val message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val message_supervisor : subject:string -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
+  val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> unit -> unit Lwt.t
 
 end
@@ -150,6 +151,18 @@ let context_factory mode society =
           lwt leader = $society(society)->leader in
           message_member ~member:leader ~subject ~data ~content ()
 
+        let reply_to ~message ?(data=[]) ~content () =
+          lwt subject = $message(message)->subject in
+          match_lwt $message(message)->origin with
+          | Object_message.CatchAll ->
+            log_error "can't reply_to message %d, it was sent by the catchall??" message ;
+            return_unit
+          | Object_message.Stage _ ->
+            log_error "can't reply_to message %d, it was sent by a stage" message ;
+            return_unit
+          | Object_message.Member member ->
+            message_member ~member ~subject:("Re: "^subject) ~content ()
+
         let forward_to_supervisor ~message ?(data=[]) ~subject () =
           lwt content = $message(message)->content in
           lwt leader = $society(society)->leader in
@@ -188,7 +201,7 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(reference=None) ?(data=[]) member subject content =
+        let send_message ?(in_reply_to=None) ?(reference=None) ?(data=[]) member subject content =
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
@@ -216,7 +229,7 @@ let context_factory mode society =
                     data)
             in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            lwt _ = Notify.api_send_message reference society stage subject member content in
+            lwt _ = Notify.api_send_message ?in_reply_to reference society stage subject member content in
             return_unit
 
         let message_member ~member ?(data=[]) ~subject ~content () =
@@ -225,6 +238,23 @@ let context_factory mode society =
         let message_supervisor ~subject ?(data=[]) ~content () =
           lwt leader = $society(society)->leader in
           message_member ~member:leader ~subject ~data ~content ()
+
+        let reply_to ~message ?(data=[]) ~content () =
+          lwt subject = $message(message)->subject in
+          match_lwt $message(message)->origin with
+          | Object_message.CatchAll ->
+            log_error "can't reply_to message %d, it was sent by the catchall??" message ;
+            return_unit
+          | Object_message.Stage _ ->
+            log_error "can't reply_to message %d, it was sent by a stage" message ;
+            return_unit
+          | Object_message.Member member ->
+            match_lwt $message(message)->transport with
+            | Object_message.NoTransport ->
+              log_error "can't reply_to message %d, no transport" message ;
+              return_unit
+            | Object_message.Email email ->
+              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member ("Re: "^subject) content
 
         let forward_to_supervisor ~message ?(data=[]) ~subject () =
           lwt leader = $society(society)->leader in
@@ -445,6 +475,7 @@ let context_factory mode society =
 
       message_member ;
       message_supervisor ;
+      reply_to ;
       forward_to_supervisor ;
 
       search_members ;

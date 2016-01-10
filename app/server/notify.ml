@@ -442,7 +442,7 @@ let send_direct_message sender target message =
 
 (* api emails going out *******************************************************)
 
-let api_send_message reference society destination subject member content =
+let api_send_message ?in_reply_to reference society destination subject member content =
   lwt locators = uids_to_locators [ member ] in
   lwt shortlink = $society(society)->shortlink in
   Lwt_list.iter_p
@@ -451,9 +451,9 @@ let api_send_message reference society destination subject member content =
          {
            locator ;
            references = Some reference ;
-           in_reply_to = None ;
+           in_reply_to ;
            reply_to = Some (shortlink, destination) ;
-           subject = Printf.sprintf "[Accretio] %s" subject ;
+           subject ;
            content
          })
     locators
