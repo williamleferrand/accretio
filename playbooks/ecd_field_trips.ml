@@ -93,8 +93,14 @@ let forward_suggestion_to_all_members context message =
 
 let mark_not_coming context message =
   lwt member = context.get_message_sender ~message in
-  context.log_info "member %d is not coming" member ;
-  return `None
+  context.log_info "checking the week attached to message %d and member %d" message member ;
+  match_lwt context.get_message_data ~message ~key:key_week with
+    None ->
+    context.log_error "message %d doesn't have a week key" message ;
+    return `None
+  | Some week ->
+    context.log_info "member %d is not coming to the field trip on week %s" member week ;
+    return `None
 
 let remove_member context message =
   lwt member = context.get_message_sender ~message in

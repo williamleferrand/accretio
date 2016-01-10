@@ -216,7 +216,7 @@ let context_factory mode society =
                     data)
             in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            lwt _ = Notify.api_send_message society stage subject member content in
+            lwt _ = Notify.api_send_message reference society stage subject member content in
             return_unit
 
         let message_member ~member ?(data=[]) ~subject ~content () =
@@ -394,6 +394,7 @@ let context_factory mode society =
 
    let get_message_data ~message ~key =
      lwt original = get_original_message ~message in
+     Lwt_log.ign_info_f "get message data message:%d key:%s original_message:%d" message key original ;
      (* we need to find the parent of this original message *)
      lwt references = $message(original)->references in
      lwt original_outbound_message_reference =
@@ -405,10 +406,13 @@ let context_factory mode society =
          None
          references
      in
+
      match original_outbound_message_reference with
-     | None -> return_none
+     | None ->
+       Lwt_log.ign_info_f "no original outbound reference for message %d, key %s" message key ;
+       return_none
      | Some reference ->
-       lwt reference = $message(message)->reference in
+       Lwt_log.ign_info_f "original outbound reference for message %d, key %s is %s" message key reference ;
        let key = reference^"-"^key in
        get ~key
 
