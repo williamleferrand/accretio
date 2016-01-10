@@ -35,6 +35,7 @@ let solicit_weekly_organizer context member =
         pcdata "Are you available for a simple children activity this weekend?" ; br () ;
         br () ;
       ]
+      ()
   in
   return (`CandidateWasNotified member)
 
@@ -67,7 +68,8 @@ let mark_as_joining_and_forward_suggestion context message =
       ~subject:"Please format the suggestion for the other members"
       ~content:[
         pcdata suggestion
-      ] in
+      ]
+      () in
   return `None
 
 let forward_suggestion_to_all_members context message =
@@ -90,7 +92,8 @@ let forward_suggestion_to_all_members context message =
                pcdata organizer ; pcdata "suggests that we " ; pcdata suggestion ; br () ;
                br () ;
                pcdata "Would you like to join?" ; br () ;
-             ])
+             ]
+             ())
         members
     in
     return `None
@@ -133,7 +136,8 @@ let confirm_event context message =
                pcdata suggestion ; br () ;
                br () ;
                pcdata "Looking forward to it!" ; br () ;
-             ])
+             ]
+             ())
         members
     in
     return `None

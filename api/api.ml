@@ -29,9 +29,9 @@ type 'output context =
     cancel_timers : query:string -> unit Lwt.t ;
 
     (* messaging utilities *)
-    message_member : member:uid -> subject:string -> content:Html5_types.div_content_fun elt list -> unit Lwt.t ;
-    message_supervisor : subject:string -> content:Html5_types.div_content_fun elt list -> unit Lwt.t ;
-    forward_to_supervisor : message:uid -> subject:string -> unit Lwt.t ;
+    message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
+    message_supervisor : subject:string -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
+    forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> unit -> unit Lwt.t ;
 
     (* getting talent & tagging people *)
 
@@ -50,6 +50,8 @@ type 'output context =
     get_message_content : message:uid -> string Lwt.t ;
     get_message_sender : message:uid -> uid Lwt.t ;
     get_original_message : message:uid -> uid Lwt.t ;
+
+    get_message_data : message:uid -> key:string -> string option Lwt.t ;
 
     (* member management *)
 

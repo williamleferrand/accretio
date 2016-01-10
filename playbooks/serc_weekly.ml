@@ -62,7 +62,8 @@ let send_email_to_swimmers context temperature =
              pcdata "Cheers," ;
              br () ;
              pcdata "William"
-           ])
+           ]
+           ())
       participants
   in
   return `None

@@ -69,7 +69,8 @@ let notify_failure context () =
         pcdata "Hi," ; br () ;
         br () ;
         pcdata "The Sanity Check has failed. Please investigate"
-      ] in
+      ]
+      () in
   return `None
 
 let absorb_success context () =

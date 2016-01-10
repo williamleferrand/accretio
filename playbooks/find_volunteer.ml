@@ -37,6 +37,7 @@ let alert_supervisor context () =
         Raw.a ~a:[ a_href (uri_of_string  (fun () -> context.direct_link)) ] [ pcdata context.direct_link ] ; br ();
         br () ;
       ]
+      ()
   in
   return `None
 
@@ -70,6 +71,7 @@ let look_for_candidate context () =
             br () ;
             span [ pcdata tagline ] ; br () ;
           ]
+          ()
       in
       lwt _ =
         context.set_timer
