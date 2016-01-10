@@ -82,3 +82,8 @@ PLAYBOOK
 
  *test_api_member_functions ~> `Failure ~> notify_failure
   test_api_member_functions ~> `Success ~> absorb_success
+
+
+(* the crontabs ***************************************************************)
+
+CRON test_api_member_functions "0 * * * * *"
