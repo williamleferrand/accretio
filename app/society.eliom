@@ -148,6 +148,7 @@ let trigger_string = server_function ~name:"society-trigger-string" Json.t<int *
 let add_members (uid, emails, tags) =
   protected_connected
     (fun _ ->
+       Lwt_log.ign_info_f "adding members to society %d, emails are %s" uid emails ;
        let emails = Ys_email.get_all_emails emails in
        lwt _ =
          Lwt_list.iter_p
@@ -163,6 +164,7 @@ let add_members (uid, emails, tags) =
                   | `Object_already_exists (_, uid) -> return uid
                   | `Object_created member -> return member.Object_member.uid
               in
+              Lwt_log.ign_info_f "adding member %d via email %s in society %d" member email uid ;
               let tags = "active" :: tags in
               lwt _ = $society(uid)<-members +=! (`Member tags, member) in
               return_unit)

@@ -65,7 +65,8 @@ let schedule_dinner context () =
               br () ;
               pcdata "There are enough potential participants for another dinner. " ;
               pcdata "Please reply with a custom message that will be used to contact the next organizer."
-            ] in
+            ]
+            () in
         return `None
     end
 
@@ -92,12 +93,13 @@ let ask_volunteer_for_yelp_link context member =
           br () ;
           pcdata "Where could we go? Just sent me a yelp link and I'll forward it to the group!" ; br ()
         ]
+        ()
     in
   return `None
 
 
 let review_yelp_link context message =
-  lwt _ = context.forward_to_supervisor ~message ~subject:"Review the yelp link" in
+  lwt _ = context.forward_to_supervisor ~message ~subject:"Review the yelp link" () in
   return `None
 
 
@@ -139,6 +141,7 @@ let forward_yelp_link_to_all_members context message =
                        br () ;
                      pcdata "Are you in?" ; br () ;
                      ]
+                     ()
                  in
                  context.tag_member ~member ~tags:[ tag_notified run_id ])
             participants
@@ -179,7 +182,8 @@ let create_dashboard context () =
          br () ;
          ul emails  ;
          br () ;
-       ] in
+       ]
+       () in
    return `None
 
 let mark_sender_as_volunteer context message =

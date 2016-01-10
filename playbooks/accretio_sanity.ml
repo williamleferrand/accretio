@@ -69,7 +69,8 @@ let notify_failure context () =
         pcdata "Hi," ; br () ;
         br () ;
         pcdata "The Sanity Check has failed. Please investigate"
-      ] in
+      ]
+      () in
   return `None
 
 let absorb_success context () =
@@ -82,3 +83,8 @@ PLAYBOOK
 
  *test_api_member_functions ~> `Failure ~> notify_failure
   test_api_member_functions ~> `Success ~> absorb_success
+
+
+(* the crontabs ***************************************************************)
+
+CRON test_api_member_functions "0 * * * * *"

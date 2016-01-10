@@ -35,7 +35,8 @@ let check_if_baker_is_available_this_week context () =
         pcdata "Hi," ; br () ;
         br () ;
         pcdata "Are you available to bake bread this week?"
-      ] in
+      ]
+      () in
   return `None
 
 let mark_baker_as_unavailable context message =
@@ -62,7 +63,8 @@ let ask_baker_for_custom_message context () =
         pcdata "Hi," ; br () ;
         br () ;
         pcdata "Glad to hear that you can bake. What custom message do you want to send to your followers?"
-      ] in
+      ]
+      () in
   return `None
 
 let send_message_to_participants context message =
@@ -85,7 +87,8 @@ let send_message_to_participants context message =
              br () ;
              pcdata "Cheers," ; br () ;
              pcdata "William"
-           ])
+           ]
+      ())
       members
   in
   return `None
@@ -127,7 +130,8 @@ let create_dashboard_this_week context () =
           ul (List.map (fun email -> li [ pcdata email ]) emails) ;
           br () ;
           pcdata "A vos fourneaux!" ;
-        ] in
+        ]
+    () in
   return `None
 
 let tell_baker_there_are_no_participants context _ =
@@ -138,7 +142,8 @@ let tell_baker_there_are_no_participants context _ =
         pcdata "Hi," ; br () ;
         br () ;
         pcdata "Actually there are no participants this week. Invite more people to the society!"; br () ;
-      ] in
+      ]
+      () in
   return `None
 
 
