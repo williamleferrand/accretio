@@ -35,15 +35,25 @@ let current_week () =
 let next_week () =
   current_week () + 1
 
+let key_skip = sprintf "skip-week-%d"
 let key_suggestion = sprintf "suggestion-week-%d"
 let key_week = "week"
 let tag_already_asked = sprintf "alreadyasked%d"
+let tag_coming = sprintf "coming%d"
 
 (* the stages *****************************************************************)
 
 let organize_next_field_trip context () =
+   let next_week = next_week () in
+   match_lwt context.get ~key:(key_skip next_week) with
+   | Some "true" ->
+     context.log_info "skipping week %d" next_week ;
+     return `None
+   | _ -> return `AskSupervisorForSuggestion
+
+let ask_supervisor_for_suggestion context () =
   let next_week = next_week () in
-  context.log_info "organizing the next field trip for week %d" next_week ;
+  context.log_info "asking the supervisor for suggestion, week %d" next_week ;
   lwt _ =
     context.message_supervisor
       ~subject:"Please submit a suggestion for next week's field trip"
@@ -93,7 +103,6 @@ let forward_suggestion_to_all_members context message =
 
 let mark_not_coming context message =
   lwt member = context.get_message_sender ~message in
-  context.log_info "checking the week attached to message %d and member %d" message member ;
   match_lwt context.get_message_data ~message ~key:key_week with
     None ->
     context.log_error "message %d doesn't have a week key" message ;
@@ -108,12 +117,49 @@ let remove_member context message =
   lwt _ = context.remove_member ~member in
   return `None
 
+let too_late context message =
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[
+        pcdata "Oops sorry this field trip is fully booked - let's do something another time!"
+      ]
+      ()
+  in
+  return `None
+
+let mark_as_coming context message =
+  lwt member = context.get_message_sender ~message in
+  match_lwt context.get_message_data ~message ~key:key_week with
+    None ->
+    context.log_error "message %d doesn't have a week key" message ;
+    return `None
+  | Some week ->
+    context.log_info "member %d is coming to the field trip on week %s" member week ;
+    lwt _ = context.tag_member ~member ~tags:[ tag_coming (int_of_string week) ] in
+    return (`Acknowledge message)
+
+let acknowledge context message =
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[
+        pcdata "Great! I'll be back in touch in a few days once I have a better picture of who's coming - in the meantime, don't hesitate to get in touch if you have questions!"
+      ]
+      ()
+  in
+  return `None
+
 
 (* the playbook ***************************************************************)
 
 PLAYBOOK
 
- *organize_next_field_trip<forward> ~> `Message of int ~> forward_suggestion_to_all_members ~> `NotComing of email ~> mark_not_coming ~> `Unsubscribe of email ~> remove_member
+ organize_next_field_trip ~> `AskSupervisorForSuggestion ~> ask_supervisor_for_suggestion<forward>
+
+         ask_supervisor_for_suggestion<forward> ~> `Message of int ~> forward_suggestion_to_all_members ~> `NotComing of email ~> mark_not_coming ~> `Unsubscribe of email ~> remove_member
+                                                                      forward_suggestion_to_all_members ~> `TooLate of email ~> too_late
+                                                                      forward_suggestion_to_all_members ~> `Coming of email ~> mark_as_coming ~> `Acknowledge of int ~> acknowledge
 
 
 (* the crontab ****************************************************************)

@@ -28,6 +28,7 @@ open Ys_uid
 type transport_email =
   {
     offset : int ;
+    message_id : string ;
   } with bin_io
 
 type transport =

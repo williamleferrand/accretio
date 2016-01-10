@@ -250,7 +250,7 @@ let process_email =
                   attributes
               in
 
-              let transport = Object_message.(Email { offset = Uint32.to_int offset }) in
+              let transport = Object_message.(Email { offset = Uint32.to_int offset ; message_id }) in
               let origin = Object_message.(Member sender) in
               let destination =
                 if target_stage = "" then
