@@ -414,7 +414,7 @@ let dispatch_message_automatically _loc automata =
              strategies
          in
          <:match_case< $str:Vertex.stage stage$ ->
-                      let _ = Lwt_log.ign_info_f "the message is being routed from stage %s" $str:Vertex.stage stage$ in
+                      let _ = Lwt_log.ign_info_f "the message is being routed from stage %s with %s strategies" $str:Vertex.stage stage$ $str:string_of_int (List.length strategies)$ in
                       $apply_strategies$ >> :: acc)
       automata
       [ <:match_case< _ -> Lwt.return_none >> ]
