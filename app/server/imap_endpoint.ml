@@ -217,7 +217,7 @@ let process_email =
                       0
                       (String.length references_string)
                   in
-                  references @  Str.split (Str.regexp "[ \t]+") references_string
+                  references @ Str.split (Str.regexp "[ \t]+") references_string
 
                 with exn ->
                   Lwt_log.ign_error_f ~exn "error when reading references"; []

@@ -20,7 +20,7 @@ open Message_parsers
 
 let key_run_id = "find-volunteer-run-id"
 let key_tagline = "find-volunteer-tagline"
-
+let key_volunteer = sprintf "find-volunteer-volunteer-%Ld"
 let tag_refused run_id = sprintf "refused%Ld" run_id
 let tag_timer run_id member = sprintf "waiting%Ld%d" run_id member
 
@@ -65,6 +65,7 @@ let look_for_candidate context () =
       lwt _ =
         context.message_member
           ~subject:"Would you like to organize the next dinner?"
+          ~data:[ key_run_id, Int64.to_string run_id ]
           ~member
           ~content:[
             pcdata "Hi," ; br () ;
@@ -77,37 +78,34 @@ let look_for_candidate context () =
         context.set_timer
           ~label:(tag_timer run_id member)
           ~duration:(Calendar.Period.lmake ~hour:24 ())
-          (`CandidateDidntReplied member)
+          (`CandidateDidntReplied (member, run_id))
       in
       return `None
 
-let candidate_didnt_replied context member =
-  context.log_info "candidate %d didn't replied" member ;
-  match_lwt context.get ~key:"find-volunteer-run-id" with
-    None -> return `AlertSupervisor
-  | Some run_id ->
-    let run_id = Int64.of_string run_id in
-    lwt _ = context.tag_member ~member ~tags:[ tag_refused run_id ] in
-    return `FindCandidate
+let candidate_didnt_replied context (member, run_id) =
+  context.log_info "candidate %d didn't replied in run %Ld" member run_id ;
+  lwt _ = context.tag_member ~member ~tags:[ tag_refused run_id ] in
+  return `FindCandidate
 
 let candidate_declined context message =
-  match_lwt context.get ~key:key_run_id with
+  match_lwt context.get_message_data ~message ~key:key_run_id with
     None -> return `AlertSupervisor
   | Some run_id ->
     let run_id = Int64.of_string run_id in
     lwt member = context.get_message_sender ~message in
-    context.log_info "candidate %d declined" member ;
+    context.log_info "candidate %d declined run is %Ld" member run_id ;
     lwt _ = context.tag_member ~member ~tags:[ tag_refused run_id ] in
     lwt _ = context.cancel_timers ~query:(tag_timer run_id member) in
     return `FindCandidate
 
-let return_volunteer context email =
-  lwt member = context.get_message_sender email in
+let return_volunteer context message =
+  lwt member = context.get_message_sender ~message in
   lwt _ =
-    match_lwt context.get ~key:key_run_id with
+    match_lwt context.get_message_data ~message ~key:key_run_id with
       None -> return_unit
     | Some run_id ->
       let run_id = Int64.of_string run_id in
+      lwt _ = context.set ~key:(key_volunteer run_id) ~value:(string_of_int member) in
       context.cancel_timers ~query:(tag_timer run_id member)
   in
   context.log_info "volunteer found, returning %d" member ;
@@ -116,7 +114,7 @@ let return_volunteer context email =
 let candidate_with_message context message =
   lwt member = context.get_message_sender ~message in
   lwt _ =
-    match_lwt context.get ~key:key_run_id with
+    match_lwt context.get_message_data ~message ~key:key_run_id with
       None -> return_unit
     | Some run_id ->
       let run_id = Int64.of_string run_id in
@@ -130,8 +128,8 @@ COMPONENT
                                                                                        candidate_declined ~> `AlertSupervisor ~> alert_supervisor
 find_volunteer_with_tagline ~> `FindCandidate ~> look_for_candidate ~> `No of email ~> candidate_declined ~> `FindCandidate ~> look_for_candidate
                                                  look_for_candidate ~> `AlertSupervisor ~> alert_supervisor
-                                                 look_for_candidate ~> `CandidateDidntReplied of int ~> candidate_didnt_replied ~> `FindCandidate ~> look_for_candidate
-                                                                                                        candidate_didnt_replied ~> `AlertSupervisor ~> alert_supervisor
+                                                 look_for_candidate ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied ~> `FindCandidate ~> look_for_candidate
+                                                                                                                candidate_didnt_replied ~> `AlertSupervisor ~> alert_supervisor
                                                  look_for_candidate ~> `Yes of email ~> return_volunteer
                                                                                         return_volunteer ~> `AlertSupervisor ~> alert_supervisor
                                                  look_for_candidate ~> `Message of email ~> candidate_with_message

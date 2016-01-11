@@ -88,4 +88,7 @@ let run () =
       return_unit
   in
 
+  (* setting the timzeone *)
+  (* CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ; *)
+
   return_unit
