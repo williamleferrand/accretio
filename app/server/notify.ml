@@ -206,6 +206,8 @@ let create_message message =
   let m = ref "" in
   Printer.print_list (append_to_reference m) message.content ;
 
+  Lwt_log.ign_info_f "shipping message %s" !m ;
+
   lwt from_ =
     match message.reply_to with
       None -> return "'Accretio' <hi@accret.io>"
@@ -228,8 +230,8 @@ let create_message message =
       "To", message.locator.email ;
       "From", from_ ;
       "Date", date ;
-      "Content-type", "text/html; charset=UTF-8" ;
-      "Content-transfer-encoding", "quoted-printable"; ]
+      "Content-Type", "text/html; charset=UTF-8" ;
+      "Content-Transfer-Encoding", "base64" ]
   in
 
   let header =

@@ -31,5 +31,7 @@ let forward message =
   return (Some (`Message message))
 
 let content message =
+  Lwt_log.ign_info_f "getting content from %d" message ;
   lwt content = $message(message)->content in
+  Lwt_log.ign_info_f "content found" ;
   return (Some (`Content content))

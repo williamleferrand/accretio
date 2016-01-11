@@ -20,6 +20,9 @@ open Eliom_content.Html5.D
 
 open Message_parsers
 
+let _ =
+  CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.UTC_Plus (-8))
+
 
 let author = "william@accret.io"
 let name = "Dinners with friends"
@@ -30,16 +33,33 @@ let version = 0
 (* local parameters *)
 
 let key_run_id = "dinner-with-friends-run-id"
+let key_suggestion = sprintf "suggestion-%Ld"
 let key_volunteer = sprintf "dinner-with-friends-volunteer-%Ld"
 let tag_volunteer = sprintf "volunteer%Ld"
+let tag_not_joining = sprintf "notjoining%Ld"
 let tag_joining = sprintf "joining%Ld"
 let tag_notified = sprintf "notified%Ld"
-let key_date = "dinner-with-friend-date"
+let key_date = sprintf "dinner-with-friend-date-%Ld"
+let key_negative_replies_in_a_row = sprintf "dinner-with-friends-negative-replies-in-a-row-%d"
+
+(* some helpers ***************************************************************)
+
+let iso_date = "%FT%H:%M:%S"
+let get_date context run_id =
+  match_lwt context.get ~key:(key_date run_id) with
+    None -> return_none
+  | Some date ->
+    try
+      (* "2013-05-15T08:30:00-08:00" *)
+      let date = CalendarLib.Printer.Calendar.from_fstring iso_date date in
+      return (Some date)
+    with _ -> return_none
 
 (* the stages *****************************************************************)
 
 let schedule_dinner context () =
-  lwt _ = context.set ~key:key_run_id ~value:(Int64.to_string (Ys_time.now ())) in
+  let run_id = Ys_time.now () in
+  lwt _ = context.set ~key:key_run_id ~value:(Int64.to_string run_id) in
   lwt participants = context.search_members ~query:"active" () in
   let count_participants = List.length participants in
   match_lwt context.get ~key:"min-participants" with
@@ -59,22 +79,66 @@ let schedule_dinner context () =
       begin
         lwt _ =
           context.message_supervisor
-            ~subject:"Please drop a line for the next organizer"
+            ~subject:"When is the next dinner?"
+            ~data:[ key_run_id, Int64.to_string run_id ]
             ~content:[
               pcdata "Hi" ; br () ;
               br () ;
               pcdata "There are enough potential participants for another dinner. " ;
-              pcdata "Please reply with a custom message that will be used to contact the next organizer."
+              pcdata "When is the next dinner? Please give me a ISO date."
             ]
             () in
         return `None
-    end
+      end
 
+let set_date_and_ask_for_customer_message context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt date = context.get_message_content ~message in
+
+    let is_date_valid =
+      try
+        let _ = CalendarLib.Printer.Calendar.from_fstring iso_date date in
+        true
+      with exn -> context.log_error ~exn "couldn't parse date" ; false in
+
+    match is_date_valid with
+    | false ->
+      return (`AskAgainForDate message)
+    | true ->
+      lwt _ = context.set ~key:(key_date run_id) ~value:date in
+      lwt _ =
+        context.reply_to
+          ~message
+          ~data:[ key_run_id, Int64.to_string run_id ]
+          ~content:[
+            pcdata "Thanks. What should I tell the next organizer?"
+          ]
+        ()
+      in
+      return `None
+
+let ask_again_for_date context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~data:[ key_run_id, Int64.to_string run_id ]
+        ~content:[
+          pcdata "Date format is invalid, please try again"
+        ]
+        ()
+    in
+    return `None
 
 let no_volunteer context () =
   context.log_info "no volunteer found" ;
   return `None
-
 
 let ask_volunteer_for_yelp_link context member =
   match_lwt context.get ~key:key_run_id with
@@ -97,11 +161,9 @@ let ask_volunteer_for_yelp_link context member =
     in
   return `None
 
-
 let review_yelp_link context message =
   lwt _ = context.forward_to_supervisor ~message ~subject:"Review the yelp link" () in
   return `None
-
 
 let forward_yelp_link_to_all_members context message =
   match_lwt context.get ~key:key_run_id with
@@ -111,13 +173,16 @@ let forward_yelp_link_to_all_members context message =
     match_lwt context.get ~key:(key_volunteer run_id) with
       None -> return `None
     | Some volunteer ->
-      match_lwt context.get ~key:(key_date) with
+      match_lwt get_date context run_id with
         None -> return `None
       | Some date ->
         let volunteer = int_of_string volunteer in
         lwt content = context.get_message_content ~message in
+        lwt _ = context.set ~key:(key_suggestion run_id) ~value:content in
         lwt participants = context.search_members ~query:(sprintf "active -volunteer%Ld" run_id) () in
         lwt volunteer = $member(volunteer)->name in
+
+        let date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date in
         lwt _ =
           Lwt_list.iter_s
             (fun member ->
@@ -129,6 +194,7 @@ let forward_yelp_link_to_all_members context message =
                  lwt _ =
                    context.message_member
                      ~member
+                     ~data:[ key_run_id, Int64.to_string run_id ]
                      ~subject:"Dinner with friends?"
                      ~content:[
                        pcdata "Hello!" ; br () ;
@@ -137,9 +203,9 @@ let forward_yelp_link_to_all_members context message =
                        br () ;
                        Raw.a ~a:[ a_href (uri_of_string (fun () -> content)) ] [ pcdata content ] ; br () ;
                        br () ;
-                       pcdata date ; br () ;
+                       pcdata "We would meet on " ; pcdata date ; br () ;
                        br () ;
-                     pcdata "Are you in?" ; br () ;
+                       pcdata "Are you in?" ; br () ;
                      ]
                      ()
                  in
@@ -148,16 +214,68 @@ let forward_yelp_link_to_all_members context message =
         in
         return `None
 
+let mark_member_as_not_joining context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt member = context.get_message_sender message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_not_joining run_id ] in
+    lwt negative_replies_in_a_row =
+      match_lwt context.get ~key:(key_negative_replies_in_a_row member) with
+      | Some counter -> return (int_of_string counter)
+      | _ -> return 0
+    in
+    lwt _ = context.set ~key:(key_negative_replies_in_a_row member) ~value:(string_of_int (negative_replies_in_a_row + 1)) in
+    let content =
+      if negative_replies_in_a_row < 2 then
+        [
+          pcdata "Ok, I'll keep you posted about the next dinner!"
+        ]
+      else
+        [
+          pcdata "Ok, I'll keep you posted about the next dinner - unless you want to unsubscribe from these emails?"
+        ]
+    in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content
+        ()
+    in
+    return `None
+
+let remove_member context message =
+  lwt member = context.get_message_sender ~message in
+  context.log_info "removing member %d" member ;
+  lwt _ = context.remove_member ~member in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[
+        pcdata "Ok, feel free to ping me if you want to come back!"
+      ]
+      ()
+  in
+  return `None
 
 let mark_member_as_joining context message =
-  match_lwt context.get ~key:key_run_id with
+  match_lwt context.get_message_data ~message ~key:key_run_id with
     None -> return `None
   | Some run_id ->
     let run_id = Int64.of_string run_id in
     lwt member = context.get_message_sender message in
     lwt _ = context.tag_member ~member ~tags:[ tag_joining run_id ] in
+    lwt _ = context.set ~key:(key_negative_replies_in_a_row member) ~value:(string_of_int 0) in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[
+          pcdata "Great! I'll send you an update once I hear from the others."
+        ]
+        ()
+    in
     return `None
-
 
 let create_dashboard context () =
   match_lwt context.get ~key:key_run_id with
@@ -197,6 +315,139 @@ let mark_sender_as_volunteer context message =
     return (`Message message)
 
 
+let check_participation context () =
+  match_lwt context.get ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    context.log_info "checking participation for run %Ld" run_id ;
+    match_lwt context.get ~key:(key_volunteer run_id) with
+      None -> return `None
+    | Some volunteer ->
+      let volunteer = int_of_string volunteer in
+      lwt participants = context.search_members ~query:(tag_joining run_id) () in
+      match List.filter (fun uid -> uid <> volunteer) participants with
+        [] -> return (`NotEnoughParticipants run_id)
+      | _ -> return (`AskVolunteerToBook run_id)
+
+let not_enough_participants context run_id =
+  match_lwt context.get ~key:(key_volunteer run_id) with
+    None -> return `None
+  | Some volunteer ->
+    let member = int_of_string volunteer in
+    lwt _ =
+      context.message_member
+        ~member
+        ~subject:"Summary for next week's dinner"
+        ~content:[
+          pcdata "Hi," ; br () ;
+          br () ;
+          pcdata "Unfortunately, it looks like there isn't enough participants this time. Thanks for your suggestion and let's do something later!"
+        ]
+        ()
+    in
+    return `None
+
+let ask_volunteer_to_book context run_id =
+  context.log_info "checking participation for run %Ld" run_id ;
+  match_lwt context.get ~key:(key_volunteer run_id) with
+    None -> return `None
+  | Some volunteer ->
+    match_lwt get_date context run_id with
+      None -> return `None
+    | Some date ->
+      let member = int_of_string volunteer in
+      lwt participants = context.search_members ~query:(tag_joining run_id) () in
+      let date = CalendarLib.Printer.Calendar.sprint "%c" date in
+      lwt _ =
+        context.message_member
+          ~member
+          ~data:[ key_run_id, Int64.to_string run_id ]
+          ~subject:"Summary for next week's dinner"
+          ~content:[
+            pcdata "Hi," ; br () ;
+            br () ;
+            pcdata "Great news, there are " ; pcdata (string_of_int (List.length participants)) ; pcdata " participants to next week's dinner!" ; br () ;
+            br () ;
+            pcdata "Would you mind letting the restaurant know, if you feel that advance booking is needed? " ; pcdata "Dinner's date is " ; pcdata date ; br () ;
+            br () ;
+            pcdata "Please let me know when I can send the finalized invite to all participants," ; br () ;
+            br () ;
+            pcdata "Thanks!" ; br ()
+          ]
+          ()
+      in
+      return `None
+
+let confirm_to_all_participants context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    match_lwt get_date context run_id with
+      None -> return `None
+    | Some date ->
+      match_lwt context.get ~key:(key_suggestion run_id) with
+        None -> return `None
+      | Some suggestion ->
+        lwt volunteer = context.get_message_sender message in
+        lwt volunteer_name = $member(volunteer)->name in
+        lwt participants = context.search_members ~query:(tag_joining run_id) () in
+        let participants = List.filter (fun uid -> uid <> volunteer) participants in
+
+        let iso_date = CalendarLib.Printer.Calendar.sprint iso_date date in
+
+        let gcal =
+          `Assoc [
+            "@context", `String "http://schema.org" ;
+            "@type", `String "EventReservation" ;
+
+            "reservationNumber", `String "012345" ;
+            "reservationStatus", `String "http://schema.org/Confirmed" ;
+
+            (* "restaurantUrl", `String suggestion ; *)
+            "underName", `Assoc [
+              "@type", `String "Person" ;
+              "name", `String volunteer_name ] ;
+
+            "reservationFor", `Assoc [
+              "@type", `String "[Accretio] Dinner with friends" ;
+              "name", `String "Dinner" ;
+              "startDate", `String iso_date ;
+              "location", `Assoc [
+                "@type", `String "Place" ;
+                "name", `String suggestion ;
+                ]
+            ]
+          ]
+        in
+
+        let gcal = Yojson.Basic.to_string gcal in
+
+        let date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date in
+
+        lwt _ =
+          Lwt_list.iter_s
+            (fun member ->
+               context.message_member
+                 ~member
+                 ~data:[ key_run_id, Int64.to_string run_id ]
+                 ~subject:"Dinner confirmation"
+                 ~content:[
+                   Unsafe.data ("<script type=\"application/ld+json\"\>" ^ gcal ^ "</script>") ;
+                   pcdata "Hi," ; br () ;
+                   br () ;
+                   pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
+                   br () ;
+                   pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
+                 ]
+                 ())
+            participants
+        in
+
+        return `None
+
+
 (* the playbook ***************************************************************)
 
 
@@ -206,18 +457,22 @@ PARAMETERS
    - "Minimum number of participants", "min-participants"
    - "Maximum number of participants", "max-participants"
 
-
 PLAYBOOK
 
    #import find_volunteer
 
-   *schedule_dinner<content> ~> `Content of string ~> find_volunteer_with_tagline
-                                                      look_for_candidate ~> `NoVolunteer ~> no_volunteer
-                                                      return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members
+                                                     set_date_and_ask_for_customer_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message
+   *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message<content> ~> `Content of string ~> find_volunteer_with_tagline
+                                                     look_for_candidate ~> `NoVolunteer ~> no_volunteer
+                                                     return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members
 
        candidate_with_message ~> `Message of int ~> mark_sender_as_volunteer ~> `Message of int ~> review_yelp_link
 
-       forward_yelp_link_to_all_members ~> `Yes of email ~> mark_member_as_joining
+       forward_yelp_link_to_all_members ~> `NotJoining of email ~> mark_member_as_not_joining ~> `RemoveMember of email ~> remove_member
+       forward_yelp_link_to_all_members ~> `Joining of email ~> mark_member_as_joining
+
+       *check_participation ~> `NotEnoughParticipants of int64 ~> not_enough_participants
+        check_participation ~> `AskVolunteerToBook of int64 ~> ask_volunteer_to_book ~>  `Booked of email ~> confirm_to_all_participants
 
  *create_dashboard
 
