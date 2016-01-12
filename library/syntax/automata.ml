@@ -56,10 +56,22 @@ module Edge = struct
   type t = ctyp
   let compare = Pervasives.compare
   let default = let _loc = Loc.ghost in <:ctyp< _ >>
-  let to_string = function
-    | <:ctyp< `$uid:constr$ >> -> constr
-    | <:ctyp< `$uid:constr$ of $args$ >> -> Printf.sprintf "%s()" constr
+  let to_string ty =
+    let rec ty_to_string = function
+      <:ctyp< unit >> -> "()"
+    | <:ctyp< int >> -> "int"
+    | <:ctyp< email >> -> "int"
+    | <:ctyp< int64 >> -> "int64"
+    | <:ctyp< string >> -> "string"
+    | <:ctyp< float >> -> "float"
+    | <:ctyp< ($t1$ * $t2$) >> -> Printf.sprintf "%s, %s" (ty_to_string t1) (ty_to_string t2)
+    | _ -> ""
+    in
+    match ty with
+      <:ctyp< `$uid:constr$ >> -> constr
+    | <:ctyp< `$uid:constr$ of $args$ >> -> Printf.sprintf "%s(%s)" constr (ty_to_string args)
     | _ -> "edge"
+
 end
 
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
@@ -126,12 +138,36 @@ let inbound_serializers _loc automata =
          let bin_read = Pa_bin_prot2.Generate_bin_read.bin_read false tp in
          let type_class = Pa_bin_prot2.Generate_tp_class.bin_tp_class false tp in
 
+         let open Pa_deriving_common.Utils in
+         let open Pa_deriving_common.Base in
+         let open Pa_deriving_common.Type in
+         let open Pa_deriving_common.Extend in
+
+         let decls = display_errors _loc Translate.decls tp in
+         let module U = Untranslate(struct let _loc = _loc end) in
+	 let tdecls = List.concat_map U.sigdecl decls in
+         let cl = "Yojson" in
+	 let cl = find cl in
+	 let ms = derive_str _loc decls cl in
+
          <:str_item<
               $acc$ ;
               $bin_size$ ;
               $bin_write$;
               $bin_read$;
               $type_class$;
+
+              type $lid:Printf.sprintf "inbound_%s" (Vertex.stage stage)$ = $t$ ;
+
+
+
+              $ms$ ;
+
+              value $lid:"serialize_json_" ^ Vertex.stage stage$ v =
+                 $uid:"Yojson_inbound_" ^ (Vertex.stage stage)$.to_string v ;
+
+              value $lid:"deserialize_json_" ^ Vertex.stage stage$ json =
+                 $uid:"Yojson_inbound_" ^ (Vertex.stage stage)$.from_string json ;
 
               value $lid:"serialize_" ^ Vertex.stage stage$ v =
                  let _ = Lwt_log.ign_info_f "calling serializer %s" $str:Vertex.stage stage$ in
@@ -147,12 +183,17 @@ let inbound_serializers _loc automata =
 
               value $lid:"deserialize_" ^ Vertex.stage stage$ data =
                  let _ = Lwt_log.ign_info_f "calling deserializer %s" $str:Vertex.stage stage$ in
-                 let len = String.length data in
-                 let buf = Bin_prot.Common.create_buf len in
-                 do {
-                   Bin_prot.Common.blit_string_buf data buf ~len;
-                   $lid:"bin_read_inbound_" ^ Vertex.stage stage$ buf ~pos_ref:(ref 0)
-                 } ;
+                 try
+                   $lid:"deserialize_json_" ^ Vertex.stage stage$ data
+                 with [ _ ->
+                  let _ = Lwt_log.ign_info_f "this is not valid json, trying binary" in
+                  let len = String.length data in
+                  let buf = Bin_prot.Common.create_buf len in
+                  do {
+                    Bin_prot.Common.blit_string_buf data buf ~len;
+                    $lid:"bin_read_inbound_" ^ Vertex.stage stage$ buf ~pos_ref:(ref 0)
+                 }
+                ] ;
 
              >>
     )
@@ -271,28 +312,46 @@ let triggers _loc automata =
        (* if there is no inbound edge, we can hope that the inbound type is unit, as it must be a cronable stage *)
        let default =
          match List.mem (`Tickable) (Vertex.options stage) with
-           true -> `Unit
-         | false -> `Unknown in
+           true -> Some `Unit
+         | false -> None in
+
+       let extract_type = function
+           <:ctyp< int >> -> Some `Int
+         | <:ctyp< int64 >> -> Some `Int64
+         | <:ctyp< string >> -> Some `String
+         | <:ctyp< email >> -> Some `Int
+         | <:ctyp< float >> -> Some `Float
+         | _ -> None
+       in
+
+       let rec type_to_expr = function
+         | `Unit -> <:expr< `Unit >>
+         | `Int -> <:expr< `Int >>
+         | `Int64 -> <:expr< `Int64 >>
+         | `String -> <:expr< `String >>
+         | `Float -> <:expr< `Float >>
+         | `Tuple2 (t1, t2) -> <:expr< `Tuple2($type_to_expr t1$, $type_to_expr t2$) >>
+       in
+
        let input_type =
          G.fold_pred_e
            (fun transition acc ->
               match G.E.label transition with
-              | <:ctyp< `$uid:constr$ >> -> `Unit
-              | <:ctyp< `$uid:constr$ of int >> -> `Int
-              | <:ctyp< `$uid:constr$ of email >> -> `Int
-              | <:ctyp< `$uid:constr$ of float >> -> `Float
-              | <:ctyp< `$uid:constr$ of string >> -> `String
-              | _ -> `Unknown)
+              | <:ctyp< `$uid:constr$ >> -> Some `Unit
+              | <:ctyp< `$uid:constr$ of ($t1$ * $t2$) >> ->
+                (match extract_type t1, extract_type t2 with
+                   None, _ | _, None -> None
+                 | Some t1, Some t2 -> Some (`Tuple2(t1, t2)))
+              | <:ctyp< `$uid:constr$ of $t1$ >> -> extract_type t1
+              | _ -> None)
            automata
            stage
            default in
+
        let stage = Vertex.stage stage in
        match input_type with
-       | `Unknown -> acc
-       | `Unit -> <:expr< [ (`Unit, $str:stage$) :: $acc$ ] >>
-       | `Int -> <:expr< [ (`Int, $str:stage$) :: $acc$ ] >>
-       | `Float -> <:expr< [ (`Float, $str:stage$) :: $acc$ ] >>
-       | `String -> <:expr< [ (`String, $str:stage$) :: $acc$ ] >>)
+       | None -> Printf.eprintf "skipping stage %s in the triggers, type unknown\n" stage ; flush stdout ; acc
+       | Some ty -> <:expr< [ ($type_to_expr ty$, $str:stage$) :: $acc$ ] >>)
     automata
     <:expr< [] >>
 

@@ -387,6 +387,7 @@ let ask_volunteer_to_book context run_id =
       return `None
 
 let remind_volunteer context (run_id, number_of_reminders) =
+  context.log_info "remind_volunteer with run_id %Ld, number of reminders %d" run_id number_of_reminders ;
   if number_of_reminders > 2 then
     return (`UnresponsiveVolunteer run_id)
   else
