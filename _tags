@@ -34,7 +34,7 @@
 
 <app/server/view_*.ml>: pkg_deriving.syntax
 
-<app/server/*.ml{,i}> and not <app/server/object_*.ml{,i}>: pkg_lwt.syntax, use_operators, pkg_lwt.syntax.log, pkg_eliom.server
+<app/server/*.ml{,i}> and not <app/server/object_*.ml{,i}>: pkg_lwt.syntax, use_operators, pkg_lwt.syntax.log, pkg_eliom.server, pkg_deriving-yojson
 
 <app/server/ys_stripe*> or <app/server/ys_twilio*>: pkg_js_of_ocaml.deriving.syntax, pkg_deriving.syntax, pkg_deriving-yojson.syntax, pkg_deriving-yojson, pkg_yojson
 
@@ -68,4 +68,4 @@
 # some libs tags
 ################################################################################
 
-<library/syntax/*>: pkg_camlp4.lib,pkg_camlp4.quotations.r,pkg_camlp4.metagenerator,pkg_camlp4.extend,syntax_camlp4o,pkg_type_conv,pkg_ocamlgraph
+<library/syntax/*>: pkg_camlp4.lib,pkg_camlp4.quotations.r,pkg_camlp4.metagenerator,pkg_camlp4.extend,syntax_camlp4o,pkg_type_conv,pkg_ocamlgraph,pkg_deriving.tc

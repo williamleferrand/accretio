@@ -622,7 +622,7 @@ let builder bundle =
           in
           div ~a:[ a_class [ "trigger" ]] [ input ; call  ]
         | `Float ->
-          let input = input ~input_type:`Text () in
+          let input = input ~input_type:`Text ~a:[ a_placeholder "FLOAT" ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_float (view.uid, stage, float_of_string arg))
@@ -635,7 +635,7 @@ let builder bundle =
              in
              div ~a:[ a_class [ "trigger" ]] [ input ; call ]
         | `String ->
-          let input = input ~input_type:`Text () in
+          let input = input ~input_type:`Text ~a:[ a_placeholder "STRING" ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_string (view.uid, stage, arg))
@@ -648,7 +648,7 @@ let builder bundle =
           in
           div ~a:[ a_class [ "trigger" ]] [ input ; call ]
         | _ ->
-          let input = input ~input_type:`Text ~a:[ a_placeholder "RAW FIELD" ] () in
+          let input = input ~input_type:`Text ~a:[ a_placeholder "JSON" ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_raw (view.uid, stage, arg))
