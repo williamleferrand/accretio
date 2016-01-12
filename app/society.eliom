@@ -32,7 +32,7 @@ type bundle =
     view : View_society.t ;
     (* playbook info *)
     automata : string ;
-    triggers :  ([ `Unit | `Int | `Float | `String ] * string) list ;
+    triggers : (([ `Unit | `Int | `Int64 | `Float | `String | `Tuple2 of ('a * 'a) ] as 'a )* string) list ;
     mailables : string list ;
     email_actions : (string * string list) list ;
     (* society info *)
@@ -138,10 +138,17 @@ let trigger_string (society, stage, args) =
   Lwt_log.ign_info_f "triggering stage string, society is %d, stage is %s, args is %s" society stage args ;
   Executor.stack_and_trigger_string society stage args
 
+let trigger_raw (society, stage, args) =
+  (* convert from json to value?? *)
+
+  Lwt_log.ign_info_f "triggering stage raw, society is %d, stage is %s, args is %s" society stage args ;
+  Executor.stack_and_trigger_raw society stage args
+
 let trigger_unit = server_function ~name:"society-trigger-unit" Json.t<int * string> trigger_unit
 let trigger_int = server_function ~name:"society-trigger-int" Json.t<int * string * int> trigger_int
 let trigger_float = server_function ~name:"society-trigger-float" Json.t<int * string * float> trigger_float
 let trigger_string = server_function ~name:"society-trigger-string" Json.t<int * string * string> trigger_string
+let trigger_raw = server_function ~name:"society-trigger-raw" Json.t<int * string * string> trigger_raw
 
 (* members *)
 
@@ -638,6 +645,19 @@ let builder bundle =
                  ~button_type:`Button
                  ~a:[ a_onclick call ]
                  [ pcdata stage ]
+          in
+          div ~a:[ a_class [ "trigger" ]] [ input ; call ]
+        | _ ->
+          let input = input ~input_type:`Text ~a:[ a_placeholder "RAW FIELD" ] () in
+          let call _ =
+            let arg = Ys_dom.get_value input in
+            ignore_result (%trigger_raw (view.uid, stage, arg))
+          in
+          let call =
+            button
+              ~button_type:`Button
+              ~a:[ a_onclick call ]
+              [ pcdata stage ]
           in
           div ~a:[ a_class [ "trigger" ]] [ input ; call ])
       bundle.triggers

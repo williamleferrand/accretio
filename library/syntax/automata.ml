@@ -56,10 +56,22 @@ module Edge = struct
   type t = ctyp
   let compare = Pervasives.compare
   let default = let _loc = Loc.ghost in <:ctyp< _ >>
-  let to_string = function
-    | <:ctyp< `$uid:constr$ >> -> constr
-    | <:ctyp< `$uid:constr$ of $args$ >> -> Printf.sprintf "%s()" constr
+  let to_string ty =
+    let rec ty_to_string = function
+      <:ctyp< unit >> -> "()"
+    | <:ctyp< int >> -> "int"
+    | <:ctyp< email >> -> "int"
+    | <:ctyp< int64 >> -> "int64"
+    | <:ctyp< string >> -> "string"
+    | <:ctyp< float >> -> "float"
+    | <:ctyp< ($t1$ * $t2$) >> -> Printf.sprintf "%s, %s" (ty_to_string t1) (ty_to_string t2)
+    | _ -> ""
+    in
+    match ty with
+      <:ctyp< `$uid:constr$ >> -> constr
+    | <:ctyp< `$uid:constr$ of $args$ >> -> Printf.sprintf "%s(%s)" constr (ty_to_string args)
     | _ -> "edge"
+
 end
 
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
@@ -271,28 +283,46 @@ let triggers _loc automata =
        (* if there is no inbound edge, we can hope that the inbound type is unit, as it must be a cronable stage *)
        let default =
          match List.mem (`Tickable) (Vertex.options stage) with
-           true -> `Unit
-         | false -> `Unknown in
+           true -> Some `Unit
+         | false -> None in
+
+       let extract_type = function
+           <:ctyp< int >> -> Some `Int
+         | <:ctyp< int64 >> -> Some `Int64
+         | <:ctyp< string >> -> Some `String
+         | <:ctyp< email >> -> Some `Int
+         | <:ctyp< float >> -> Some `Float
+         | _ -> None
+       in
+
+       let rec type_to_expr = function
+         | `Unit -> <:expr< `Unit >>
+         | `Int -> <:expr< `Int >>
+         | `Int64 -> <:expr< `Int64 >>
+         | `String -> <:expr< `String >>
+         | `Float -> <:expr< `Float >>
+         | `Tuple2 (t1, t2) -> <:expr< `Tuple2($type_to_expr t1$, $type_to_expr t2$) >>
+       in
+
        let input_type =
          G.fold_pred_e
            (fun transition acc ->
               match G.E.label transition with
-              | <:ctyp< `$uid:constr$ >> -> `Unit
-              | <:ctyp< `$uid:constr$ of int >> -> `Int
-              | <:ctyp< `$uid:constr$ of email >> -> `Int
-              | <:ctyp< `$uid:constr$ of float >> -> `Float
-              | <:ctyp< `$uid:constr$ of string >> -> `String
-              | _ -> `Unknown)
+              | <:ctyp< `$uid:constr$ >> -> Some `Unit
+              | <:ctyp< `$uid:constr$ of ($t1$ * $t2$) >> ->
+                (match extract_type t1, extract_type t2 with
+                   None, _ | _, None -> None
+                 | Some t1, Some t2 -> Some (`Tuple2(t1, t2)))
+              | <:ctyp< `$uid:constr$ of $t1$ >> -> extract_type t1
+              | _ -> None)
            automata
            stage
            default in
+
        let stage = Vertex.stage stage in
        match input_type with
-       | `Unknown -> acc
-       | `Unit -> <:expr< [ (`Unit, $str:stage$) :: $acc$ ] >>
-       | `Int -> <:expr< [ (`Int, $str:stage$) :: $acc$ ] >>
-       | `Float -> <:expr< [ (`Float, $str:stage$) :: $acc$ ] >>
-       | `String -> <:expr< [ (`String, $str:stage$) :: $acc$ ] >>)
+       | None -> Printf.eprintf "skipping stage %s in the triggers, type unknown\n" stage ; flush stdout ; acc
+       | Some ty -> <:expr< [ ($type_to_expr ty$, $str:stage$) :: $acc$ ] >>)
     automata
     <:expr< [] >>
 

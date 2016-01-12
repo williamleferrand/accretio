@@ -674,6 +674,15 @@ let stack_and_trigger_string society stage args =
       created_on = Ys_time.now () ;
     }
 
+let stack_and_trigger_raw society stage args =
+  push_and_execute society
+    {
+      stage ;
+      args ;
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
+    }
+
 (* this is a naive cron executor *)
 
 open CalendarLib
