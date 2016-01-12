@@ -439,7 +439,8 @@ let dispatch_ys hook =
     register_extension "operators" ;
 
     register_extension
-      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ]
+      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ; A "-ppopt" ; Sh "`ocamlfind query deriving`/pa_deriving_common.cma" ;
+                A "-ppopt" ; Sh "`ocamlfind query deriving-yojson`/syntax.cma" ; ]
       ~after:[ A "-ppopt" ; A "-export" ] "playbooks" ;
 
     (* copy the graph to the server *)

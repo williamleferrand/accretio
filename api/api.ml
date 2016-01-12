@@ -93,7 +93,7 @@ sig
 
   (* it is much easier to generate these value in camlp4 land than in the other side *)
 
-  val triggers : ([ `Unit | `Int | `Float | `String ] * string) list
+  val triggers : (([ `Unit | `Int | `Int64 | `Float | `String | `Tuple2 of ('a * 'a) ] as 'a )* string) list
   val mailables : string list
 
   val email_actions : (string * string list) list

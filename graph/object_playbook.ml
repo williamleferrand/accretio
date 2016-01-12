@@ -52,10 +52,6 @@ type t = {
 
   thread : uid ;
 
-  (* old fields *)
-  source : string ;
-
-
 } with vertex
   (
     {
