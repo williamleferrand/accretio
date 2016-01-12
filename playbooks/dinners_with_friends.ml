@@ -41,6 +41,7 @@ let tag_joining = sprintf "joining%Ld"
 let tag_notified = sprintf "notified%Ld"
 let key_date = sprintf "dinner-with-friend-date-%Ld"
 let key_negative_replies_in_a_row = sprintf "dinner-with-friends-negative-replies-in-a-row-%d"
+let tag_timer_volunteer_booking = sprintf "timervolunteerbooking%Ld"
 
 (* some helpers ***************************************************************)
 
@@ -377,7 +378,70 @@ let ask_volunteer_to_book context run_id =
           ]
           ()
       in
+      lwt _ =
+        context.set_timer
+          ~label:(tag_timer_volunteer_booking run_id)
+          ~duration:(Calendar.Period.lmake ~hour:12 ())
+          (`RemindVolunteer (run_id, 0))
+      in
       return `None
+
+let remind_volunteer context (run_id, number_of_reminders) =
+  if number_of_reminders > 2 then
+    return (`UnresponsiveVolunteer run_id)
+  else
+    begin
+  context.log_info "need to remind the volunteer about %Ld" run_id ;
+  match_lwt context.get ~key:(key_volunteer run_id) with
+    None -> return `None
+  | Some volunteer ->
+    match_lwt get_date context run_id with
+      None -> return `None
+    | Some date ->
+
+      let member = int_of_string volunteer in
+      lwt participants = context.search_members ~query:(tag_joining run_id) () in
+      let date = CalendarLib.Printer.Calendar.sprint "%c" date in
+
+      lwt _ =
+        context.message_member
+          ~member
+          ~data:[ key_run_id, Int64.to_string run_id ]
+          ~subject:"Summary for next week's dinner"
+          ~content:[
+            pcdata "Hello," ; br () ;
+            br () ;
+            pcdata "Sorry for the reminder but we need to confirm the dinner to all participants so that they can plan accordingly :)" ; br () ;
+            br () ;
+            pcdata "There are " ; pcdata (string_of_int (List.length participants)) ; pcdata " participants and the dinner's date is " ; pcdata date ;
+            pcdata ", do we need a booking or can we tell everyone that we're all set?" ; br () ;
+            br () ;
+            pcdata "Thanks!" ; br () ;
+          ]
+          ()
+      in
+      lwt _ =
+        context.set_timer
+          ~label:(tag_timer_volunteer_booking run_id)
+          ~duration:(Calendar.Period.lmake ~hour:12 ())
+          (`RemindVolunteer (run_id, number_of_reminders + 1))
+      in
+      return `None
+    end
+
+let unresponsive_volunteer context run_id =
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Unresponsive volunteer"
+      ~data:[ key_run_id, Int64.to_string run_id ]
+      ~content:[
+        pcdata "Hi," ; br () ;
+        br () ;
+        pcdata "Volunteer in run " ; pcdata (Int64.to_string run_id) ; pcdata " hasn't confirmed the dinner. You're needed" ; br () ;
+      ]
+      ()
+  in
+  return `None
 
 let confirm_to_all_participants context message =
   match_lwt context.get_message_data ~message ~key:key_run_id with
@@ -390,6 +454,12 @@ let confirm_to_all_participants context message =
       match_lwt context.get ~key:(key_suggestion run_id) with
         None -> return `None
       | Some suggestion ->
+
+        lwt _ =
+          context.cancel_timers
+            ~query:(tag_timer_volunteer_booking run_id)
+        in
+
         lwt volunteer = context.get_message_sender message in
         lwt volunteer_name = $member(volunteer)->name in
         lwt participants = context.search_members ~query:(tag_joining run_id) () in
@@ -473,6 +543,10 @@ PLAYBOOK
 
        *check_participation ~> `NotEnoughParticipants of int64 ~> not_enough_participants
         check_participation ~> `AskVolunteerToBook of int64 ~> ask_volunteer_to_book ~>  `Booked of email ~> confirm_to_all_participants
+                                                               ask_volunteer_to_book ~> `RemindVolunteer of int64 * int ~> remind_volunteer ~> `RemindVolunteer of int64 * int ~> remind_volunteer
+                                                                                                                           remind_volunteer ~> `UnresponsiveVolunteer of int64 ~> unresponsive_volunteer
+                                                                                                                           remind_volunteer ~> `Booked of email ~> confirm_to_all_participants
+
 
  *create_dashboard
 
