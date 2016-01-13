@@ -1284,10 +1284,6 @@ h2 {
   font-size: 18px;
   margin-right: 10px;
 }
-/* line 14, ../sass/_society_public.scss */
-.society-public .society-public-details > div a {
-  font-weight: bold;
-}
 
 /* line 2, ../sass/_footer.scss */
 .footer {
