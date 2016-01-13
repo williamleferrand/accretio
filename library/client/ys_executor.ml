@@ -20,6 +20,8 @@
 
 (* later we'll have to dedup code here *)
 
+open Ys_types
+
 type schedule = Immediate | Delayed of int
 
 type call =
@@ -27,4 +29,5 @@ type call =
     stage : string ;
     args : string ;
     schedule : schedule ;
+    created_on : timestamp ;
   }

@@ -104,7 +104,7 @@ let process_email =
                   Lwt_log.ign_info_f "member not found for email %s, let's create a ghost" email ;
                   (match_lwt Object_member.Store.create
                                ~preferred_email:email
-                               ~name:address.ad_mailbox
+                               ~name:""
                                ~emails:[ email ]
                                ~state:Object_member.Ghost
                                () with

@@ -24,12 +24,14 @@ open Ast
 
 module StringSet = Set.Make(String)
 
+type opt = Tickable | Mailbox | MessageStrategies of string list
+
 module Vertex = struct
 
   type t =
     {
       stage: string ;
-      options : [ `Tickable | `Mailbox | `MessageStrategies of string list ] list ;
+      options: opt list ;
       path : string list ;
     }
 
@@ -46,7 +48,7 @@ module Vertex = struct
    let path v = v.path
 
    let is_mailable v =
-     List.exists (function `MessageStrategies _ -> true | _ -> false) v.options
+     List.exists (function MessageStrategies _ -> true | _ -> false) v.options
 
 end
 
@@ -77,6 +79,7 @@ end
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
 
 let extract_inbound_type _loc automata stage =
+  Printf.eprintf "stage %s has %d options\n" (Vertex.stage stage) (List.length (Vertex.options stage)) ; flush stdout ;
   let edges =
     G.fold_pred_e
       (fun edge acc ->
@@ -88,13 +91,16 @@ let extract_inbound_type _loc automata stage =
       []
   in
   match edges with
-  | <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
+    <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
   | <:ctyp< `$uid:constr$ of $t$ >> :: _ -> Some t
   | <:ctyp< `$uid:constr$ >> :: _ -> Some <:ctyp< unit >>
   | _ ->
-    match List.mem (`Tickable) (Vertex.options stage) with
-      false -> None
-    | true -> Some <:ctyp< unit >>
+    match List.mem Tickable (Vertex.options stage) with
+      true -> Some <:ctyp< unit >>
+    | false ->
+      match List.mem Mailbox (Vertex.options stage) with
+        true -> Some <:ctyp< int >>
+      | false -> None
 
 let outbound_types _loc automata =
   G.fold_vertex
@@ -124,7 +130,7 @@ let outbound_types _loc automata =
 let inbound_serializers _loc automata =
   G.fold_vertex
     (fun stage acc ->
-       (* we look at all the successors of this stage *)
+       (* we look at all the inbound edges for this stage *)
        match extract_inbound_type _loc automata stage with
          None ->
          Printf.eprintf "warning: stage %s isn't reachable, we can't infer the type\n" (Vertex.stage stage) ;
@@ -133,11 +139,6 @@ let inbound_serializers _loc automata =
 
          let tp = TyDcl(_loc, Printf.sprintf "inbound_%s" (Vertex.stage stage), [], t, []) in
 
-         let bin_size = Pa_bin_prot2.Generate_bin_size.bin_size false tp in
-         let bin_write = Pa_bin_prot2.Generate_bin_write.bin_write false tp  in
-         let bin_read = Pa_bin_prot2.Generate_bin_read.bin_read false tp in
-         let type_class = Pa_bin_prot2.Generate_tp_class.bin_tp_class false tp in
-
          let open Pa_deriving_common.Utils in
          let open Pa_deriving_common.Base in
          let open Pa_deriving_common.Type in
@@ -145,55 +146,23 @@ let inbound_serializers _loc automata =
 
          let decls = display_errors _loc Translate.decls tp in
          let module U = Untranslate(struct let _loc = _loc end) in
-	 let tdecls = List.concat_map U.sigdecl decls in
+
          let cl = "Yojson" in
 	 let cl = find cl in
 	 let ms = derive_str _loc decls cl in
 
          <:str_item<
               $acc$ ;
-              $bin_size$ ;
-              $bin_write$;
-              $bin_read$;
-              $type_class$;
 
               type $lid:Printf.sprintf "inbound_%s" (Vertex.stage stage)$ = $t$ ;
 
-
-
               $ms$ ;
 
-              value $lid:"serialize_json_" ^ Vertex.stage stage$ v =
+              value $lid:"serialize_" ^ Vertex.stage stage$ v =
                  $uid:"Yojson_inbound_" ^ (Vertex.stage stage)$.to_string v ;
 
-              value $lid:"deserialize_json_" ^ Vertex.stage stage$ json =
+              value $lid:"deserialize_" ^ Vertex.stage stage$ json =
                  $uid:"Yojson_inbound_" ^ (Vertex.stage stage)$.from_string json ;
-
-              value $lid:"serialize_" ^ Vertex.stage stage$ v =
-                 let _ = Lwt_log.ign_info_f "calling serializer %s" $str:Vertex.stage stage$ in
-                 let size = $lid:"bin_size_inbound_" ^ Vertex.stage stage$ v in
-                 let buf = Bin_prot.Common.create_buf size in
-                 let s = Bytes.create size in
-                 do {
-                   ignore ($lid:"bin_write_inbound_" ^ Vertex.stage stage$ buf v ~pos:0) ;
-                   Bin_prot.Common.blit_buf_string buf s size ;
-                   let _ = Lwt_log.ign_info_f "calling serializer %s returned" $str:Vertex.stage stage$ in
-                   s
-                 } ;
-
-              value $lid:"deserialize_" ^ Vertex.stage stage$ data =
-                 let _ = Lwt_log.ign_info_f "calling deserializer %s" $str:Vertex.stage stage$ in
-                 try
-                   $lid:"deserialize_json_" ^ Vertex.stage stage$ data
-                 with [ _ ->
-                  let _ = Lwt_log.ign_info_f "this is not valid json, trying binary" in
-                  let len = String.length data in
-                  let buf = Bin_prot.Common.create_buf len in
-                  do {
-                    Bin_prot.Common.blit_string_buf data buf ~len;
-                    $lid:"bin_read_inbound_" ^ Vertex.stage stage$ buf ~pos_ref:(ref 0)
-                 }
-                ] ;
 
              >>
     )
@@ -279,7 +248,10 @@ let dispatch _loc automata =
     G.fold_vertex
       (fun stage acc ->
          match extract_inbound_type _loc automata stage with
-           None -> acc
+           None ->
+           Printf.eprintf "skipping dispatch for stage %s, no inbound type\n" (Vertex.stage stage) ;
+           flush stdout ;
+           acc
          | Some _ ->
            let dispatcher = outbound_dispatcher false _loc automata stage <:expr< Delayed timeout >> in
 
@@ -311,9 +283,13 @@ let triggers _loc automata =
        (* we can only guess the input format from the inbound edges *)
        (* if there is no inbound edge, we can hope that the inbound type is unit, as it must be a cronable stage *)
        let default =
-         match List.mem (`Tickable) (Vertex.options stage) with
+         match List.mem Tickable (Vertex.options stage) with
            true -> Some `Unit
-         | false -> None in
+         | false ->
+           match List.mem Mailbox (Vertex.options stage) with
+             true -> Some `String
+           | false -> None
+       in
 
        let extract_type = function
            <:ctyp< int >> -> Some `Int
@@ -450,7 +426,7 @@ let dispatch_message_automatically _loc automata =
          let strategies =
            List.fold_left
              (fun acc -> function
-                | `MessageStrategies strats ->
+                | MessageStrategies strats ->
                   List.fold_left (fun acc strat -> StringSet.add strat acc) acc strats
                 | _ -> acc)
              StringSet.empty

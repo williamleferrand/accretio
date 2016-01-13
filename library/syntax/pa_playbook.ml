@@ -49,8 +49,7 @@ let compile_automata _loc imports chains crons =
   let options = Hashtbl.create 0 in
   let paths = Hashtbl.create 0 in
 
-  List.iter (fun (stage, _) -> Hashtbl.add options stage [ `Tickable ]) crons ;
-
+  List.iter (fun (stage, _) -> Hashtbl.add options stage [ Tickable ]) crons ;
 
   let append_options vertex =
     Hashtbl.add
@@ -83,6 +82,7 @@ let compile_automata _loc imports chains crons =
   in
 
   let update vertex =
+    append_options vertex ;
     Vertex.({ stage = Vertex.stage vertex ;
               options = get_options (Vertex.stage vertex) ;
               path = get_paths (Vertex.stage vertex) })
@@ -177,13 +177,13 @@ EXTEND Gram
 
         let options = match options with
           | None -> []
-          | Some `Tickable -> [ `Tickable ]
-          | Some `Mailbox -> [ `Mailbox ]
+          | Some `Tickable -> [ Tickable ]
+          | Some `Mailbox -> [ Mailbox ]
         in
 
         let options = match message_strategies with
             None -> options
-          | Some strats -> `MessageStrategies strats :: options
+          | Some strats -> MessageStrategies strats :: options
         in
 
         { Vertex.stage ; options ; path = [] }

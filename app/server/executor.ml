@@ -46,7 +46,7 @@ sig
   val message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val message_supervisor : subject:string -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
-  val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> unit -> unit Lwt.t
+  val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
 
 end
 
@@ -70,7 +70,7 @@ let check_missing_parameters society =
   return missing_parameters
 
 
-let context_factory mode society =
+let context_factory mode society society_name =
 
   let mode_specifics =
     match mode with
@@ -163,11 +163,16 @@ let context_factory mode society =
           | Object_message.Member member ->
             message_member ~member ~subject:("Re: "^subject) ~content ()
 
-        let forward_to_supervisor ~message ?(data=[]) ~subject () =
-          lwt content = $message(message)->content in
+        let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
+          lwt original_content = $message(message)->content in
+          let content =
+            content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
+          in
+          let flat_content = ref "" in
+          Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
           lwt leader = $society(society)->leader in
           lwt reference = $message(message)->reference in
-          send_message ~data ~reference:(Some reference) leader subject content
+          send_message ~data ~reference:(Some reference) leader subject !flat_content
 
       end
       in (module Mode_Specifics: MODE_SPECIFICS)
@@ -251,44 +256,55 @@ let context_factory mode society =
           | Object_message.Member member ->
             match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
-              log_error "can't reply_to message %d, no transport" message ;
-              return_unit
+              log_warning "can't reply_to message %d, no transport, doing direct message" message ;
+              send_message ~data member ("Re: "^subject) content
             | Object_message.Email email ->
               send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member ("Re: "^subject) content
 
-        let forward_to_supervisor ~message ?(data=[]) ~subject () =
+        let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt leader = $society(society)->leader in
-          lwt reference, content = $message(message)->(reference, content) in
-          lwt _ = Notify.api_forward_message reference society stage subject leader message in
+          lwt reference, original_content = $message(message)->(reference, content) in
+          let content =
+            content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
+          in
+          let flat_content = ref "" in
+          Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
           lwt uid =
             match_lwt Object_message.Store.create
                         ~society
                           ~origin:(Object_message.Stage stage)
-                          ~content
+                          ~content:!flat_content
                           ~subject
                           ~destination:(Object_message.Member leader)
                           ~reference:(Object_message.create_reference subject)
-                          ~references:[reference ]
+                          ~references:[ reference ]
                           () with
               | `Object_already_exists (_, uid) -> return uid
               | `Object_created message -> return message.Object_message.uid
           in
           (* TODO: I'm not sure that we want to attach the data at this level
              as a matter of fact I'm pretty sure it's quite wrong, we probably
-             want to go back to the original message *)
-          lwt reference =
+             want to go back to the original message - or both ?? *)
+          lwt references =
             match_lwt $message(message)->references with
-             [] -> $message(uid)->reference
-            | reference :: _ -> return reference
+              [] -> lwt r =  $message(uid)->reference in return [ r ]
+            | reference :: _ -> lwt r =  $message(uid)->reference in return [ r ; reference ]
           in
           lwt _ =
             $society(society)<-data %% (fun store ->
                 List.fold_left
                   (fun acc (key, value) ->
-                     (reference^"-"^key, value) :: acc)
+                     List.fold_left
+                       (fun acc reference ->
+                          (reference^"-"^key, value) :: acc)
+                       acc
+                       references)
                   store
                   data)
           in
+          lwt reference = $message(uid)->reference in
+          lwt _ = Notify.api_forward_message reference society stage subject leader message in
+
           lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
           return_unit
 
@@ -423,7 +439,8 @@ let context_factory mode society =
       | Some message -> return message
 
    let get_message_data ~message ~key =
-     lwt original = get_original_message ~message in
+     (* lwt original = get_original_message ~message in *)
+     let original = message in
      Lwt_log.ign_info_f "get message data message:%d key:%s original_message:%d" message key original ;
      (* we need to find the parent of this original message *)
      lwt references = $message(original)->references in
@@ -459,9 +476,10 @@ let context_factory mode society =
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^(string_of_int society)
-
     let context = {
       society ;
+      society_name ;
+
       direct_link ;
 
       stage ;
@@ -517,16 +535,16 @@ let step society =
 
   | [] ->
 
-    lwt playbook, mode = $society(society)->(playbook, mode) in
+    lwt playbook, mode, name = $society(society)->(playbook, mode, name) in
 
     let context_factory =
       match mode with
       | Object_society.Sandbox ->
         Lwt_log.ign_info_f "society %d is running in mode sandbox" society ;
-        context_factory_sandbox society
+        context_factory_sandbox society name
       | _ ->
         Lwt_log.ign_info_f "society %d is running in mode production" society ;
-        context_factory_production society
+        context_factory_production society name
     in
 
     let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)
@@ -605,20 +623,14 @@ let push society call =
 (* the strategy here is to push the call on the stack & awake; that way it gets
    inserted inside the history, etc etc. *)
 
-open Bin_prot.Std
+open Deriving_Yojson
 
 let push_and_execute society call =
   lwt _ = push society call in
   ignore_result (step society) ;
   return_unit
 
-let unit_args =
-  let size = bin_size_unit () in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_unit buf () ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
-  s
+let unit_args = Yojson_unit.to_string ()
 
 let stack_and_trigger_unit society stage =
   push_and_execute society
@@ -629,13 +641,7 @@ let stack_and_trigger_unit society stage =
       created_on = Ys_time.now () ;
     }
 
-let int_args i =
-  let size = bin_size_int i in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_int buf i ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
-  s
+let int_args i = Yojson_int.to_string i
 
 let stack_and_trigger_int society stage args =
   push_and_execute society
@@ -647,29 +653,21 @@ let stack_and_trigger_int society stage args =
     }
 
 let stack_and_trigger_float society stage args =
-  let size = bin_size_float args in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_float buf args ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
+  let args = Yojson_float.to_string args in
   push_and_execute society
     {
       stage ;
-      args = s ;
+      args ;
       schedule = Immediate ;
       created_on = Ys_time.now () ;
     }
 
 let stack_and_trigger_string society stage args =
-  let size = bin_size_string args in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_string buf args ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
+  let args = Yojson_string.to_string args in
   push_and_execute society
     {
       stage ;
-      args = s ;
+      args ;
       schedule = Immediate ;
       created_on = Ys_time.now () ;
     }
