@@ -605,20 +605,14 @@ let push society call =
 (* the strategy here is to push the call on the stack & awake; that way it gets
    inserted inside the history, etc etc. *)
 
-open Bin_prot.Std
+open Deriving_Yojson
 
 let push_and_execute society call =
   lwt _ = push society call in
   ignore_result (step society) ;
   return_unit
 
-let unit_args =
-  let size = bin_size_unit () in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_unit buf () ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
-  s
+let unit_args = Yojson_unit.to_string ()
 
 let stack_and_trigger_unit society stage =
   push_and_execute society
@@ -629,13 +623,7 @@ let stack_and_trigger_unit society stage =
       created_on = Ys_time.now () ;
     }
 
-let int_args i =
-  let size = bin_size_int i in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_int buf i ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
-  s
+let int_args i = Yojson_int.to_string i
 
 let stack_and_trigger_int society stage args =
   push_and_execute society
@@ -647,29 +635,21 @@ let stack_and_trigger_int society stage args =
     }
 
 let stack_and_trigger_float society stage args =
-  let size = bin_size_float args in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_float buf args ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
+  let args = Yojson_float.to_string args in
   push_and_execute society
     {
       stage ;
-      args = s ;
+      args ;
       schedule = Immediate ;
       created_on = Ys_time.now () ;
     }
 
 let stack_and_trigger_string society stage args =
-  let size = bin_size_string args in
-  let buf = Bin_prot.Common.create_buf size in
-  let s = Bytes.create size in
-  ignore (bin_write_string buf args ~pos:0) ;
-  Bin_prot.Common.blit_buf_string buf s size ;
+  let args = Yojson_string.to_string args in
   push_and_execute society
     {
       stage ;
-      args = s ;
+      args ;
       schedule = Immediate ;
       created_on = Ys_time.now () ;
     }

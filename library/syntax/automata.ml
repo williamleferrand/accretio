@@ -133,11 +133,6 @@ let inbound_serializers _loc automata =
 
          let tp = TyDcl(_loc, Printf.sprintf "inbound_%s" (Vertex.stage stage), [], t, []) in
 
-         let bin_size = Pa_bin_prot2.Generate_bin_size.bin_size false tp in
-         let bin_write = Pa_bin_prot2.Generate_bin_write.bin_write false tp  in
-         let bin_read = Pa_bin_prot2.Generate_bin_read.bin_read false tp in
-         let type_class = Pa_bin_prot2.Generate_tp_class.bin_tp_class false tp in
-
          let open Pa_deriving_common.Utils in
          let open Pa_deriving_common.Base in
          let open Pa_deriving_common.Type in
@@ -145,55 +140,23 @@ let inbound_serializers _loc automata =
 
          let decls = display_errors _loc Translate.decls tp in
          let module U = Untranslate(struct let _loc = _loc end) in
-	 let tdecls = List.concat_map U.sigdecl decls in
+
          let cl = "Yojson" in
 	 let cl = find cl in
 	 let ms = derive_str _loc decls cl in
 
          <:str_item<
               $acc$ ;
-              $bin_size$ ;
-              $bin_write$;
-              $bin_read$;
-              $type_class$;
 
               type $lid:Printf.sprintf "inbound_%s" (Vertex.stage stage)$ = $t$ ;
 
-
-
               $ms$ ;
 
-              value $lid:"serialize_json_" ^ Vertex.stage stage$ v =
+              value $lid:"serialize_" ^ Vertex.stage stage$ v =
                  $uid:"Yojson_inbound_" ^ (Vertex.stage stage)$.to_string v ;
 
-              value $lid:"deserialize_json_" ^ Vertex.stage stage$ json =
+              value $lid:"deserialize_" ^ Vertex.stage stage$ json =
                  $uid:"Yojson_inbound_" ^ (Vertex.stage stage)$.from_string json ;
-
-              value $lid:"serialize_" ^ Vertex.stage stage$ v =
-                 let _ = Lwt_log.ign_info_f "calling serializer %s" $str:Vertex.stage stage$ in
-                 let size = $lid:"bin_size_inbound_" ^ Vertex.stage stage$ v in
-                 let buf = Bin_prot.Common.create_buf size in
-                 let s = Bytes.create size in
-                 do {
-                   ignore ($lid:"bin_write_inbound_" ^ Vertex.stage stage$ buf v ~pos:0) ;
-                   Bin_prot.Common.blit_buf_string buf s size ;
-                   let _ = Lwt_log.ign_info_f "calling serializer %s returned" $str:Vertex.stage stage$ in
-                   s
-                 } ;
-
-              value $lid:"deserialize_" ^ Vertex.stage stage$ data =
-                 let _ = Lwt_log.ign_info_f "calling deserializer %s" $str:Vertex.stage stage$ in
-                 try
-                   $lid:"deserialize_json_" ^ Vertex.stage stage$ data
-                 with [ _ ->
-                  let _ = Lwt_log.ign_info_f "this is not valid json, trying binary" in
-                  let len = String.length data in
-                  let buf = Bin_prot.Common.create_buf len in
-                  do {
-                    Bin_prot.Common.blit_string_buf data buf ~len;
-                    $lid:"bin_read_inbound_" ^ Vertex.stage stage$ buf ~pos_ref:(ref 0)
-                 }
-                ] ;
 
              >>
     )

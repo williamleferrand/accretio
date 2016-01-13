@@ -120,27 +120,34 @@ let reset_stack society =
 
 let reset_stack = server_function ~name:"society-reset-stack" Json.t<int> reset_stack
 
+let remove_from_stack (society, created_on, stage) =
+  lwt stack = $society(society)<-stack %%% (fun stack ->
+      return (List.filter (fun call -> not (call.Ys_executor.created_on = created_on && call.Ys_executor.stage = stage)) stack)
+    ) in
+  return (Some stack)
+
+let remove_from_stack = server_function ~name:"society-remove-from-stack" Json.t<int * int64 * string> remove_from_stack
+
 (* triggers, todo ACL *)
 
 let trigger_unit (society, stage) =
   Lwt_log.ign_info_f "triggering stage unit, society is %d, stage is %s" society stage ;
   Executor.stack_and_trigger_unit society stage
 
-let trigger_int (society, stage, args) =
+let trigger_int (society, stage, (args: int)) =
   Lwt_log.ign_info_f "triggering stage int, society is %d, stage is %s, args is %d" society stage args ;
   Executor.stack_and_trigger_int society stage args
 
-let trigger_float (society, stage, args) =
+let trigger_float (society, stage, (args: float)) =
   Lwt_log.ign_info_f "triggering stage float, society is %d, stage is %s, args is %f" society stage args ;
   Executor.stack_and_trigger_float society stage args
 
-let trigger_string (society, stage, args) =
+let trigger_string (society, stage, (args: string)) =
   Lwt_log.ign_info_f "triggering stage string, society is %d, stage is %s, args is %s" society stage args ;
   Executor.stack_and_trigger_string society stage args
 
-let trigger_raw (society, stage, args) =
+let trigger_raw (society, stage, (args: string)) =
   (* convert from json to value?? *)
-
   Lwt_log.ign_info_f "triggering stage raw, society is %d, stage is %s, args is %s" society stage args ;
   Executor.stack_and_trigger_raw society stage args
 
@@ -554,10 +561,20 @@ let builder bundle =
   let stack = RList.create () in
   attach_stack view.uid stack ;
 
-
   let format_call call =
+    let remove _ =
+      Authentication.if_connected
+        (fun _ -> rpc %remove_from_stack (view.uid, call.Ys_executor.created_on, call.Ys_executor.stage) (RList.update stack))
+    in
+    let remove =
+      button
+        ~button_type:`Button
+        ~a:[ a_onclick remove ]
+        [ pcdata "Cancel" ]
+    in
     div ~a:[ a_class [ "call" ]] [
-      pcdata call.Ys_executor.stage
+      pcdata call.Ys_executor.stage ;
+      remove ;
     ]
   in
 
