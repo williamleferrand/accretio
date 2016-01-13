@@ -101,6 +101,7 @@ let scrub_name context message =
     context.forward_to_supervisor
       ~message
       ~subject:"Please scrub the name"
+      ~content:[ pcdata "Please scrub the name below" ]
       ()
   in
   return `None
