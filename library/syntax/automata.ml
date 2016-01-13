@@ -24,12 +24,14 @@ open Ast
 
 module StringSet = Set.Make(String)
 
+type opt = Tickable | Mailbox | MessageStrategies of string list
+
 module Vertex = struct
 
   type t =
     {
       stage: string ;
-      options : [ `Tickable | `Mailbox | `MessageStrategies of string list ] list ;
+      options: opt list ;
       path : string list ;
     }
 
@@ -46,7 +48,7 @@ module Vertex = struct
    let path v = v.path
 
    let is_mailable v =
-     List.exists (function `MessageStrategies _ -> true | _ -> false) v.options
+     List.exists (function MessageStrategies _ -> true | _ -> false) v.options
 
 end
 
@@ -77,6 +79,7 @@ end
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
 
 let extract_inbound_type _loc automata stage =
+  Printf.eprintf "stage %s has %d options\n" (Vertex.stage stage) (List.length (Vertex.options stage)) ; flush stdout ;
   let edges =
     G.fold_pred_e
       (fun edge acc ->
@@ -88,13 +91,16 @@ let extract_inbound_type _loc automata stage =
       []
   in
   match edges with
-  | <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
+    <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
   | <:ctyp< `$uid:constr$ of $t$ >> :: _ -> Some t
   | <:ctyp< `$uid:constr$ >> :: _ -> Some <:ctyp< unit >>
   | _ ->
-    match List.mem (`Tickable) (Vertex.options stage) with
-      false -> None
-    | true -> Some <:ctyp< unit >>
+    match List.mem Tickable (Vertex.options stage) with
+      true -> Some <:ctyp< unit >>
+    | false ->
+      match List.mem Mailbox (Vertex.options stage) with
+        true -> Some <:ctyp< int >>
+      | false -> None
 
 let outbound_types _loc automata =
   G.fold_vertex
@@ -124,7 +130,7 @@ let outbound_types _loc automata =
 let inbound_serializers _loc automata =
   G.fold_vertex
     (fun stage acc ->
-       (* we look at all the successors of this stage *)
+       (* we look at all the inbound edges for this stage *)
        match extract_inbound_type _loc automata stage with
          None ->
          Printf.eprintf "warning: stage %s isn't reachable, we can't infer the type\n" (Vertex.stage stage) ;
@@ -242,7 +248,10 @@ let dispatch _loc automata =
     G.fold_vertex
       (fun stage acc ->
          match extract_inbound_type _loc automata stage with
-           None -> acc
+           None ->
+           Printf.eprintf "skipping dispatch for stage %s, no inbound type\n" (Vertex.stage stage) ;
+           flush stdout ;
+           acc
          | Some _ ->
            let dispatcher = outbound_dispatcher false _loc automata stage <:expr< Delayed timeout >> in
 
@@ -274,9 +283,13 @@ let triggers _loc automata =
        (* we can only guess the input format from the inbound edges *)
        (* if there is no inbound edge, we can hope that the inbound type is unit, as it must be a cronable stage *)
        let default =
-         match List.mem (`Tickable) (Vertex.options stage) with
+         match List.mem Tickable (Vertex.options stage) with
            true -> Some `Unit
-         | false -> None in
+         | false ->
+           match List.mem Mailbox (Vertex.options stage) with
+             true -> Some `String
+           | false -> None
+       in
 
        let extract_type = function
            <:ctyp< int >> -> Some `Int
@@ -413,7 +426,7 @@ let dispatch_message_automatically _loc automata =
          let strategies =
            List.fold_left
              (fun acc -> function
-                | `MessageStrategies strats ->
+                | MessageStrategies strats ->
                   List.fold_left (fun acc strat -> StringSet.add strat acc) acc strats
                 | _ -> acc)
              StringSet.empty

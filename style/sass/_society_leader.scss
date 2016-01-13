@@ -1,6 +1,6 @@
-.society {
+.society-leader {
 
-    .society-mode {
+    .society-leader-mode {
         text-align: center;
         padding: 10px 0 ;
         button {
@@ -12,7 +12,7 @@
         }
     }
 
-    .society-upper {
+    .society-leader-upper {
         margin-bottom: 10px;
         .logs {
             .logs-inner {
@@ -58,7 +58,7 @@
         }
     }
 
-    .society-lower {
+    .society-leader-lower {
         > div {
             padding: 10px;
             margin-bottom: 10px;

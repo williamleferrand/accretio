@@ -163,7 +163,7 @@ let ask_volunteer_for_yelp_link context member =
   return `None
 
 let review_yelp_link context message =
-  lwt _ = context.forward_to_supervisor ~message ~subject:"Review the yelp link" () in
+  lwt _ = context.forward_to_supervisor ~message ~subject:"Review the yelp link" ~content:[ pcdata "Please review the yelp link" ] () in
   return `None
 
 let forward_yelp_link_to_all_members context message =
@@ -530,6 +530,7 @@ PARAMETERS
 
 PLAYBOOK
 
+   #import core_join_request
    #import find_volunteer
 
                                                      set_date_and_ask_for_customer_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message

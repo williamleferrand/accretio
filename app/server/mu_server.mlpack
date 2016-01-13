@@ -20,10 +20,12 @@ Imap_endpoint
 
 Dashboard
 
-
-Society
 Logs
 Loader
 
 
 Executor
+
+Society_leader
+Society_public
+Society
