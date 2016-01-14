@@ -79,7 +79,6 @@ end
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
 
 let extract_inbound_type _loc automata stage =
-  Printf.eprintf "stage %s has %d options\n" (Vertex.stage stage) (List.length (Vertex.options stage)) ; flush stdout ;
   let edges =
     G.fold_pred_e
       (fun edge acc ->
@@ -287,7 +286,7 @@ let triggers _loc automata =
            true -> Some `Unit
          | false ->
            match List.mem Mailbox (Vertex.options stage) with
-             true -> Some `String
+             true -> Some `Int
            | false -> None
        in
 
@@ -297,7 +296,7 @@ let triggers _loc automata =
          | <:ctyp< string >> -> Some `String
          | <:ctyp< email >> -> Some `Int
          | <:ctyp< float >> -> Some `Float
-         | _ -> None
+         | _ -> Some `Raw
        in
 
        let rec type_to_expr = function
@@ -306,7 +305,7 @@ let triggers _loc automata =
          | `Int64 -> <:expr< `Int64 >>
          | `String -> <:expr< `String >>
          | `Float -> <:expr< `Float >>
-         | `Tuple2 (t1, t2) -> <:expr< `Tuple2($type_to_expr t1$, $type_to_expr t2$) >>
+         | `Raw -> <:expr< `Raw >>
        in
 
        let input_type =
@@ -314,10 +313,6 @@ let triggers _loc automata =
            (fun transition acc ->
               match G.E.label transition with
               | <:ctyp< `$uid:constr$ >> -> Some `Unit
-              | <:ctyp< `$uid:constr$ of ($t1$ * $t2$) >> ->
-                (match extract_type t1, extract_type t2 with
-                   None, _ | _, None -> None
-                 | Some t1, Some t2 -> Some (`Tuple2(t1, t2)))
               | <:ctyp< `$uid:constr$ of $t1$ >> -> extract_type t1
               | _ -> None)
            automata

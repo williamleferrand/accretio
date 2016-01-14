@@ -74,7 +74,7 @@ let retrieve = server_function ~name:"playbook-retrieve" Json.t<int> retrieve
 let _ =
   Ys_shortlink.register_checker Object_society.Store.find_by_shortlink
 
-let create_society (playbook, name, description, data) : Ys_uid.uid option Lwt.t =
+let create_society (playbook, name, description, data) : (string * Ys_uid.uid) option Lwt.t =
   protected_connected
     (fun session ->
        match_lwt Ys_shortlink.create () with
@@ -95,8 +95,8 @@ let create_society (playbook, name, description, data) : Ys_uid.uid option Lwt.t
          let uid = society.Object_society.uid in
          lwt _ = $member(session.member_uid)<-societies +=! (`Society, uid) in
          lwt _ = $playbook(playbook)<-societies +=! (`Society, uid) in
-         return (Some uid)
-       | `Object_already_exists (_, uid) -> return (Some uid))
+         return (Some (shortlink, uid))
+       | `Object_already_exists (_, uid) -> return (Some (shortlink, uid)))
 
 let create_society = server_function ~name:"playbook-create-society" Json.t<int * string * string * ((string * string) list)> create_society
 
@@ -163,7 +163,7 @@ let builder  = function
                rpc
                %create_society
                    (view.playbook.uid, name, description, data)
-                   (fun uid -> Service.goto (Service.Society uid)))
+                   (fun (shortlink, uid) -> Service.goto (Service.Society (shortlink, uid))))
       in
       let create =
         button

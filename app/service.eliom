@@ -48,7 +48,7 @@ type service =
   | Playbook of int
   | Dashboard
   | Create
-  | Society of int
+  | Society of string * int
   | Library deriving(Json)
 
 let admin objekt =
@@ -75,7 +75,7 @@ let path_of_service = function
   | Dashboard -> [ "dashboard" ]
   | Library -> [ "library" ]
   | Create -> [ "create" ]
-  | Society uid -> [ "society" ; Ys_uid.to_string uid ]
+  | Society (shortlink, _) -> [ "society" ; shortlink ]
   | Landing -> [ "" ]
 
 let service, update_service = S.create Uninitialized

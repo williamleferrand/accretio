@@ -31,7 +31,7 @@ type bundle =
     view : View_society.t ;
     (* playbook info *)
     automata : string ;
-    triggers : (([ `Unit | `Int | `Int64 | `Float | `String | `Tuple2 of ('a * 'a) ] as 'a )* string) list ;
+    triggers : (([ `Unit | `Int | `Int64 | `Float | `String | `Raw ]) * string) list ;
     mailables : string list ;
     email_actions : (string * string list) list ;
     (* society info *)

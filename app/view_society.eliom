@@ -30,6 +30,7 @@ type mode = Public | Private | Sandbox deriving (Json)
 type t =
   {
     uid : uid ;
+    shortlink : string ;
     leader : View_member.t ;
     name : string ;
     description : string ;
@@ -42,7 +43,7 @@ type t =
 {server{
 
 let to_view uid =
-  lwt leader, name, description, mode, playbook = $society(uid)->(leader, name, description, mode, playbook) in
+  lwt leader, name, description, mode, playbook, shortlink = $society(uid)->(leader, name, description, mode, playbook, shortlink) in
   let mode =
     match mode with
     | Object_society.Sandbox -> Sandbox
@@ -53,6 +54,7 @@ let to_view uid =
   lwt playbook = View_playbook.to_view playbook in
   return {
     uid ;
+    shortlink ;
     leader ;
     name ;
     description ;
@@ -77,7 +79,7 @@ let format view =
     | Sandbox -> "sandbox"
   in
   div ~a:[ a_class [ "society" ; mode ] ;
-           a_onclick (fun _ -> Service.goto (Service.Society view.uid)) ] [
+           a_onclick (fun _ -> Service.goto (Service.Society (view.shortlink, view.uid))) ] [
     div ~a:[ a_class [ "name" ]] [ pcdata view.name ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;
   ]
