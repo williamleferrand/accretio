@@ -78,18 +78,14 @@ let register_page_with_title ~path ~get_params ~extract_service () =
           lwt _ = Shunt.apply options in
           lwt session = Sessions.get () in
           let pipe = Live.pipe in
-          lwt service, title = extract_service session gp in
+          lwt service, title, description = extract_service session gp in
           let mixpanel_id = Ys_config.get_string "mixpanel-id" in
           let fb_app_id = Ys_config.get_string Ys_config.fb_app_id in
           let stripe_publishable_key = Ys_config.get_string Ys_config.stripe_publishable_key in
           ignore {unit{
               Bootstrap.init %service %pipe %session %fb_app_id %stripe_publishable_key
             }} ;
-          match title with
-            None ->
-            Lwt.return (Nutshell.common mixpanel_id version)
-          | Some title ->
-            Lwt.return (Nutshell.common ~title mixpanel_id version)))
+          Lwt.return (Nutshell.common ?title ?description mixpanel_id version)))
 
 let update_invite_code =
   function
@@ -137,8 +133,8 @@ let _ =
     ~extract_service:(fun _ uid ->
         try_lwt
           lwt name = $member(uid)->name in
-          return (Service.Member uid, Some name)
-        with _ -> return (Service.Landing, None))
+          return (Service.Member uid, Some name, None)
+        with _ -> return (Service.Landing, None, None))
    () ;
   register_page
     ~path:[ "recover" ]
@@ -167,11 +163,11 @@ let _ =
             (try_lwt
                let uid = int_of_string shortlink in
                lwt shortlink = $society(uid)->shortlink in
-               return (Service.Society(shortlink, uid), None)
-             with _ -> return (Service.Landing, None))
+               return (Service.Society(shortlink, uid), None, None)
+             with _ -> return (Service.Landing, None, None))
           | Some uid ->
             lwt name, description = $society(uid)->(name, description) in
-            return (Service.Society (shortlink, uid), Some (name ^ " - " ^ description)))
+            return (Service.Society (shortlink, uid), Some name, Some description))
     () ;
   register_page_no_param
     ~path:[ "create" ]
