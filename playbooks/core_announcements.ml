@@ -21,7 +21,7 @@ open Message_parsers
 
 let key_content = sprintf "core-announcement-content-%Ld"
 let key_id = "core-announcement-id"
-let tag_timer = sprintf "coreannouncementtimer-%Ld"
+let tag_timer = sprintf "coreannouncementtimer%Ld%d"
 
 (* the stages *)
 
@@ -50,7 +50,7 @@ let make_announcement context (content, members) =
          in
          lwt _ =
            context.set_timer
-             ~label:(tag_timer id)
+             ~label:(tag_timer id member)
              ~duration:(Calendar.Period.lmake ~hour:6 ())
              (`RemindMember (id, member, 0))
          in
@@ -64,7 +64,8 @@ let mark_as_read context message =
     None -> return `None
   | Some id ->
     let id = Int64.of_string id in
-    lwt _ = context.cancel_timers ~query:(tag_timer id) in
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.cancel_timers ~query:(tag_timer id member) in
     return `None
 
 let remind_member context (id, member, attempts) =
@@ -105,7 +106,7 @@ let remind_member context (id, member, attempts) =
       in
       lwt _ =
         context.set_timer
-          ~label:(tag_timer id)
+          ~label:(tag_timer id member)
           ~duration:(Calendar.Period.lmake ~hour:6 ())
           (`RemindMember (id, member, attempts + 1))
       in
