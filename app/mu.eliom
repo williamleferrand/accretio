@@ -145,38 +145,47 @@ let _ =
     ~get_params:(string "token")
     ~extract_service:(fun _ token -> return (Service.Recover token))
     () ;
-register_page_no_param
-  ~path:[ "request_recovery" ]
-  ~extract_service:(fun _ -> return Service.RequestRecovery)
-  () ;
-register_page_no_param
-  ~path:[ "feedback" ]
-  ~extract_service:(fun _ -> return Service.Feedback)
-  () ;
-register_page
-  ~path:[ "playbook" ]
-  ~get_params:(int "uid")
-  ~extract_service:(fun _ uid -> return (Service.Playbook uid))
-  () ;
-register_page
-  ~path:[ "society" ]
-  ~get_params:(int "uid")
-  ~extract_service:(fun _ uid -> return (Service.Society uid))
-  () ;
-register_page_no_param
-  ~path:[ "create" ]
-  ~extract_service:(fun _ -> return Service.Create)
-  () ;
-register_page_no_param
-  ~path:[ "dashboard" ]
-  ~extract_service:(function
-      | Anonymous -> return Service.Landing
-      | Connected _ -> return Service.Dashboard)
-  () ;
-register_page_no_param
-  ~path:[ "library" ]
-  ~extract_service:(fun _ -> return Service.Library)
-  () ;
-
+  register_page_no_param
+    ~path:[ "request_recovery" ]
+    ~extract_service:(fun _ -> return Service.RequestRecovery)
+    () ;
+  register_page_no_param
+    ~path:[ "feedback" ]
+    ~extract_service:(fun _ -> return Service.Feedback)
+    () ;
+  register_page
+    ~path:[ "playbook" ]
+    ~get_params:(int "uid")
+    ~extract_service:(fun _ uid -> return (Service.Playbook uid))
+    () ;
+  register_page_with_title
+    ~path:[ "society" ]
+    ~get_params:(string "shortlink")
+    ~extract_service:(fun _ shortlink ->
+        match_lwt Object_society.Store.find_by_shortlink shortlink with
+          | None ->
+            (try_lwt
+               let uid = int_of_string shortlink in
+               lwt shortlink = $society(uid)->shortlink in
+               return (Service.Society(shortlink, uid), None)
+             with _ -> return (Service.Landing, None))
+          | Some uid ->
+            lwt name, description = $society(uid)->(name, description) in
+            return (Service.Society (shortlink, uid), Some (name ^ " - " ^ description)))
+    () ;
+  register_page_no_param
+    ~path:[ "create" ]
+    ~extract_service:(fun _ -> return Service.Create)
+    () ;
+  register_page_no_param
+    ~path:[ "dashboard" ]
+    ~extract_service:(function
+        | Anonymous -> return Service.Landing
+        | Connected _ -> return Service.Dashboard)
+    () ;
+  register_page_no_param
+    ~path:[ "library" ]
+    ~extract_service:(fun _ -> return Service.Library)
+    () ;
 
 Lwt_log.ign_info "Mu has started"
