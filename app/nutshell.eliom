@@ -26,11 +26,9 @@ open Eliom_content.Html5.D
 
 {server{
 
-let pitch = "Accretio is a mutual assistance network enhanced by big data"
+let description = "Automate what makes you thrive"
 
-let pitch = "Automate what makes you thrive"
-
-let common ?(title="Accretio") mixpanel_id version =
+let common ?(title="Accretio") ?(description=description) mixpanel_id version =
   html (* ~a:[ a_manifest (uri_of_string (fun () -> "/manifest_" ^ version ^".manifest")) ] *)
     (head (Eliom_content.Html5.D.title (pcdata "Accretio")) [
         meta ~a:([a_charset "utf-8"; a_content "text/html"; a_http_equiv "Content-Type"]) () ;
@@ -38,7 +36,7 @@ let common ?(title="Accretio") mixpanel_id version =
         meta ~a:[ a_name "apple-mobile-web-app-capable"; a_content "yes" ] () ;
         meta ~a:[ a_name "mobile-web-app-capable"; a_content "yes" ] () ;
 
-        meta ~a:[ a_property "og:description"; a_content pitch ] () ;
+        meta ~a:[ a_property "og:description"; a_content description ] () ;
         meta ~a:[ a_property "og:type"; a_content "website" ] () ;
         meta ~a:[ a_property "og:title"; a_content title ] () ;
         meta ~a:[ a_property "og:site_name"; a_content "https://accret.io" ] () ;
