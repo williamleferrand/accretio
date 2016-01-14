@@ -518,6 +518,62 @@ let confirm_to_all_participants context message =
 
         return `None
 
+(* in case we need to notify the participants to a dinner *)
+
+let make_announcement_current_run context () =
+  match_lwt context.get ~key:(key_run_id) with
+    None ->
+    context.log_info "no run id found, notifying nobody" ;
+    return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    return (`MakeAnnouncementRunId run_id)
+
+let make_announcement_run_id context run_id =
+  lwt _ =
+    context.message_supervisor
+      ~data:[ key_run_id, Int64.to_string run_id ]
+      ~subject:"Please type your announcement"
+      ~content:[
+        pcdata "Hi" ; br () ;
+        br () ;
+        pcdata "Please reply with your announcement above"
+      ]
+      ()
+  in
+  return `None
+
+let prepare_announcement context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt announcement = context.get_message_content ~message in
+    match_lwt context.search_members ~query:(tag_joining run_id) () with
+      [] ->
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[ pcdata "Sorry but there are no participants for the run id you sent me" ]
+          ()
+      in
+      return `None
+    | _ as participants ->
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[
+            pcdata "Ok, I'm sending the following message to " ;
+            pcdata (string_of_int (List.length participants)) ;
+            pcdata " participants:" ; br () ;
+            br () ;
+            i [ pcdata announcement ] ; br () ;
+            br ()
+          ]
+          ()
+      in
+      return (`MakeAnnouncement (announcement, participants))
+
 
 (* the playbook ***************************************************************)
 
@@ -531,7 +587,10 @@ PARAMETERS
 PLAYBOOK
 
    #import core_join_request
+   #import core_announcements
    #import find_volunteer
+
+   *make_announcement_current_run ~> `MakeAnnouncementRunId of int64 ~> make_announcement_run_id<forward> ~> `Message of email ~> prepare_announcement ~> `MakeAnnouncement of (string * int list) ~> make_announcement
 
                                                      set_date_and_ask_for_customer_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message
    *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message<content> ~> `Content of string ~> find_volunteer_with_tagline

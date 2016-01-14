@@ -44,12 +44,10 @@ sig
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
   val message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
-  val message_supervisor : subject:string -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
 
 end
-
 
 let check_missing_parameters society =
   lwt playbook, data = $society(society)->(playbook, data) in
@@ -70,7 +68,9 @@ let check_missing_parameters society =
   return missing_parameters
 
 
-let context_factory mode society society_name =
+let context_factory mode society society_name society_shortlink =
+
+  let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^society_shortlink in
 
   let mode_specifics =
     match mode with
@@ -147,10 +147,6 @@ let context_factory mode society society_name =
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
           send_message ~data member subject !flat_content
 
-        let message_supervisor ~subject ?(data=[]) ~content () =
-          lwt leader = $society(society)->leader in
-          message_member ~member:leader ~subject ~data ~content ()
-
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->origin with
@@ -172,7 +168,7 @@ let context_factory mode society society_name =
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
           lwt leader = $society(society)->leader in
           lwt reference = $message(message)->reference in
-          send_message ~data ~reference:(Some reference) leader subject !flat_content
+          send_message ~data ~reference:(Some reference) leader (Printf.sprintf "[Accretio] [%s] %s" society_name subject) !flat_content
 
       end
       in (module Mode_Specifics: MODE_SPECIFICS)
@@ -240,10 +236,6 @@ let context_factory mode society society_name =
         let message_member ~member ?(data=[]) ~subject ~content () =
           send_message ~data member subject content
 
-        let message_supervisor ~subject ?(data=[]) ~content () =
-          lwt leader = $society(society)->leader in
-          message_member ~member:leader ~subject ~data ~content ()
-
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->origin with
@@ -263,6 +255,7 @@ let context_factory mode society society_name =
 
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt leader = $society(society)->leader in
+          let subject = Printf.sprintf "[Accretio] [%s] %s" society_name subject in
           lwt reference, original_content = $message(message)->(reference, content) in
           let content =
             content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
@@ -473,9 +466,19 @@ let context_factory mode society society_name =
      lwt _ = $society(society)<-members -= member in
      return_unit
 
+   (* message primitives *)
+
+   let message_supervisor ~subject ?(data=[]) ~content () =
+     lwt leader = $society(society)->leader in
+     let content =
+       content @ [ br () ; pcdata "The society dashboard is accessible here: " ;
+                   Raw.a ~a:[ a_href (uri_of_string (fun () -> direct_link)) ] [ pcdata direct_link ] ; br () ]
+     in
+     message_member ~member:leader ~subject:(Printf.sprintf "[Accretio] [%s] %s" society_name subject) ~data ~content ()
+
+
     (* now we finally have the context that we'll feed to the specific stage *)
 
-    let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^(string_of_int society)
     let context = {
       society ;
       society_name ;
@@ -535,16 +538,16 @@ let step society =
 
   | [] ->
 
-    lwt playbook, mode, name = $society(society)->(playbook, mode, name) in
+    lwt playbook, mode, name, shortlink = $society(society)->(playbook, mode, name, shortlink) in
 
     let context_factory =
       match mode with
       | Object_society.Sandbox ->
         Lwt_log.ign_info_f "society %d is running in mode sandbox" society ;
-        context_factory_sandbox society name
+        context_factory_sandbox society name shortlink
       | _ ->
         Lwt_log.ign_info_f "society %d is running in mode production" society ;
-        context_factory_production society name
+        context_factory_production society name shortlink
     in
 
     let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)

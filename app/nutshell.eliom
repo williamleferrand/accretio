@@ -28,7 +28,7 @@ open Eliom_content.Html5.D
 
 let pitch = "Accretio is a mutual assistance network enhanced by big data"
 
-let pitch = "Browse ideas, share thoughts and make decisions"
+let pitch = "Automate what makes you thrive"
 
 let common ?(title="Accretio") mixpanel_id version =
   html (* ~a:[ a_manifest (uri_of_string (fun () -> "/manifest_" ^ version ^".manifest")) ] *)
@@ -96,7 +96,7 @@ let dispatch service : 'a option React.signal =
   | Library -> Library.dom ()
   | Create -> Create.dom ()
   | Landing -> Landing.dom ()
-  | Society uid -> Society.dom uid
+  | Society (_, uid) -> Society.dom uid
   | _ -> S.const None
 (*
   | Landing -> Landing.dom ()
