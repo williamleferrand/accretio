@@ -92,7 +92,7 @@ let schedule_dinner context () =
         return `None
       end
 
-let set_date_and_ask_for_customer_message context message =
+let set_date_and_ask_for_custom_message context message =
   match_lwt context.get_message_data ~message ~key:key_run_id with
     None -> return `None
   | Some run_id ->
@@ -588,12 +588,13 @@ PLAYBOOK
 
    #import core_join_request
    #import core_announcements
+   #import core_invite
    #import find_volunteer
 
    *make_announcement_current_run ~> `MakeAnnouncementRunId of int64 ~> make_announcement_run_id<forward> ~> `Message of email ~> prepare_announcement ~> `MakeAnnouncement of (string * int list) ~> make_announcement
 
-                                                     set_date_and_ask_for_customer_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message
-   *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_customer_message<content> ~> `Content of string ~> find_volunteer_with_tagline
+                                                     set_date_and_ask_for_custom_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message
+   *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message<content> ~> `Content of string ~> find_volunteer_with_tagline
                                                      look_for_candidate ~> `NoVolunteer ~> no_volunteer
                                                      return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members
 

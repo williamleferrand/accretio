@@ -14,6 +14,7 @@ type 'output context =
   {
     society : uid ;
     society_name : string ;
+    society_description : string ;
 
     direct_link : string ;
 
@@ -59,6 +60,7 @@ type 'output context =
 
     add_member : member:uid -> unit Lwt.t ;
     remove_member : member:uid -> unit Lwt.t ;
+    is_member : member:uid -> bool Lwt.t ;
 
   }
 

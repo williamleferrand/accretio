@@ -68,8 +68,9 @@ let check_missing_parameters society =
   return missing_parameters
 
 
-let context_factory mode society society_name society_shortlink =
+let context_factory mode society =
 
+  lwt society_name, society_description, society_shortlink = $society(society)->(name, description, shortlink) in
   let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^society_shortlink in
 
   let mode_specifics =
@@ -466,6 +467,10 @@ let context_factory mode society society_name society_shortlink =
      lwt _ = $society(society)<-members -= member in
      return_unit
 
+   let is_member ~member =
+     lwt members = $society(society)->members in
+     return (Ys_uid.Edges.mem member members)
+
    (* message primitives *)
 
    let message_supervisor ~subject ?(data=[]) ~content () =
@@ -482,6 +487,7 @@ let context_factory mode society society_name society_shortlink =
     let context = {
       society ;
       society_name ;
+      society_description ;
 
       direct_link ;
 
@@ -513,6 +519,7 @@ let context_factory mode society society_name society_shortlink =
 
       add_member ;
       remove_member ;
+      is_member ;
 
       get_message_data ;
 
@@ -520,7 +527,7 @@ let context_factory mode society society_name society_shortlink =
 
   end in
   let module FactoryWithMode = Factory(Mode_Specifics) in
-  (module FactoryWithMode: STAGE_CONTEXT_FACTORY)
+  return (module FactoryWithMode: STAGE_CONTEXT_FACTORY)
 
 let context_factory_sandbox = context_factory `Sandbox
 let context_factory_production = context_factory `Production
@@ -538,16 +545,16 @@ let step society =
 
   | [] ->
 
-    lwt playbook, mode, name, shortlink = $society(society)->(playbook, mode, name, shortlink) in
+    lwt playbook, mode = $society(society)->(playbook, mode) in
 
-    let context_factory =
+    lwt context_factory =
       match mode with
       | Object_society.Sandbox ->
         Lwt_log.ign_info_f "society %d is running in mode sandbox" society ;
-        context_factory_sandbox society name shortlink
+        context_factory_sandbox society
       | _ ->
         Lwt_log.ign_info_f "society %d is running in mode production" society ;
-        context_factory_production society name shortlink
+        context_factory_production society
     in
 
     let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)

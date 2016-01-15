@@ -66,6 +66,9 @@ module Edge = struct
     | <:ctyp< int64 >> -> "int64"
     | <:ctyp< string >> -> "string"
     | <:ctyp< float >> -> "float"
+    | <:ctyp< ($t1$ * $t2$ * $t3$ * $t4$ * $t5$) >> -> Printf.sprintf "%s, %s, %s, %s, %s" (ty_to_string t1) (ty_to_string t2) (ty_to_string t3) (ty_to_string t4) (ty_to_string t5)
+    | <:ctyp< ($t1$ * $t2$ * $t3$ * $t4$) >> -> Printf.sprintf "%s, %s, %s, %s" (ty_to_string t1) (ty_to_string t2) (ty_to_string t3) (ty_to_string t4)
+    | <:ctyp< ($t1$ * $t2$ * $t3$) >> -> Printf.sprintf "%s, %s, %s" (ty_to_string t1) (ty_to_string t2) (ty_to_string t3)
     | <:ctyp< ($t1$ * $t2$) >> -> Printf.sprintf "%s, %s" (ty_to_string t1) (ty_to_string t2)
     | _ -> ""
     in
@@ -467,7 +470,7 @@ module Dot = Graph.Graphviz.Dot(struct
     let vertex_attributes v = [ `Shape `Ellipse ; `HtmlLabel (Vertex.stage v) ]
     let vertex_name v = Vertex.stage v
     let default_vertex_attributes _ = []
-    let graph_attributes _ = [ `Margin 0.0 ]
+    let graph_attributes _ = [ `Page (8.5, 11.0) ; `Margin 0.0 ]
 
   end)
 
@@ -485,6 +488,16 @@ let dump_automata _loc automata =
   let destination_file = original_prefix ^ ".automata" in
   let oc = open_out_bin destination_file in
   Marshal.to_channel oc automata [] ;
+  close_out oc
+
+let print_automata _loc automata =
+  let original_file = Loc.file_name _loc in
+  let original_prefix = Filename.chop_extension original_file in
+  let original_prefix = Filename.concat (Filename.dirname original_prefix) ("dot_" ^ Filename.basename original_prefix) in
+  Printf.eprintf "printing the automata, prefix is %s\n" original_prefix ; flush stdout ;
+  let destination_file = original_prefix ^ ".dot" in
+  let oc = open_out_bin destination_file in
+  let () = Dot.output_graph oc automata in
   close_out oc
 
 let load_automata _loc import =

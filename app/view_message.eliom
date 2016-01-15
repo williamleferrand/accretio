@@ -78,8 +78,8 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 let format_interlocutor = function
-    | Stage stage -> [ pcdata "From stage " ; pcdata stage ]
-    | Member member -> [ pcdata "From member " ; View_member.format member ]
+    | Stage stage -> [ pcdata "Stage " ; pcdata stage ]
+    | Member member -> [ pcdata "Member " ; View_member.format member ]
     | CatchAll -> [ pcdata "CatchAll" ]
 
 let format view =
@@ -88,8 +88,8 @@ let format view =
     div ~a:[ a_class [ "message-reference" ]] [
       pcdata view.reference
     ] ;
-    div ~a:[ a_class [ "message-origin" ]] (format_interlocutor view.origin) ;
-    div ~a:[ a_class [ "message-destination" ]] (format_interlocutor view.destination) ;
+    div ~a:[ a_class [ "message-origin" ]] (pcdata "From: " :: (format_interlocutor view.origin)) ;
+    div ~a:[ a_class [ "message-destination" ]] (pcdata "To: " :: (format_interlocutor view.destination)) ;
     div ~a:[ a_class [ "message-subject" ]] [ pcdata "Subject: " ;  pcdata view.subject ] ;
     div ~a:[ a_class [ "message-content" ]] [
       pcdata view.content ;
