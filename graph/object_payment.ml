@@ -27,6 +27,10 @@ open Ys_uid
 type state = Pending | Failed of string | Paid with bin_io
 
 type currency = USD with bin_io, default_value(USD)
+
+let apply_stripe_fees amount =
+  ceil (0.30 +. (amount *. 0.029))
+
 type t = {
 
   uid : uid ;

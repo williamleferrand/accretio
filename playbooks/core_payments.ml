@@ -54,6 +54,8 @@ let request_payment context (member, label, amount, evidence_message) =
           br () ;
           pcdata "By the way, payments on Accretio are processed by Stripe. Accretio doesn't add any fees to the transaction but the Stripe fees." ; br () ;
           br () ;
+          pcdata "Let me know if you have any questions," ; br () ;
+          br () ;
           pcdata "Thanks!" ;
         ]
       | _ ->
@@ -66,6 +68,8 @@ let request_payment context (member, label, amount, evidence_message) =
           Raw.a ~a:[ a_href (uri_of_string (fun () -> payment_direct_link)) ] [ pcdata payment_direct_link ] ; br () ;
           br () ;
           pcdata "Attached is a scan of the total bill. " ; pcdata "Payments on Accretio are processed by Stripe. Accretio doesn't add any fees to the transaction but the Stripe fees." ; br () ;
+          br () ;
+          pcdata "Let me know if you have any questions," ; br () ;
           br () ;
           pcdata "Thanks!" ;
         ]

@@ -112,7 +112,9 @@ let get_stack society =
 let get_stack = server_function ~name:"society-leader-get-stack" Json.t<int> get_stack
 
 let reset_stack society =
+  Lwt_log.ign_info_f "resetting stack for society %d" society ;
   lwt stack = $society(society)<-stack %%% (fun _ -> return []) in
+  Lwt_log.ign_info_f "stack reset for society %d" society ;
   return (Some stack)
 
 let reset_stack = server_function ~name:"society-leader-reset-stack" Json.t<int> reset_stack

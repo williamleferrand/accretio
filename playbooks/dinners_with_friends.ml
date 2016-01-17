@@ -676,7 +676,7 @@ let split_payment context message =
             context.reply_to
               ~message
               ~content:[ pcdata "Great, asking "; pcdata (string_of_int (List.length members)) ;
-                         pcdata (Printf.sprintf " $%.2f each" owed) ]
+                         pcdata (Printf.sprintf " members $%.2f each" owed) ]
               ()
           in
           return `None

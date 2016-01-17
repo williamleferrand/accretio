@@ -493,7 +493,7 @@ let context_factory mode society =
         match_lwt Object_payment.Store.create
                     ~member
                     ~label
-                    ~amount
+                    ~amount:(Object_payment.apply_stripe_fees amount)
                     ~currency:Object_payment.USD
                     ~society
                     ~callback_success:None
@@ -601,66 +601,68 @@ let step society =
     let is_due call =
       match call.schedule with
       | Delayed delay when Int64.add call.created_on (Int64.of_int delay) > Ys_time.now () ->
-        Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+        Lwt_log.ign_info_f "there is a delayed call, trigger after %d, created on %Ld, skipping" delay call.created_on ;
         false
       | Delayed delay ->
-        Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+        Lwt_log.ign_info_f "there is a delayed call, trigger after %d, created on %Ld, running" delay call.created_on ;
         true
       | _ -> true
     in
 
-    let run =
-      function
-        [] ->
-        Lwt_log.ign_info_f "society %d has an empty stack" society ;
-        return []
-      | _ as stack ->
-        let rec look_for_first_call_due = function
-            [] -> return []
-          | call :: tail ->
-            match is_due call with
-              false ->
-              lwt stack = look_for_first_call_due tail in
-              return (call :: stack)
-            | true ->
-              Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
-              lwt result = Playbook.step context_factory call in
-              lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
-              match result with
-                None -> return tail
-              | Some followup -> return (followup :: tail)
-        in
-        look_for_first_call_due stack
+    let run stack =
+      try_lwt match stack with
+          [] ->
+          Lwt_log.ign_info_f "society %d has an empty stack" society ;
+          return []
+        | _ as stack ->
+          let rec look_for_first_call_due = function
+              [] -> return []
+            | call :: tail ->
+              match is_due call with
+                false ->
+                lwt stack = look_for_first_call_due tail in
+                return (call :: stack)
+              | true ->
+                Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
+                lwt result = Playbook.step context_factory call in
+                lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
+                match result with
+                  None -> return tail
+                | Some followup -> return (followup :: tail)
+          in
+          look_for_first_call_due stack
+      with exn -> Lwt_log.ign_error_f ~exn "Error inside the stack" ; return stack
     in
 
     let rec unstack () =
       (* this looks weird but it's made so that it leverages the per-field mutexes defined by pa_vertex *)
       lwt _ = $society(society)<-stack %%% run in
+      (* moving back all side car calls back into the main stack *)
       lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
           lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
           return [])
       in
+      (* deleting all the inflight calls that were cancelled *)
       lwt _ = $society(society)<-stack %%% (fun stack ->
           lwt tombstones = $society(society)->tombstones in
-      let timers =
-        List.fold_left
-          (fun acc timestamp ->
-             SetInt64.add timestamp acc)
-          SetInt64.empty
-          tombstones
+          let timers =
+            List.fold_left
+              (fun acc timestamp ->
+                 SetInt64.add timestamp acc)
+              SetInt64.empty
+              tombstones
+          in
+          return
+            (List.filter
+               (fun call -> not (SetInt64.mem call.created_on timers))
+               stack))
       in
-      return
-        (List.filter
-           (fun call -> not (SetInt64.mem call.created_on timers))
-           stack)
-)
-in
-match_lwt $society(society)->stack with
-| stack when List.exists is_due stack -> unstack ()
-| _ -> return_unit
-in
+      match_lwt $society(society)->stack with
+      | stack when List.exists is_due stack -> unstack ()
+      | _ -> return_unit
+    in
 
-unstack ()
+    unstack ()
 
 
 let push society call =

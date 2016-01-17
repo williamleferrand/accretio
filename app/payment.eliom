@@ -38,9 +38,6 @@ type bundle =
 let _ =
   Ys_shortlink.register_checker Object_payment.Store.find_by_shortlink
 
-let apply_stripe_charges amount =
-  ceil (0.30 +. (amount *. 0.029))
-
 let retrieve uid =
   lwt payment = View_payment.to_view uid in
   lwt stripe =
@@ -65,25 +62,30 @@ let perform (uid, stripe_customer, stripe_last4) =
   (* rely on the field lock to prevent double charges *)
 
   let callback_success () =
-    lwt society, callback_success = $payment(uid)->(society, callback_success) in
-    match callback_success with
-      None -> return_unit
-    | Some call -> Executor.push_and_execute society call
+    try_lwt
+      lwt society, callback_success = $payment(uid)->(society, callback_success) in
+      match callback_success with
+        None -> return_unit
+      | Some call -> Executor.push_and_execute society call
+    with exn -> Lwt_log.ign_error_f ~exn "couldn't call callback success for payment %d" uid ;
+      return_unit
   in
 
   let callback_failure () =
-    lwt society, callback_failure = $payment(uid)->(society, callback_failure) in
-    match callback_failure with
-      None -> return_unit
-    | Some call -> Executor.push_and_execute society call
+    try_lwt
+      lwt society, callback_failure = $payment(uid)->(society, callback_failure) in
+      match callback_failure with
+        None -> return_unit
+      | Some call -> Executor.push_and_execute society call
+    with exn -> Lwt_log.ign_error_f ~exn "couldn't call callback failure for payment %d" uid ;
+      return_unit
   in
 
   lwt amount, label, member = $payment(uid)->(amount, label, member) in
-  let amount = apply_stripe_charges amount in
-    $payment(uid)<-state %%% (function
-        | Object_payment.Paid as state ->
-          Lwt_log.ign_warning_f "attempting to double perform payment %d" uid ;
-          return state
+  $payment(uid)<-state %%% (function
+      | Object_payment.Paid as state ->
+        Lwt_log.ign_warning_f "attempting to double perform payment %d" uid ;
+        return state
         | _ ->
           match_lwt charges
                       ~customer:stripe_customer
