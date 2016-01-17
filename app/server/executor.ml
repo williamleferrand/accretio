@@ -484,9 +484,34 @@ let context_factory mode society =
 
     (* payments *)
 
-    let create_invoice ~member ~label ~evidence ~amount ~on_success =
+    let request_payment ~member ~label ~evidence ~amount ~on_success ~on_failure =
       log_info "requesting payment to member %d" member ;
-      return_none
+      match_lwt Ys_shortlink.create () with
+        None -> return_none
+      | Some shortlink ->
+        let callback_success = Stage_Specifics.outbound_dispatcher 0 on_success in
+        let callback_failure = Stage_Specifics.outbound_dispatcher 0 on_failure in
+
+        match_lwt Object_payment.Store.create
+                    ~member
+                    ~label
+                    ~amount
+                    ~currency:Object_payment.USD
+                    ~society
+                    ~callback_success
+                    ~callback_failure
+                    ~shortlink
+                    ~state:Object_payment.Pending
+                    () with
+          `Object_already_exists _ -> Lwt_log.ign_error_f "couldn't create invoice??" ; return_none
+        | `Object_created payment ->
+          lwt _ = $member(member)<-payments += (`Payment, payment.Object_payment.uid) in
+          return (Some payment.Object_payment.uid)
+
+    let payment_direct_link ~payment =
+      lwt shortlink = $payment(payment)->shortlink in
+      let link = (Ys_config.get_string "url-prefix")^"/payment/"^shortlink in
+      return link
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
@@ -530,7 +555,8 @@ let context_factory mode society =
 
       get_message_data ;
 
-      create_invoice ;
+      request_payment ;
+      payment_direct_link ;
 
     }
 

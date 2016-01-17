@@ -183,5 +183,13 @@ let _ =
     ~path:[ "library" ]
     ~extract_service:(fun _ -> return Service.Library)
     () ;
+  register_page
+    ~path:[ "payment" ]
+    ~get_params:(string "shortlink")
+    ~extract_service:(fun _ shortlink ->
+        match_lwt Object_payment.Store.find_by_shortlink shortlink with
+        | None -> return Service.Landing
+        | Some uid -> return (Service.Payment (shortlink, uid)))
+    () ;
 
 Lwt_log.ign_info "Mu has started"

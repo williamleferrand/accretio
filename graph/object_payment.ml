@@ -24,24 +24,36 @@ open Ys_default
 open Ys_types
 open Ys_uid
 
-type state = Pending | Rejected | Paid with bin_io
+type state = Pending | Failed of string | Paid with bin_io
 
+type currency = USD with bin_io, default_value(USD)
 type t = {
 
   uid : uid ;
 
   created_on : timestamp ;
   society : uid ;
+  callback_success : Ys_executor.call ;
+  callback_failure : Ys_executor.call ;
+
+
 
   label : string ;
 
-  member : string ;
+  member : uid ;
   state : state ;
   evidence : Object_message.attachments ;
+
+  shortlink : string ;
+
+  amount : float ;
+  currency : currency ;
 
 } with vertex
   (
     {
-      required = [ society ; member ; label ]
+      aliases = [ `String shortlink ] ;
+      required = [ society ; member ; label ; shortlink ; amount ; state ; callback_success ; callback_failure ] ;
+      uniques = [ shortlink ]
     }
   )

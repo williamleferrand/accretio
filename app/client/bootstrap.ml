@@ -29,9 +29,9 @@ let init service pipe session fb_app_id stripe_key =
   Sessions.register_fb_app_id fb_app_id ; *)
   (* register the container *)
   Lwt.ignore_result
-    ((* lwt _ = Ys_googlemaps.load () in
+    ((* lwt _ = Ys_googlemaps.load () in *)
      Ys_stripe.load () ;
-     lwt _ = Ys_stripe.set_publishable_key stripe_key in *)
+     lwt _ = Ys_stripe.set_publishable_key stripe_key in
      lwt _ = Eliom_client.wait_load_end () in
      Dom_html.window##scroll(0, 1) ;
      Manip.appendToBody (Nutshell.body ()) ;
