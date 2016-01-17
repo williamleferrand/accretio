@@ -118,16 +118,33 @@ let process_email =
       attributes
   in
 
-  let rec extract_mime ((plain, html) as acc) (header, body) =
+  let rec extract_body ((plain, html) as acc) (header, body) =
     match body with
     | `Body body ->
-      (match fst (Netmime_string.scan_value_with_parameters (header#field "content-type") []) with
-       | "text/html" -> (plain, Some body#value)
-       | "text/plain" -> (Some body#value, html)
-       | _ as s -> Lwt_log.ign_info_f "can't read content-type, %s" s ;  (plain, html))
-    | `Parts parts -> List.fold_left extract_mime acc parts
+      (match Netmime_header.get_content_type header with
+       | "text/html", _ -> (plain, Some body#value)
+       | "text/plain", _ -> (Some body#value, html)
+       | (_ as s, _) -> Lwt_log.ign_info_f "can't read content-type, %s" s ; (plain, html))
+    | `Parts parts -> List.fold_left extract_body acc parts
   in
 
+  let rec extract_attachments attachments (header, body) =
+    match body with
+    | `Body body ->
+      (try
+         (match Netmime_header.get_content_disposition header with
+          | "attachment", params ->
+            Lwt_log.ign_info_f "found attachment" ;
+            (try
+               let content_type, _ = Netmime_header.get_content_type header in
+               Lwt_log.ign_info_f "found attachment with content_type %s" content_type ;
+               let filename = Netmime_string.param_value (List.assoc "filename" params) in
+               (filename, content_type, body#value) :: attachments
+             with _ -> attachments)
+          | _ -> attachments)
+       with _ -> attachments)
+    | `Parts parts -> List.fold_left extract_attachments attachments parts
+  in
 
   let dispatch (offset, attributes) =
     try_lwt
@@ -136,48 +153,45 @@ let process_email =
       let accretio_target =
         List.fold_left
           (fun acc response ->
-               match acc with
-                 Some _ as acc -> acc
-               | None ->
-                 match response with
-                 | `Envelope env -> Some (find_accretio_target (env.env_to @ env.env_cc @ env.env_bcc))
-                 | _ -> acc)
-            None
-            attributes
-        in
+             match acc with
+               Some _ as acc -> acc
+             | None ->
+               match response with
+               | `Envelope env -> Some (find_accretio_target (env.env_to @ env.env_cc @ env.env_bcc))
+               | _ -> acc)
+          None
+          attributes
+      in
 
-        match accretio_target with
-          None ->
-          Lwt_log.ign_error_f "can't dispatch email %s, there is no accretio target in the enveloppe" (Uint32.to_string offset) ;
-          return_none
+      match accretio_target with
+        None ->
+        Lwt_log.ign_error_f "can't dispatch email %s, there is no accretio target in the enveloppe" (Uint32.to_string offset) ;
+        return_none
 
-        | Some address ->
-          Lwt_log.ign_info_f "found accretio email %s@%s\n" address.ad_mailbox address.ad_host ; flush stdout ;
+      | Some address ->
+        Lwt_log.ign_info_f "found accretio email %s@%s\n" address.ad_mailbox address.ad_host ; flush stdout ;
 
-          let target_shortlink = Str.matched_group 1 address.ad_mailbox in
-          let target_stage = Str.matched_group 2 address.ad_mailbox in
+        let target_shortlink = Str.matched_group 1 address.ad_mailbox in
+        let target_stage = Str.matched_group 2 address.ad_mailbox in
 
-          match_lwt Object_society.Store.find_by_shortlink target_shortlink with
-          | None -> Lwt_log.ign_error_f "shortlink %s doesn't map to any known society" target_shortlink ; return_none
-          | Some society ->
+        match_lwt Object_society.Store.find_by_shortlink target_shortlink with
+        | None -> Lwt_log.ign_error_f "shortlink %s doesn't map to any known society" target_shortlink ; return_none
+        | Some society ->
 
-            lwt playbook = $society(society)->playbook in
-            let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
-            match target_stage = "" || List.mem target_stage Playbook.mailables with
-            | false -> Lwt_log.ign_error_f "message %d attempted to wakeup stage %s in society %d, playbook %d, but it isn't mailable" (Uint32.to_int offset) target_stage society playbook ;
-              return_none
-            | true ->
+          lwt playbook = $society(society)->playbook in
+          let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
 
-            (* let's see if we can find the sender *)
-            (* what do we want to do if we can't find the sender?? *)
-            (* do we want to create it?? *)
+          (* let's see if we can find the sender *)
+          (* what do we want to do if we can't find the sender?? *)
+          (* do we want to create it?? *)
 
-            lwt senders = map_senders_to_accretio_users attributes in
-            let senders = UidSet.elements senders in
-            match senders with
-            | [] -> Lwt_log.ign_error_f "no sender in message %d" (Uint32.to_int offset) ;
-              return_none
-            | sender :: _ ->
+          lwt senders = map_senders_to_accretio_users attributes in
+          let senders = UidSet.elements senders in
+          match senders with
+          | [] -> Lwt_log.ign_error_f "no sender in message %d" (Uint32.to_int offset) ;
+            return_none
+          | sender :: _ ->
+
             let mime_option =
               List.fold_left
                 (fun acc -> function
@@ -199,7 +213,13 @@ let process_email =
 
             | Some (raw, ((header, _) as mime)) ->
 
-              let body_plain, body_html = extract_mime (None, None) mime in
+              let body_plain, body_html = extract_body (None, None) mime in
+
+              Lwt_log.ign_info_f "body extracted" ;
+
+              let attachments = extract_attachments [] mime in
+
+              Lwt_log.ign_info_f "found %d attachments" (List.length attachments) ;
 
               let message_id = header#field "message-id" in
               Lwt_log.ign_info_f "message id is %s" message_id ;
@@ -222,6 +242,7 @@ let process_email =
                 with exn ->
                   Lwt_log.ign_error_f ~exn "error when reading references"; []
               in
+
               List.iter (fun reference -> Lwt_log.ign_info_f "found reference %s" reference) references ;
               Lwt_log.ign_info_f "there are %d references" (List.length references) ;
 
@@ -241,59 +262,67 @@ let process_email =
                 return_none
               | Some content ->
 
-              let subject =
-                List.fold_left
-                  (fun acc -> function
-                     | `Envelope env -> env.env_subject
-                     | _ -> acc)
-                  ""
-                  attributes
-              in
+                let subject =
+                  List.fold_left
+                    (fun acc -> function
+                       | `Envelope env -> env.env_subject
+                       | _ -> acc)
+                    ""
+                    attributes
+                in
 
-              let transport = Object_message.(Email { offset = Uint32.to_int offset ; message_id }) in
-              let origin = Object_message.(Member sender) in
-              let destination =
-                if target_stage = "" then
-                  Object_message.CatchAll
-                else
-                  Object_message.(Stage target_stage) in
+                let transport = Object_message.(Email { offset = Uint32.to_int offset ; message_id }) in
+                let origin = Object_message.(Member sender) in
+                let destination =
+                  if target_stage = "" then
+                    Object_message.CatchAll
+                  else
+                    Object_message.(Stage target_stage) in
 
-              match_lwt
-                Object_message.Store.create
-                  ~society
-                  ~subject
-                  ~transport
-                  ~content
-                  ~origin
-                  ~destination
-                  ~reference:(Object_message.create_reference content)
-                  ~references
-                  () with
-              | `Object_already_exists _ ->
-                Lwt_log.ign_info_f "message already exists" ;
-                return (Some society)
-              | `Object_created message ->
-                lwt _ = $member(sender)<-messages += (`Email, message.Object_message.uid) in
-                lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
-                Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
+                let attachments =
+                  List.map
+                    (fun (filename, content_type, content) ->
+                       Object_message.({ filename ; content_type ; content }))
+                    attachments
+                in
 
-                if target_stage = "" then
+                match_lwt
+                  Object_message.Store.create
+                    ~society
+                    ~subject
+                    ~transport
+                    ~content
+                    ~origin
+                    ~destination
+                    ~reference:(Object_message.create_reference content)
+                    ~references
+                    ~attachments
+                    () with
+                | `Object_already_exists _ ->
+                  Lwt_log.ign_info_f "message already exists" ;
                   return (Some society)
-                else
-                  match_lwt Playbook.dispatch_message_automatically message.Object_message.uid target_stage with
-                  | None ->
-                    Lwt_log.ign_info_f "dispatching the message automatically didn't succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
-                    return (Some society)
-                  | Some call ->
-                    Lwt_log.ign_info_f "dispatching the message automatically succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
-                    $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
-                    lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
-                    return (Some society)
+                | `Object_created message ->
+                  lwt _ = $member(sender)<-messages += (`Email, message.Object_message.uid) in
+                  lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
+                  Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
 
-      with
-      | exn ->
-        Lwt_log.ign_error_f ~exn "something happened: %s when parsing offset %d" (Printexc.to_string exn) (Uint32.to_int offset) ;
-        return_none
+                  if target_stage = "" then
+                    return (Some society)
+                  else
+                    match_lwt Playbook.dispatch_message_automatically message.Object_message.uid target_stage with
+                    | None ->
+                      Lwt_log.ign_info_f "dispatching the message automatically didn't succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
+                      return (Some society)
+                    | Some call ->
+                      Lwt_log.ign_info_f "dispatching the message automatically succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
+                      $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+                      lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+                      return (Some society)
+
+    with
+    | exn ->
+      Lwt_log.ign_error_f ~exn "something happened: %s when parsing offset %d" (Printexc.to_string exn) (Uint32.to_int offset) ;
+      return_none
 
   in
 
@@ -311,15 +340,15 @@ let process_emails emails =
     Lwt_list.iter_p
       (fun society ->
          lwt leader = $society(society)->leader in
-         Lwt_log.ign_info_f "asking %d to check society %d" leader society ;
-         return_unit)
-      targets
-  in
-  return
-    (List.fold_left
-       (fun o1 (o2, _) -> if Uint32.compare o1 o2 > 0 then o1 else o2)
-       Uint32.zero
-       emails)
+  Lwt_log.ign_info_f "asking %d to check society %d" leader society ;
+  return_unit)
+targets
+in
+return
+  (List.fold_left
+     (fun o1 (o2, _) -> if Uint32.compare o1 o2 > 0 then o1 else o2)
+     Uint32.zero
+     emails)
 
 
 let wait_mail host port user pass mbox =
@@ -337,58 +366,58 @@ let wait_mail host port user pass mbox =
 
   match_lwt run sock i o c `Await with
   | `Ok ->
-      (* let rec logout = function
-        | `Untagged _ -> run sock i o c `Await >>= logout
-        | `Ok -> return_unit *)
+    (* let rec logout = function
+       | `Untagged _ -> run sock i o c `Await >>= logout
+       | `Ok -> return_unit *)
     let rec idle stop uidn = function
-        | `Untagged (`Exists _) -> Lazy.force stop; run sock i o c `Await >>= idle stop uidn
-        | `Untagged _ -> run sock i o c `Await >>= idle stop uidn
-        | `Ok ->
-          run sock i o c (`Cmd (Imap.search ~uid:true (`Uid [uidn, None])))
-          >>= search uidn Uint32.zero
-      and search uidn n = function
-        | `Untagged (`Search (n :: _, _)) -> run sock i o c `Await >>= search uidn n
-        | `Untagged _ -> run sock i o c `Await >>= search uidn n
-        | `Ok ->
-            if n = Uint32.zero then
-              let cmd, stop = Imap.idle () in
-              run sock i o c (`Cmd cmd) >>= idle stop uidn
-            else
-            let cmd = Imap.fetch ~uid:true ~changed:Uint64.one [n, Some n] [ `Envelope ; `Rfc822 ] in
-            run sock i o c (`Cmd cmd) >>= fetch uidn n []
-      and fetch uidn n accum = function
-        | `Untagged (`Fetch (_, attrs)) ->
-          let accum =
-            try
-              match List.fold_left (fun acc -> function (`Uid uid) -> Some uid | _ -> acc) None attrs with
-                None -> accum
-              | Some uid -> (uid, attrs) :: accum
-            with _ -> accum
-          in
-          run sock i o c `Await >>= fetch uidn n accum
-        | `Untagged _ -> run sock i o c `Await >>= fetch uidn n accum
-        | `Ok ->
-           Lwt_log.ign_info_f "done with the callback fetch, got %d elements to inspect\n" (List.length accum); flush stdout ;
-           lwt imap_offset = process_emails accum in
-           lwt _ = Eliom_reference.set persistent_imap_offset imap_offset in
-           run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
+      | `Untagged (`Exists _) -> Lazy.force stop; run sock i o c `Await >>= idle stop uidn
+      | `Untagged _ -> run sock i o c `Await >>= idle stop uidn
+      | `Ok ->
+        run sock i o c (`Cmd (Imap.search ~uid:true (`Uid [uidn, None])))
+        >>= search uidn Uint32.zero
+    and search uidn n = function
+      | `Untagged (`Search (n :: _, _)) -> run sock i o c `Await >>= search uidn n
+      | `Untagged _ -> run sock i o c `Await >>= search uidn n
+      | `Ok ->
+        if n = Uint32.zero then
+          let cmd, stop = Imap.idle () in
+          run sock i o c (`Cmd cmd) >>= idle stop uidn
+        else
+          let cmd = Imap.fetch ~uid:true ~changed:Uint64.one [n, Some n] [ `Envelope ; `Rfc822 ] in
+          run sock i o c (`Cmd cmd) >>= fetch uidn n []
+    and fetch uidn n accum = function
+      | `Untagged (`Fetch (_, attrs)) ->
+        let accum =
+          try
+            match List.fold_left (fun acc -> function (`Uid uid) -> Some uid | _ -> acc) None attrs with
+              None -> accum
+            | Some uid -> (uid, attrs) :: accum
+          with _ -> accum
+        in
+        run sock i o c `Await >>= fetch uidn n accum
+      | `Untagged _ -> run sock i o c `Await >>= fetch uidn n accum
+      | `Ok ->
+        Lwt_log.ign_info_f "done with the callback fetch, got %d elements to inspect\n" (List.length accum); flush stdout ;
+        lwt imap_offset = process_emails accum in
+        lwt _ = Eliom_reference.set persistent_imap_offset imap_offset in
+        run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
 (*
           let name = match name with None -> "<unnamed>" | Some name -> name in
           Format.printf "New mail from %s, better go and check it out!\n%!" name;
           run sock i o c (`Cmd Imap.logout) >>= logout *)
-      and select uidn = function
-        | `Untagged (`Ok (`Uid_next uidn, _)) -> run sock i o c `Await >>= select uidn
-        | `Untagged _ -> run sock i o c `Await >>= select uidn
-        | `Ok ->
-          let cmd, stop = Imap.idle () in
-          run sock i o c (`Cmd cmd) >>= idle stop uidn
-      and login = function
-        | `Untagged _ -> run sock i o c `Await >>= login
-        | `Ok ->
-          lwt imap_offset = Eliom_reference.get persistent_imap_offset in
-          run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
-      in
-      run sock i o c (`Cmd (Imap.login user pass)) >>= login
+    and select uidn = function
+      | `Untagged (`Ok (`Uid_next uidn, _)) -> run sock i o c `Await >>= select uidn
+      | `Untagged _ -> run sock i o c `Await >>= select uidn
+      | `Ok ->
+        let cmd, stop = Imap.idle () in
+        run sock i o c (`Cmd cmd) >>= idle stop uidn
+    and login = function
+      | `Untagged _ -> run sock i o c `Await >>= login
+      | `Ok ->
+        lwt imap_offset = Eliom_reference.get persistent_imap_offset in
+        run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
+    in
+    run sock i o c (`Cmd (Imap.login user pass)) >>= login
   | `Untagged _ -> assert false
 
 

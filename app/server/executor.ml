@@ -43,7 +43,7 @@ sig
   val log_warning : ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
-  val message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
+  val message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
 
@@ -105,7 +105,7 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(reference=None) ?(data=[]) member subject content =
+        let send_message ?(attachments=[]) ?(reference=None) ?(data=[]) member subject content =
           let origin = Object_message.Stage Stage_Specifics.stage in
           lwt uid =
             match_lwt Object_message.Store.create
@@ -113,6 +113,7 @@ let context_factory mode society =
                         ~origin
                         ~content
                         ~subject
+                        ~attachments
                         ~destination:(Object_message.Member member)
                         ~reference:(Object_message.create_reference subject)
                         ~references:(match reference with Some reference -> [ reference ] | None -> [])
@@ -143,10 +144,10 @@ let context_factory mode society =
           log_info "message attached from member %d to society %d" member society ;
           return_unit
 
-        let message_member ~member ?(data=[]) ~subject ~content () =
+        let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
           let flat_content = ref "" in
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
-          send_message ~data member subject !flat_content
+          send_message ~data ~attachments member subject !flat_content
 
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
@@ -203,7 +204,7 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(in_reply_to=None) ?(reference=None) ?(data=[]) member subject content =
+        let send_message ?(in_reply_to=None) ?(reference=None) ?(attachments=[]) ?(data=[]) member subject content =
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
@@ -231,11 +232,11 @@ let context_factory mode society =
                     data)
             in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            lwt _ = Notify.api_send_message ?in_reply_to reference society stage subject member content in
+            lwt _ = Notify.api_send_message ?in_reply_to reference ~attachments society stage subject member content in
             return_unit
 
-        let message_member ~member ?(data=[]) ~subject ~content () =
-          send_message ~data member subject content
+        let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
+          send_message ~data ~attachments member subject content
 
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
@@ -257,7 +258,7 @@ let context_factory mode society =
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt leader = $society(society)->leader in
           let subject = Printf.sprintf "[Accretio] [%s] %s" society_name subject in
-          lwt reference, original_content = $message(message)->(reference, content) in
+          lwt reference, original_content, attachments = $message(message)->(reference, content, attachments) in
           let content =
             content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
           in
@@ -297,7 +298,7 @@ let context_factory mode society =
                   data)
           in
           lwt reference = $message(uid)->reference in
-          lwt _ = Notify.api_forward_message reference society stage subject leader message in
+          lwt _ = Notify.api_forward_message ~attachments reference society stage subject leader message in
 
           lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
           return_unit
@@ -473,18 +474,24 @@ let context_factory mode society =
 
    (* message primitives *)
 
-   let message_supervisor ~subject ?(data=[]) ~content () =
+   let message_supervisor ~subject ?(attachments=[]) ?(data=[]) ~content () =
      lwt leader = $society(society)->leader in
      let content =
        content @ [ br () ; pcdata "The society dashboard is accessible here: " ;
                    Raw.a ~a:[ a_href (uri_of_string (fun () -> direct_link)) ] [ pcdata direct_link ] ; br () ]
      in
-     message_member ~member:leader ~subject:(Printf.sprintf "[Accretio] [%s] %s" society_name subject) ~data ~content ()
+     message_member ~member:leader ~attachments ~subject:(Printf.sprintf "[Accretio] [%s] %s" society_name subject) ~data ~content ()
 
+    (* payments *)
+
+    let create_invoice ~member ~label ~evidence ~amount ~on_success =
+      log_info "requesting payment to member %d" member ;
+      return_none
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
+
       society ;
       society_name ;
       society_description ;
@@ -522,6 +529,8 @@ let context_factory mode society =
       is_member ;
 
       get_message_data ;
+
+      create_invoice ;
 
     }
 

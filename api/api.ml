@@ -32,8 +32,8 @@ type 'output context =
     cancel_timers : query:string -> unit Lwt.t ;
 
     (* messaging utilities *)
-    message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
-    message_supervisor : subject:string -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
+    message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
+    message_supervisor : subject:string -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
     reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
     forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t ;
 
@@ -61,6 +61,10 @@ type 'output context =
     add_member : member:uid -> unit Lwt.t ;
     remove_member : member:uid -> unit Lwt.t ;
     is_member : member:uid -> bool Lwt.t ;
+
+    (* payments *)
+
+    create_invoice : member:uid -> label:string -> evidence:Object_message.attachments -> amount:float -> on_success:'output -> string option Lwt.t ;
 
   }
 

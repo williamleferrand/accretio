@@ -588,6 +588,7 @@ PLAYBOOK
 
    #import core_join_request
    #import core_announcements
+   #import core_payments
    #import core_invite
    #import find_volunteer
 

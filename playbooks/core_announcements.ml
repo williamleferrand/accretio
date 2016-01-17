@@ -69,6 +69,7 @@ let mark_as_read context message =
     return `None
 
 let remind_member context (id, member, attempts) =
+  context.log_info "restarting the remind_member for run %Ld" id ;
   match_lwt context.get ~key:(key_content id) with
     None -> return `None
   | Some content ->
