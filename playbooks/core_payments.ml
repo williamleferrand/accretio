@@ -34,8 +34,8 @@ let request_payment context (member, label, amount, evidence_message) =
       ~label
       ~evidence
       ~amount
-      ~on_success:(`PaymentSuccessful(member))
-      ~on_failure:(`PaymentFailed(member)) with
+      ~on_success:(fun payment -> `PaymentSuccess(member, payment))
+      ~on_failure:(fun payment -> `PaymentFailure(member, payment)) with
   | None ->
     context.log_error "couldn't issue payment for %d, panic" member ;
     return (`AlertSupervisor (member, label, amount))
@@ -90,7 +90,7 @@ let request_payment context (member, label, amount, evidence_message) =
     in
     return `None
 
-let alert_supervisor context (member, label, amount) =
+let payment_alert_supervisor context (member, label, amount) =
   context.log_warning "alerting supervisor for member %d, label %s, amount %f" member label amount ;
   lwt email = $member(member)->preferred_email in
   lwt _ =
@@ -173,6 +173,14 @@ let payment_success context (member, payment) =
       ]
       ()
   in
+  lwt _ =
+    context.message_supervisor
+      ~subject:"You got a payment"
+      ~content:[
+        pcdata "Good news, you got a payment"
+      ]
+      ()
+  in
   return `None
 
 let do_nothing _ _ =
@@ -182,7 +190,7 @@ let do_nothing _ _ =
 
 COMPONENT
 
- request_payment ~> `AlertSupervisor of (int * string * float) ~> alert_supervisor
+ request_payment ~> `AlertSupervisor of (int * string * float) ~> payment_alert_supervisor
  request_payment ~> `RemindMemberOfPayment of (int * string * int * int) ~> remind_member_of_payment ~> `RemindMemberOfPayment of (int * string * int * int) ~> remind_member_of_payment
  request_payment ~> `PaymentSuccess of (int * int) ~> payment_success
- request_payment ~> `PaymentFailure of int ~> do_nothing
+ request_payment ~> `PaymentFailure of (int * int) ~> do_nothing

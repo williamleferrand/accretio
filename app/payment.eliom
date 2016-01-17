@@ -66,12 +66,16 @@ let perform (uid, stripe_customer, stripe_last4) =
 
   let callback_success () =
     lwt society, callback_success = $payment(uid)->(society, callback_success) in
-    Executor.push_and_execute society callback_success
+    match callback_success with
+      None -> return_unit
+    | Some call -> Executor.push_and_execute society call
   in
 
   let callback_failure () =
     lwt society, callback_failure = $payment(uid)->(society, callback_failure) in
-    Executor.push_and_execute society callback_failure
+    match callback_failure with
+      None -> return_unit
+    | Some call -> Executor.push_and_execute society call
   in
 
   lwt amount, label, member = $payment(uid)->(amount, label, member) in
@@ -90,7 +94,7 @@ let perform (uid, stripe_customer, stripe_last4) =
             Error exn ->
             Lwt_log.ign_info_f
               "error while processing paymement for payment %d" uid ;
-            callback_failure () ;
+            lwt _ = callback_failure () in
             return (Object_payment.Failed (Printexc.to_string exn))
           | Ok charge ->
             match charge.ReplyCharges.paid, charge.ReplyCharges.failure_message with
@@ -100,18 +104,18 @@ let perform (uid, stripe_customer, stripe_last4) =
                 charge.ReplyCharges.id
                 msg
                 uid ;
-              callback_failure () ;
+              lwt _ = callback_failure () in
               return (Object_payment.Failed msg)
             | false, None ->
               Lwt_log.ign_info_f
                 "charge %s was returned unpaid, no message, payment is %d"
                 charge.ReplyCharges.id
                 uid ;
-              callback_failure () ;
+              lwt _ = callback_failure () in
               return (Object_payment.Failed (Printf.sprintf "Rejected by Stripe (%s)" charge.ReplyCharges.id))
             | true, _ ->
               Lwt_log.ign_info_f "payment %d was processed successfully" uid ;
-              callback_success () ;
+              lwt _ = callback_success () in
               return Object_payment.Paid)
 
 let perform_with_token (uid, token) =

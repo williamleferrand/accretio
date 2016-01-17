@@ -33,10 +33,8 @@ type t = {
 
   created_on : timestamp ;
   society : uid ;
-  callback_success : Ys_executor.call ;
-  callback_failure : Ys_executor.call ;
-
-
+  callback_success : Ys_executor.call_option ;
+  callback_failure : Ys_executor.call_option ;
 
   label : string ;
 

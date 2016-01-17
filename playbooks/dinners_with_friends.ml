@@ -42,6 +42,7 @@ let tag_notified = sprintf "notified%Ld"
 let key_date = sprintf "dinner-with-friend-date-%Ld"
 let key_negative_replies_in_a_row = sprintf "dinner-with-friends-negative-replies-in-a-row-%d"
 let tag_timer_volunteer_booking = sprintf "timervolunteerbooking%Ld"
+let tag_has_participated = "hasparticipated"
 
 (* some helpers ***************************************************************)
 
@@ -575,6 +576,113 @@ let prepare_announcement context message =
       return (`MakeAnnouncement (announcement, participants))
 
 
+let debrief_current_run context () =
+  match_lwt context.get ~key:(key_run_id) with
+    None ->
+    context.log_info "no run id found, can't debrief anything" ;
+    return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    return (`DebriefRunId run_id)
+
+let debrief context run_id =
+  match_lwt context.search_members ~query:(tag_joining run_id) () with
+    [] ->
+    context.log_info "there were no participants for run %Ld" run_id ;
+    return `None
+  | _ as participants ->
+    lwt participants =
+      Lwt_list.map_s
+        (fun member ->
+           lwt preferred_email, name = $member(member)->(preferred_email, name) in
+           return (li [ pcdata name ; pcdata " " ; pcdata preferred_email ]))
+        participants
+    in
+
+    lwt _ =
+      (* TODO: ask the volunteer instead of the supervisor? *)
+      context.message_supervisor
+        ~data:[ key_run_id, Int64.to_string run_id ]
+        ~subject:"Debriefing of the Dinner"
+        ~content:[
+          pcdata "Please edit the following list of participants, leaving only those who came and haven't pay. Please attach the receipt and print the total cost to be splitted at the top of the message" ; br () ;
+          br () ;
+          ul participants ;
+          br ()
+        ]
+        ()
+    in
+
+    return `None
+
+let split_payment context message =
+  let open Ys_uid in
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    match_lwt get_date context run_id with
+      None -> return `None
+    | Some date ->
+
+      lwt content = context.get_message_content ~message in
+      let members = Ys_email.get_all_emails content in
+      context.log_info "splitting payments between %d members" (List.length members) ;
+      lwt members =
+        Lwt_list.fold_left_s
+          (fun acc email ->
+             match_lwt Object_member.Store.find_by_email email with
+             | None -> return acc
+             | Some uid -> return (UidSet.add uid acc))
+          UidSet.empty
+          members
+      in
+      let members = UidSet.elements members in
+      lwt _ =
+        Lwt_list.iter_s
+          (fun member -> context.tag_member ~member ~tags:[ tag_has_participated ])
+          members
+      in
+      let amount = ref 0.0 in
+      (try
+         Scanf.sscanf content "$%f" (fun f -> amount := f);
+       with _ -> ()) ;
+      if !amount = 0.0 then
+        begin
+          lwt _ =
+            context.forward_to_supervisor
+              ~message
+              ~subject:"Couldn't parse amount"
+              ~data:[ key_run_id, Int64.to_string run_id ]
+              ~content:[ pcdata "Couldn't grab amount :/" ]
+              ()
+          in
+          return `None
+        end
+      else
+        begin
+          let owed = ceil (!amount /. (float_of_int (List.length members))) in
+          let date = CalendarLib.Printer.Calendar.sprint "%B %d" date in
+          let label = context.society_name ^ " " ^ date in
+          let calls = List.map (fun member -> `RequestPayment (member, label, owed, message)) members in
+          (* we don't have a way to return a set of calls, but we can cheat & use timers for that *)
+          lwt _ =
+            Lwt_list.iter_s
+              (fun call ->
+                 context.set_timer ~duration:(Calendar.Period.lmake ~minute:1 ()) call)
+              calls
+          in
+          lwt _ =
+            context.reply_to
+              ~message
+              ~content:[ pcdata "Great, asking "; pcdata (string_of_int (List.length members)) ;
+                         pcdata (Printf.sprintf " $%.2f each" owed) ]
+              ()
+          in
+          return `None
+        end
+
+
 (* the playbook ***************************************************************)
 
 
@@ -609,6 +717,9 @@ PLAYBOOK
                                                                ask_volunteer_to_book ~> `RemindVolunteer of int64 * int ~> remind_volunteer ~> `RemindVolunteer of int64 * int ~> remind_volunteer
                                                                                                                            remind_volunteer ~> `UnresponsiveVolunteer of int64 ~> unresponsive_volunteer
                                                                                                                            remind_volunteer ~> `Booked of email ~> confirm_to_all_participants
+
+       *debrief_current_run ~> `DebriefRunId of int64 ~> debrief<forward> ~> `Message of email ~> split_payment ~> `Message of email ~> split_payment
+       split_payment ~> `RequestPayment of (int * string * float * int) ~> request_payment
 
 
  *create_dashboard

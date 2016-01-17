@@ -83,7 +83,7 @@ type 'output context =
 
     (* payments *)
 
-    request_payment : member:uid -> label:string -> evidence:Object_message.attachments -> amount:float -> on_success:'output -> on_failure:'output -> uid option Lwt.t ;
+    request_payment : member:uid -> label:string -> evidence:Object_message.attachments -> amount:float -> on_success:(uid -> 'output) -> on_failure:(uid -> 'output) -> uid option Lwt.t ;
     payment_direct_link : payment:uid -> string Lwt.t ;
 
   }

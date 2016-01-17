@@ -265,10 +265,27 @@ let create_message message =
     match message.attachments with
       [] -> (mail_header, `Body main_text_body)
     | _ as attachments ->
+      mail_header#update_field "content-type" "multipart/mixed" ;
       let text_body_header =
-        Netmime.basic_mime_header []
+        Netmime.basic_mime_header [
+          "Content-Type", "text/html; charset=UTF-8" ;
+          "Content-Transfer-Encoding", "base64" ;
+        ]
       in
-      let attachments = [] in
+      let attachments =
+        List.map
+          (fun attachment ->
+             let header =
+               Netmime.basic_mime_header [
+                 "Content-Type", attachment.Object_message.content_type ;
+                 "Content-Disposition",  "inline; filename=receipt" ;
+                 "Content-Transfer-Encoding", "base64" ;
+               ]
+             in
+             (header, `Body (new Netmime.memory_mime_body attachment.Object_message.content))
+          )
+          attachments
+      in
       (mail_header, `Parts ((text_body_header, `Body main_text_body) :: attachments))
   in
 

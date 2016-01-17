@@ -489,8 +489,6 @@ let context_factory mode society =
       match_lwt Ys_shortlink.create () with
         None -> return_none
       | Some shortlink ->
-        let callback_success = Stage_Specifics.outbound_dispatcher 0 on_success in
-        let callback_failure = Stage_Specifics.outbound_dispatcher 0 on_failure in
 
         match_lwt Object_payment.Store.create
                     ~member
@@ -498,14 +496,19 @@ let context_factory mode society =
                     ~amount
                     ~currency:Object_payment.USD
                     ~society
-                    ~callback_success
-                    ~callback_failure
+                    ~callback_success:None
+                    ~callback_failure:None
                     ~shortlink
                     ~state:Object_payment.Pending
                     () with
           `Object_already_exists _ -> Lwt_log.ign_error_f "couldn't create invoice??" ; return_none
         | `Object_created payment ->
           lwt _ = $member(member)<-payments += (`Payment, payment.Object_payment.uid) in
+          let callback_success = Stage_Specifics.outbound_dispatcher 0 (on_success payment.Object_payment.uid) in
+          let callback_failure = Stage_Specifics.outbound_dispatcher 0 (on_failure payment.Object_payment.uid) in
+
+          $payment(payment.Object_payment.uid)<-callback_success = Some callback_success ;
+          $payment(payment.Object_payment.uid)<-callback_failure = Some callback_failure ;
           return (Some payment.Object_payment.uid)
 
     let payment_direct_link ~payment =
@@ -746,7 +749,8 @@ let check_all_crons () =
   lwt to_awake, _ =
     Object_society.Store.fold_flat_lwt
     (fun acc uid ->
-      match_lwt $society(uid)->mode with
+      try_lwt
+        match_lwt $society(uid)->mode with
         | Object_society.Sandbox -> return (Some (uid :: acc)) (* don't wake up cron jobs for sandboxed societies *)
         | _ ->
           lwt playbook = $society(uid)->playbook in
@@ -768,7 +772,7 @@ let check_all_crons () =
                 Playbook.crontabs) in
           match !need_to_be_waken_up with
           | false -> return (Some acc)
-          | true -> return (Some (uid :: acc)))
+          | true -> return (Some (uid :: acc)) with _ -> return (Some acc))
           []
           None
           (-1)
@@ -779,7 +783,13 @@ let check_all_crons () =
          return minute
 
 let rec start_cron () =
-  lwt next_minute = check_all_crons () in
+  lwt next_minute =
+    try_lwt
+      check_all_crons ()
+    with exn ->
+      Lwt_log.ign_error_f ~exn "cron error" ;
+      Lwt.fail exn
+  in
   let now = Calendar.now () in
   Printer.Calendar.print "now: %c\n" now ;
   Printer.Calendar.print "next_minute: %c\n" next_minute ;
@@ -794,5 +804,6 @@ let rec start_cron () =
     start_cron ()
 
 let  _ =
+  Lwt_log.ign_info_f "starting all crons" ;
   (* lwt _ =   Eliom_reference.set last_minute_checked None in *)
   start_cron ()
