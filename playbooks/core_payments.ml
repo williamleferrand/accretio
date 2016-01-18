@@ -50,10 +50,11 @@ let request_payment context (member, label, amount, evidence_message) =
           br ()  ;
           pcdata "Thanks for your participation to " ; pcdata context.society_name ; pcdata ", I hope you enjoyed it!" ; br () ;
           br () ;
-          pcdata "Your share ends up being "; pcdata (Printf.sprintf "$%.2f" amount) ; pcdata ", would you mind visiting the secured link below & authorize the payment?" ; br () ;
+          pcdata "Your share ends up being "; pcdata (Printf.sprintf "$%.2f" amount) ; pcdata ". Would you mind visiting the secured link below & authorize the payment?" ; br () ;
+          br () ;
           Raw.a ~a:[ a_href (uri_of_string (fun () -> payment_direct_link)) ] [ pcdata payment_direct_link ] ; br () ;
           br () ;
-          pcdata "By the way, payments on Accretio are processed by Stripe. Accretio doesn't add any fees to the transaction but the Stripe fees." ; br () ;
+          pcdata "By the way, payments are secured by Stripe and only Stripe fees are added to the original receipt." ; br () ;
           br () ;
           pcdata "Let me know if you have any questions," ; br () ;
           br () ;
@@ -65,10 +66,11 @@ let request_payment context (member, label, amount, evidence_message) =
           br () ;
           pcdata "Thanks for your participation to " ; pcdata context.society_name ; pcdata ", I hope you enjoyed it!" ; br () ;
           br () ;
-          pcdata "Your share ends up being "; pcdata (Printf.sprintf "$%.2f" amount) ; pcdata ", would you mind visiting the secured link below & authorize the payment?" ; br () ;
+          pcdata "Your share ends up being "; pcdata (Printf.sprintf "$%.2f" amount) ; pcdata ". Would you mind visiting the secured link below & authorize the payment?" ; br () ;
+          br () ;
           Raw.a ~a:[ a_href (uri_of_string (fun () -> payment_direct_link)) ] [ pcdata payment_direct_link ] ; br () ;
           br () ;
-          pcdata "Attached is a scan of the total bill. " ; pcdata "Payments on Accretio are processed by Stripe. Accretio doesn't add any fees to the transaction but the Stripe fees." ; br () ;
+          pcdata "The receipt for group is attached. " ; pcdata "Payments are secured by Stripe and only Stripe fees are added to the original receipt." ; br () ;
           br () ;
           pcdata "Let me know if you have any questions," ; br () ;
           br () ;
@@ -182,7 +184,8 @@ let payment_success context (member, payment) =
     context.message_supervisor
       ~subject:"You got a payment"
       ~content:[
-        pcdata "Good news, you got a payment"
+        pcdata "Good news, you got a payment" ; br () ;
+        br () ;
       ]
       ()
   in

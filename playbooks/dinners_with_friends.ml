@@ -597,7 +597,7 @@ let debrief context run_id =
            lwt preferred_email, name = $member(member)->(preferred_email, name) in
            return (li [ pcdata name ; pcdata " " ; pcdata preferred_email ]))
         participants
-    in
+in
 
     lwt _ =
       (* TODO: ask the volunteer instead of the supervisor? *)
@@ -605,10 +605,11 @@ let debrief context run_id =
         ~data:[ key_run_id, Int64.to_string run_id ]
         ~subject:"Debriefing of the Dinner"
         ~content:[
-          pcdata "Please edit the following list of participants, leaving only those who came and haven't pay. Please attach the receipt and print the total cost to be splitted at the top of the message" ; br () ;
+          pcdata "Hi," ; br () ;
+          br () ;
+          pcdata "Please edit the following list of participants, leaving only those who came and haven't paid yet. Please attach the receipt and print the total cost to be splitted among participants at the top of the message" ; br () ;
           br () ;
           ul participants ;
-          br ()
         ]
         ()
     in
@@ -661,7 +662,7 @@ let split_payment context message =
         end
       else
         begin
-          let owed = ceil (!amount /. (float_of_int (List.length members))) in
+          let owed = ceil (!amount *. 100. /. (float_of_int (List.length members))) /. 100.0 in
           let date = CalendarLib.Printer.Calendar.sprint "%B %d" date in
           let label = context.society_name ^ " " ^ date in
           let calls = List.map (fun member -> `RequestPayment (member, label, owed, message)) members in
