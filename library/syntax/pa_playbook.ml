@@ -289,6 +289,7 @@ EXTEND Gram
             let crons = compile_crons _loc crons in
 
             dump_automata _loc automata ;
+            print_automata _loc automata ;
 
             <:str_item<
               $parameters$ ;

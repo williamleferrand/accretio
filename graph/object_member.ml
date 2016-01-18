@@ -101,6 +101,7 @@ type t = {
 
   (* activity *)
   messages : [ `Email ] edges ;
+  payments : [ `Payment ] edges ;
 
 } with vertex
   (

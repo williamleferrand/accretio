@@ -49,6 +49,7 @@ type service =
   | Dashboard
   | Create
   | Society of string * int
+  | Payment of string * int
   | Library deriving(Json)
 
 let admin objekt =
@@ -76,6 +77,7 @@ let path_of_service = function
   | Library -> [ "library" ]
   | Create -> [ "create" ]
   | Society (shortlink, _) -> [ "society" ; shortlink ]
+  | Payment (shortlink, _) -> [ "payment" ; shortlink ]
   | Landing -> [ "" ]
 
 let service, update_service = S.create Uninitialized

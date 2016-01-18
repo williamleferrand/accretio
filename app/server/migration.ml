@@ -37,6 +37,30 @@ let reset_all_boxes () =
     None
     (-1)
 
+let reset_all_stacks () =
+  Lwt_log.ign_info_f "resetting all stacks if they don't deserialize" ;
+  Object_society.Store.fold_flat_lwt
+    (fun _ uid ->
+       Lwt_log.ign_info_f "checking society %d" uid ;
+       lwt _ =
+         try_lwt
+           lwt stack = $society(uid)->stack in
+           return_unit
+         with _ ->
+           Lwt_log.ign_info_f "resetting stack for society %d" uid ;
+           $society(uid)<-stack = [] ; return_unit in
+       lwt _ =
+         try_lwt
+           lwt sidecar = $society(uid)->sidecar in
+           return_unit
+         with _ ->
+           Lwt_log.ign_info_f "resetting sidecar for society %d" uid ;
+           $society(uid)<-sidecar = [] ; return_unit in
+       return (Some ()))
+    ()
+    None
+    (-1)
+
 let create_playbook_threads () =
   Lwt_log.ign_info_f "create playbook threads" ;
   Object_playbook.Store.fold_flat_lwt
@@ -75,6 +99,7 @@ let reset_message_transport () =
 let run () =
   lwt _ = create_playbook_threads () in
   lwt _ = reset_message_transport () in
+  lwt _ = reset_all_stacks () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in

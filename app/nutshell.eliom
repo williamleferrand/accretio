@@ -95,6 +95,7 @@ let dispatch service : 'a option React.signal =
   | Create -> Create.dom ()
   | Landing -> Landing.dom ()
   | Society (_, uid) -> Society.dom uid
+  | Payment (_, uid) -> Payment.dom uid
   | _ -> S.const None
 (*
   | Landing -> Landing.dom ()

@@ -43,7 +43,7 @@ sig
   val log_warning : ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
-  val message_member : member:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
+  val message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
   val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
 
@@ -68,8 +68,9 @@ let check_missing_parameters society =
   return missing_parameters
 
 
-let context_factory mode society society_name society_shortlink =
+let context_factory mode society =
 
+  lwt society_name, society_description, society_shortlink = $society(society)->(name, description, shortlink) in
   let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^society_shortlink in
 
   let mode_specifics =
@@ -104,7 +105,7 @@ let context_factory mode society society_name society_shortlink =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(reference=None) ?(data=[]) member subject content =
+        let send_message ?(attachments=[]) ?(reference=None) ?(data=[]) member subject content =
           let origin = Object_message.Stage Stage_Specifics.stage in
           lwt uid =
             match_lwt Object_message.Store.create
@@ -112,6 +113,7 @@ let context_factory mode society society_name society_shortlink =
                         ~origin
                         ~content
                         ~subject
+                        ~attachments
                         ~destination:(Object_message.Member member)
                         ~reference:(Object_message.create_reference subject)
                         ~references:(match reference with Some reference -> [ reference ] | None -> [])
@@ -142,10 +144,10 @@ let context_factory mode society society_name society_shortlink =
           log_info "message attached from member %d to society %d" member society ;
           return_unit
 
-        let message_member ~member ?(data=[]) ~subject ~content () =
+        let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
           let flat_content = ref "" in
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
-          send_message ~data member subject !flat_content
+          send_message ~data ~attachments member subject !flat_content
 
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
@@ -202,7 +204,7 @@ let context_factory mode society society_name society_shortlink =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(in_reply_to=None) ?(reference=None) ?(data=[]) member subject content =
+        let send_message ?(in_reply_to=None) ?(reference=None) ?(attachments=[]) ?(data=[]) member subject content =
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
@@ -230,11 +232,11 @@ let context_factory mode society society_name society_shortlink =
                     data)
             in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-            lwt _ = Notify.api_send_message ?in_reply_to reference society stage subject member content in
+            lwt _ = Notify.api_send_message ?in_reply_to reference ~attachments society stage subject member content in
             return_unit
 
-        let message_member ~member ?(data=[]) ~subject ~content () =
-          send_message ~data member subject content
+        let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
+          send_message ~data ~attachments member subject content
 
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
@@ -256,7 +258,7 @@ let context_factory mode society society_name society_shortlink =
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt leader = $society(society)->leader in
           let subject = Printf.sprintf "[Accretio] [%s] %s" society_name subject in
-          lwt reference, original_content = $message(message)->(reference, content) in
+          lwt reference, original_content, attachments = $message(message)->(reference, content, attachments) in
           let content =
             content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
           in
@@ -296,7 +298,7 @@ let context_factory mode society society_name society_shortlink =
                   data)
           in
           lwt reference = $message(uid)->reference in
-          lwt _ = Notify.api_forward_message reference society stage subject leader message in
+          lwt _ = Notify.api_forward_message ~attachments reference society stage subject leader message in
 
           lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
           return_unit
@@ -391,7 +393,9 @@ let context_factory mode society society_name society_shortlink =
           log_info "setting timer %s" label ;
           lwt _ = $society(society)<-timers += (`Label label, Int64.to_int call.created_on) in
           return_unit
-      with exn -> log_error ~exn "error when setting the timer" ; return_unit
+      with exn ->
+        Lwt_log.ign_error_f ~exn "error when setting the timer" ;
+        log_error ~exn "error when setting the timer" ; return_unit
 
     let cancel_timers = fun ~query ->
       lwt timers = Object_society.Store.search_timers society query in
@@ -466,22 +470,64 @@ let context_factory mode society society_name society_shortlink =
      lwt _ = $society(society)<-members -= member in
      return_unit
 
+   let is_member ~member =
+     lwt members = $society(society)->members in
+     return (Ys_uid.Edges.mem member members)
+
    (* message primitives *)
 
-   let message_supervisor ~subject ?(data=[]) ~content () =
+   let message_supervisor ~subject ?(attachments=[]) ?(data=[]) ~content () =
      lwt leader = $society(society)->leader in
      let content =
        content @ [ br () ; pcdata "The society dashboard is accessible here: " ;
                    Raw.a ~a:[ a_href (uri_of_string (fun () -> direct_link)) ] [ pcdata direct_link ] ; br () ]
      in
-     message_member ~member:leader ~subject:(Printf.sprintf "[Accretio] [%s] %s" society_name subject) ~data ~content ()
+     message_member ~member:leader ~attachments ~subject:(Printf.sprintf "[Accretio] [%s] %s" society_name subject) ~data ~content ()
 
+    (* payments *)
+
+    let request_payment ~member ~label ~evidence ~amount ~on_success ~on_failure =
+      log_info "requesting payment to member %d" member ;
+      match_lwt Ys_shortlink.create () with
+        None -> return_none
+      | Some shortlink ->
+
+        match_lwt Object_payment.Store.create
+                    ~member
+                    ~label
+                    ~amount:(Object_payment.apply_stripe_fees amount)
+                    ~currency:Object_payment.USD
+                    ~society
+                    ~callback_success:None
+                    ~callback_failure:None
+                    ~shortlink
+                    ~state:Object_payment.Pending
+                    () with
+          `Object_already_exists _ -> Lwt_log.ign_error_f "couldn't create invoice??" ; return_none
+        | `Object_created payment ->
+          lwt _ = $member(member)<-payments += (`Payment, payment.Object_payment.uid) in
+          let callback_success = Stage_Specifics.outbound_dispatcher 0 (on_success payment.Object_payment.uid) in
+          let callback_failure = Stage_Specifics.outbound_dispatcher 0 (on_failure payment.Object_payment.uid) in
+
+          $payment(payment.Object_payment.uid)<-callback_success = Some callback_success ;
+          $payment(payment.Object_payment.uid)<-callback_failure = Some callback_failure ;
+          return (Some payment.Object_payment.uid)
+
+    let payment_direct_link ~payment =
+      lwt shortlink = $payment(payment)->shortlink in
+      let link = (Ys_config.get_string "url-prefix")^"/payment/"^shortlink in
+      return link
+
+    let payment_amount ~payment =
+      $payment(payment)->amount
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
+
       society ;
       society_name ;
+      society_description ;
 
       direct_link ;
 
@@ -513,20 +559,26 @@ let context_factory mode society society_name society_shortlink =
 
       add_member ;
       remove_member ;
+      is_member ;
 
       get_message_data ;
 
+      request_payment ;
+      payment_direct_link ;
+      payment_amount ;
     }
 
   end in
   let module FactoryWithMode = Factory(Mode_Specifics) in
-  (module FactoryWithMode: STAGE_CONTEXT_FACTORY)
+  return (module FactoryWithMode: STAGE_CONTEXT_FACTORY)
 
 let context_factory_sandbox = context_factory `Sandbox
 let context_factory_production = context_factory `Production
 
 
 (* the step-by-step execution *)
+
+let step_lock = Lwt_mutex.create ()
 
 let step society =
 
@@ -538,16 +590,16 @@ let step society =
 
   | [] ->
 
-    lwt playbook, mode, name, shortlink = $society(society)->(playbook, mode, name, shortlink) in
+    lwt playbook, mode = $society(society)->(playbook, mode) in
 
-    let context_factory =
+    lwt context_factory =
       match mode with
       | Object_society.Sandbox ->
         Lwt_log.ign_info_f "society %d is running in mode sandbox" society ;
-        context_factory_sandbox society name shortlink
+        context_factory_sandbox society
       | _ ->
         Lwt_log.ign_info_f "society %d is running in mode production" society ;
-        context_factory_production society name shortlink
+        context_factory_production society
     in
 
     let playbook = Registry.get playbook in (* here we want to revisit how we load playbooks, but fine *)
@@ -556,67 +608,76 @@ let step society =
     let is_due call =
       match call.schedule with
       | Delayed delay when Int64.add call.created_on (Int64.of_int delay) > Ys_time.now () ->
-        Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+        Lwt_log.ign_info_f "there is a delayed call, trigger after %d, created on %Ld, skipping" delay call.created_on ;
         false
       | Delayed delay ->
-        Lwt_log.ign_info_f "there is a delayed call, trigger in %d" delay ;
+        Lwt_log.ign_info_f "there is a delayed call, trigger after %d, created on %Ld, running" delay call.created_on ;
         true
       | _ -> true
     in
 
-    let run =
-      function
-        [] ->
-        Lwt_log.ign_info_f "society %d has an empty stack" society ;
-        return []
-      | _ as stack ->
-        let rec look_for_first_call_due = function
-            [] -> return []
-          | call :: tail ->
-            match is_due call with
-              false ->
-              lwt stack = look_for_first_call_due tail in
-              return (call :: stack)
-            | true ->
-              Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
-              lwt result = Playbook.step context_factory call in
-              lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
-              match result with
-                None -> return tail
-              | Some followup -> return (followup :: tail)
-        in
-        look_for_first_call_due stack
+    let run stack =
+      try_lwt match stack with
+          [] ->
+          Lwt_log.ign_info_f "society %d has an empty stack" society ;
+          return []
+        | _ as stack ->
+          let rec look_for_first_call_due = function
+              [] -> return []
+            | call :: tail ->
+              match is_due call with
+                false ->
+                lwt stack = look_for_first_call_due tail in
+                return (call :: stack)
+              | true ->
+                Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
+                lwt result = Playbook.step context_factory call in
+                lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
+                match result with
+                  None -> return tail
+                | Some followup -> return (followup :: tail)
+          in
+          look_for_first_call_due stack
+      with exn -> Lwt_log.ign_error_f ~exn "Error inside the stack" ; return stack
     in
 
     let rec unstack () =
       (* this looks weird but it's made so that it leverages the per-field mutexes defined by pa_vertex *)
       lwt _ = $society(society)<-stack %%% run in
+      (* moving back all side car calls back into the main stack *)
+      Lwt_log.ign_info_f "moving the sidecar back into the main stack for society %d" society ;
       lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
           lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
           return [])
       in
+      Lwt_log.ign_info_f "deleting tombstoned calls from the stack for society %d" society ;
+      (* deleting all the inflight calls that were cancelled *)
       lwt _ = $society(society)<-stack %%% (fun stack ->
           lwt tombstones = $society(society)->tombstones in
-      let timers =
-        List.fold_left
-          (fun acc timestamp ->
-             SetInt64.add timestamp acc)
-          SetInt64.empty
-          tombstones
+          let timers =
+            List.fold_left
+              (fun acc timestamp ->
+                 SetInt64.add timestamp acc)
+              SetInt64.empty
+              tombstones
+          in
+          return
+            (List.filter
+               (fun call -> not (SetInt64.mem call.created_on timers))
+               stack))
       in
-      return
-        (List.filter
-           (fun call -> not (SetInt64.mem call.created_on timers))
-           stack)
-)
-in
-match_lwt $society(society)->stack with
-| stack when List.exists is_due stack -> unstack ()
-| _ -> return_unit
-in
+      match_lwt $society(society)->stack with
+      | stack when List.exists is_due stack -> unstack ()
+      | _ -> return_unit
+    in
 
-unstack ()
+    unstack ()
 
+
+let step society =
+  Lwt_mutex.with_lock
+    step_lock
+    (fun () -> step society)
 
 let push society call =
   lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in
@@ -704,7 +765,8 @@ let check_all_crons () =
   lwt to_awake, _ =
     Object_society.Store.fold_flat_lwt
     (fun acc uid ->
-      match_lwt $society(uid)->mode with
+      try_lwt
+        match_lwt $society(uid)->mode with
         | Object_society.Sandbox -> return (Some (uid :: acc)) (* don't wake up cron jobs for sandboxed societies *)
         | _ ->
           lwt playbook = $society(uid)->playbook in
@@ -726,7 +788,7 @@ let check_all_crons () =
                 Playbook.crontabs) in
           match !need_to_be_waken_up with
           | false -> return (Some acc)
-          | true -> return (Some (uid :: acc)))
+          | true -> return (Some (uid :: acc)) with _ -> return (Some acc))
           []
           None
           (-1)
@@ -737,7 +799,13 @@ let check_all_crons () =
          return minute
 
 let rec start_cron () =
-  lwt next_minute = check_all_crons () in
+  lwt next_minute =
+    try_lwt
+      check_all_crons ()
+    with exn ->
+      Lwt_log.ign_error_f ~exn "cron error" ;
+      Lwt.fail exn
+  in
   let now = Calendar.now () in
   Printer.Calendar.print "now: %c\n" now ;
   Printer.Calendar.print "next_minute: %c\n" next_minute ;
@@ -752,5 +820,6 @@ let rec start_cron () =
     start_cron ()
 
 let  _ =
+  Lwt_log.ign_info_f "starting all crons" ;
   (* lwt _ =   Eliom_reference.set last_minute_checked None in *)
   start_cron ()

@@ -88,6 +88,9 @@ let run () =
       return_unit
   in
 
+  (* creating a dummy payment *)
+
+
   (* setting the timzeone *)
   (* CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ; *)
 
