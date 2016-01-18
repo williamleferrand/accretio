@@ -762,6 +762,8 @@ let check_all_crons () =
       let start = Calendar.now () in
       return (Calendar.rem start (Calendar.Period.second (Calendar.second start)))
     | Some m -> return (Calendar.add m (Calendar.Period.minute 1)) in
+  try_lwt
+
   lwt to_awake, _ =
     Object_society.Store.fold_flat_lwt
     (fun acc uid ->
@@ -797,6 +799,7 @@ let check_all_crons () =
          lwt _ = Lwt_list.iter_p step to_awake in
          lwt _ = Eliom_reference.set last_minute_checked (Some minute) in
          return minute
+with exn -> Lwt_log.ign_error_f ~exn "exception caught when running crons" ; return minute
 
 let rec start_cron () =
   lwt next_minute =

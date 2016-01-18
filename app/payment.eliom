@@ -270,6 +270,7 @@ let builder = function
               | Some stripe ->
                 button
                   ~button_type:`Button
+                  ~a:[ a_onclick (fun _ -> perform (stripe.stripe_customer, stripe.stripe_last4)) ]
                   [ pcdata "Use card ending in " ; pcdata stripe.stripe_last4 ]
             in
             div ~a:[ a_class [ "box"; "payment-create-method" ]] [
