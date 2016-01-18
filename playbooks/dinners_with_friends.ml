@@ -664,7 +664,7 @@ let split_payment context message =
         begin
           let owed = ceil (!amount *. 100. /. (float_of_int (List.length members))) /. 100.0 in
           let date = CalendarLib.Printer.Calendar.sprint "%B %d" date in
-          let label = context.society_name ^ " " ^ date in
+          let label = context.society_name ^ " / " ^ date in
           let calls = List.map (fun member -> `RequestPayment (member, label, owed, message)) members in
           (* we don't have a way to return a set of calls, but we can cheat & use timers for that *)
           lwt _ =
