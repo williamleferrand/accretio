@@ -191,9 +191,9 @@ let builder = function
 
     let dispatch =
       function
-      | Paid -> `Paid
-      | Failed message -> Help.warning message ; `CreatePaymentMethod None
-      | Pending -> `CreatePaymentMethod None
+      | Paid -> update_payment_type `Paid
+      | Failed message -> Help.warning message ;  update_payment_type (`CreatePaymentMethod None)
+      | Pending -> update_payment_type (`CreatePaymentMethod None)
     in
 
     let perform (stripe_customer, stripe_last4) =

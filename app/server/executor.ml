@@ -393,7 +393,9 @@ let context_factory mode society =
           log_info "setting timer %s" label ;
           lwt _ = $society(society)<-timers += (`Label label, Int64.to_int call.created_on) in
           return_unit
-      with exn -> log_error ~exn "error when setting the timer" ; return_unit
+      with exn ->
+        Lwt_log.ign_error_f ~exn "error when setting the timer" ;
+        log_error ~exn "error when setting the timer" ; return_unit
 
     let cancel_timers = fun ~query ->
       lwt timers = Object_society.Store.search_timers society query in
@@ -516,6 +518,9 @@ let context_factory mode society =
       let link = (Ys_config.get_string "url-prefix")^"/payment/"^shortlink in
       return link
 
+    let payment_amount ~payment =
+      $payment(payment)->amount
+
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
@@ -560,7 +565,7 @@ let context_factory mode society =
 
       request_payment ;
       payment_direct_link ;
-
+      payment_amount ;
     }
 
   end in
@@ -572,6 +577,8 @@ let context_factory_production = context_factory `Production
 
 
 (* the step-by-step execution *)
+
+let step_lock = Lwt_mutex.create ()
 
 let step society =
 
@@ -638,10 +645,12 @@ let step society =
       (* this looks weird but it's made so that it leverages the per-field mutexes defined by pa_vertex *)
       lwt _ = $society(society)<-stack %%% run in
       (* moving back all side car calls back into the main stack *)
+      Lwt_log.ign_info_f "moving the sidecar back into the main stack for society %d" society ;
       lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
           lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
           return [])
       in
+      Lwt_log.ign_info_f "deleting tombstoned calls from the stack for society %d" society ;
       (* deleting all the inflight calls that were cancelled *)
       lwt _ = $society(society)<-stack %%% (fun stack ->
           lwt tombstones = $society(society)->tombstones in
@@ -664,6 +673,11 @@ let step society =
 
     unstack ()
 
+
+let step society =
+  Lwt_mutex.with_lock
+    step_lock
+    (fun () -> step society)
 
 let push society call =
   lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in

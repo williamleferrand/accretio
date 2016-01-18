@@ -26,7 +26,7 @@ let timer_reminder = sprintf "corepaymentsreminder%d%d"
 (* the stages *)
 
 let request_payment context (member, label, amount, evidence_message) =
-  context.log_info "requesting payment to member %d" member ;
+  context.log_info "requesting payment to member %d, amount is %f" member amount ;
   lwt evidence = $message(evidence_message)->attachments in
   match_lwt
     context.request_payment
@@ -41,6 +41,7 @@ let request_payment context (member, label, amount, evidence_message) =
     return (`AlertSupervisor (member, label, amount))
   | Some payment ->
     lwt payment_direct_link = context.payment_direct_link ~payment in
+    lwt amount = context.payment_amount ~payment in
     let content =
       match evidence with
         [] ->
