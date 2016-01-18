@@ -43,6 +43,15 @@ type action =
     Pending
   | RoutedToStage of string with bin_io, default_value(Pending)
 
+type attachment =
+  {
+    filename : string ;
+    content_type : string ;
+    content : string ;
+  } with bin_io
+
+type attachments = attachment list with bin_io, default_value([])
+
 let create_reference content =
   let hash = Digest.to_hex (Digest.string (Printf.sprintf "%Ld-%s" (Ys_time.now ()) content)) in
   Printf.sprintf "<%s@accret.io>" hash
@@ -69,6 +78,7 @@ type t = {
   tags : strings ;
 
   action : action ;
+  attachments : attachments ;
 
 } with vertex
   (

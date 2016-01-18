@@ -30,3 +30,6 @@ type call =
     schedule : schedule ;
     created_on : timestamp ;
   } with bin_io
+
+
+type call_option = call option with bin_io

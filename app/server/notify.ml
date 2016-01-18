@@ -69,6 +69,7 @@ type message = {
   references : string option ; (* the parent in case we are forwarding the email *)
   in_reply_to : string option ; (* this is the message Id we're replying from *)
   reply_to : (string * string) option ;
+  attachments : Object_message.attachment list ;
   subject : string ;
   content : Html5_types.div_content_fun Eliom_content.Html5.D.elt list ;
 }
@@ -174,6 +175,7 @@ let send_batches () =
                 lwt _ = pusher#push
                   {
                     subject ;
+                    attachments = [] ;
                     references = None ; in_reply_to = None ; reply_to = None ;
                     locator ;
                     content =
@@ -257,7 +259,35 @@ let create_message message =
   let main_text_body =
     new Netmime.memory_mime_body !m in
 
-  let tree = (mail_header, `Body main_text_body) in
+  (* here we either do a simple body or a parts, depending if we have attachments *)
+
+  let tree =
+    match message.attachments with
+      [] -> (mail_header, `Body main_text_body)
+    | _ as attachments ->
+      mail_header#update_field "content-type" "multipart/mixed" ;
+      let text_body_header =
+        Netmime.basic_mime_header [
+          "Content-Type", "text/html; charset=UTF-8" ;
+          "Content-Transfer-Encoding", "base64" ;
+        ]
+      in
+      let attachments =
+        List.map
+          (fun attachment ->
+             let header =
+               Netmime.basic_mime_header [
+                 "Content-Type", attachment.Object_message.content_type ;
+                 "Content-Disposition",  "inline; filename=receipt" ;
+                 "Content-Transfer-Encoding", "base64" ;
+               ]
+             in
+             (header, `Body (new Netmime.memory_mime_body attachment.Object_message.content))
+          )
+          attachments
+      in
+      (mail_header, `Parts ((text_body_header, `Body main_text_body) :: attachments))
+  in
 
   let buf = Buffer.create 16 in
   let ch = new Netchannels.output_buffer buf in
@@ -303,7 +333,8 @@ let send_welcome_message uid =
   let locator = { uid; name; email } in
   enqueue_message ~immediate:true
     {
-      subject = "Welcome!" ;
+      attachments = [] ;
+      subject ="Welcome!" ;
       references = None ;
       in_reply_to = None ;
       reply_to = None ;
@@ -324,8 +355,11 @@ let send_recovery_message uid token =
   let locator = { uid; name; email } in
   enqueue_message ~immediate:true
     {
-      subject = "Password recovery" ;
-      references = None ; in_reply_to = None ; reply_to = None ;
+      attachments = [] ;
+      subject ="Password recovery" ;
+      references = None ;
+      in_reply_to = None ;
+      reply_to = None ;
       locator ;
       content =
         [
@@ -356,7 +390,10 @@ let send_feedback session feedback contact_info =
   enqueue_message
     {
       locator ;
-      references = None ; in_reply_to = None ; reply_to = None ;
+      references = None ;
+      in_reply_to = None ;
+      reply_to = None ;
+      attachments = [] ;
       subject = "New feedback" ;
       content =
         [
@@ -387,7 +424,10 @@ let new_message thread message =
          enqueue_message
            {
              locator ;
-             references = None ; in_reply_to = None ; reply_to = None ;
+             references = None ;
+             in_reply_to = None ;
+             reply_to = None ;
+             attachments = [] ;
              subject = author_name ^ " posted a new message" ;
              content =
                [
@@ -407,7 +447,10 @@ let new_message thread message =
          enqueue_message
            {
              locator ;
-             references = None ; in_reply_to = None ; reply_to = None ;
+             references = None ;
+             in_reply_to = None ;
+             reply_to = None ;
+             attachments = [] ;
              subject = author_name ^ " posted a new message" ;
              content =
                [
@@ -430,7 +473,8 @@ let send_direct_message sender target message =
          {
            locator ;
            references = None ; in_reply_to = None ; reply_to = None ;
-           subject = (Printf.sprintf "New direct message from %s" sender_name) ;
+           attachments = [] ;
+           subject = Printf.sprintf "New direct message from %s" sender_name ;
            content = [
              pcdata sender_name ; pcdata " sent you a direct message:" ; br () ;
              br () ;
@@ -444,7 +488,7 @@ let send_direct_message sender target message =
 
 (* api emails going out *******************************************************)
 
-let api_send_message ?in_reply_to reference society destination subject member content =
+let api_send_message ?(attachments=[]) ?in_reply_to reference society destination subject member content =
   lwt locators = uids_to_locators [ member ] in
   lwt shortlink = $society(society)->shortlink in
   Lwt_list.iter_p
@@ -455,12 +499,13 @@ let api_send_message ?in_reply_to reference society destination subject member c
            references = Some reference ;
            in_reply_to ;
            reply_to = Some (shortlink, destination) ;
+           attachments ;
            subject ;
            content
          })
     locators
 
-let api_forward_message reference society destination subject member original =
+let api_forward_message ?(attachments=[]) reference society destination subject member original =
   lwt locators = uids_to_locators [ member ] in
   lwt shortlink = $society(society)->shortlink in
   lwt content = $message(original)->content in
@@ -472,7 +517,8 @@ let api_forward_message reference society destination subject member original =
            references = Some reference ;
            in_reply_to = None ;
            reply_to = Some (shortlink, destination) ;
-           subject = Printf.sprintf "[Accretio] %s" subject ;
+           attachments ;
+           subject ;
            content = [ pcdata content ] ;
          })
     locators
@@ -489,7 +535,8 @@ let check_society society =
            references = None ;
            in_reply_to = None ;
            reply_to = None ;
-           subject = Printf.sprintf "[Accretio] check society '%s'" name ;
+           attachments = [] ;
+           subject = Printf.sprintf "check society '%s'" name ;
            content =
              [
                pcdata "Hi," ; br () ;
@@ -502,7 +549,6 @@ let check_society society =
              ]
          })
     locators
-
 
 let send_message message =
   match_lwt $message(message)->destination with
@@ -518,6 +564,7 @@ let send_message message =
            references = Some reference ;
            in_reply_to = None ;
            reply_to = Some (shortlink, "") ;
+           attachments = [] ;
            subject ;
            content =
              [

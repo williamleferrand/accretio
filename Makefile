@@ -97,7 +97,8 @@ dot:
 neato:
 	neato -Tpng -Gstart=rand ./_build/app/server/bakers.ml.dot -o bakers.png
 
-
+dot_%:
+	dot -Tpng _build/app/server/$@.dot -o$@.png
 
 bakers:
 	ocamlbuild -use-menhir app/server/bakers.cmo

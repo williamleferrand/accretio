@@ -17,26 +17,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-
 open Lwt
-open Eliom_content.Html5
+open Bin_prot.Std
 
-let init service pipe session fb_app_id stripe_key =
-  (* the first step is to update the session, even before registering any handler *)
-  Updater.start () ;
-  Sessions.update_session session ;
-  (* Sessions.register_pipe pipe ;
-  Sessions.register_fb_app_id fb_app_id ; *)
-  (* register the container *)
-  Lwt.ignore_result
-    ((* lwt _ = Ys_googlemaps.load () in *)
-     Ys_stripe.load () ;
-     lwt _ = Ys_stripe.set_publishable_key stripe_key in
-     lwt _ = Eliom_client.wait_load_end () in
-     Dom_html.window##scroll(0, 1) ;
-     Manip.appendToBody (Nutshell.body ()) ;
-     Manip.appendToBody (Footer.dom ()) ;
-     Service.init () ;
-     Service.goto service ;
-     (* Ys_facebook.load !Sessions.fb_params ; *)
-     return_unit)
+open Ys_default
+open Ys_types
+open Ys_uid
+
+type state = Pending | Failed of string | Paid with bin_io
+
+type currency = USD with bin_io, default_value(USD)
+
+let apply_stripe_fees amount =
+  ceil (0.30 +. (amount *. 1.029))
+
+type t = {
+
+  uid : uid ;
+
+  created_on : timestamp ;
+  society : uid ;
+  callback_success : Ys_executor.call_option ;
+  callback_failure : Ys_executor.call_option ;
+
+  label : string ;
+
+  member : uid ;
+  state : state ;
+  evidence : Object_message.attachments ;
+
+  shortlink : string ;
+
+  amount : float ;
+  currency : currency ;
+
+} with vertex
+  (
+    {
+      aliases = [ `String shortlink ] ;
+      required = [ society ; member ; label ; shortlink ; amount ; state ; callback_success ; callback_failure ] ;
+      uniques = [ shortlink ]
+    }
+  )

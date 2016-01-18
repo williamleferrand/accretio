@@ -99,15 +99,15 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 }
 /* line 8, ../sass/_box.scss */
 .box h2, .box h3 {
-  margin-bottom: 10px;
+  margin-bottom: 18px;
 }
-/* line 13, ../sass/_box.scss */
+/* line 12, ../sass/_box.scss */
 .box h2 {
   font-size: 18px;
 }
-/* line 17, ../sass/_box.scss */
+/* line 16, ../sass/_box.scss */
 .box h3 {
-  font-size: 20px;
+  font-size: 18px;
 }
 /* line 21, ../sass/_box.scss */
 .box .box-section {
@@ -148,15 +148,15 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 }
 /* line 8, ../sass/_box.scss */
 .box-with-header h2, .box-with-header h3 {
-  margin-bottom: 10px;
+  margin-bottom: 18px;
 }
-/* line 13, ../sass/_box.scss */
+/* line 12, ../sass/_box.scss */
 .box-with-header h2 {
   font-size: 18px;
 }
-/* line 17, ../sass/_box.scss */
+/* line 16, ../sass/_box.scss */
 .box-with-header h3 {
-  font-size: 20px;
+  font-size: 18px;
 }
 /* line 21, ../sass/_box.scss */
 .box-with-header .box-section {
@@ -508,15 +508,15 @@ h2 {
 }
 /* line 8, ../sass/_box.scss */
 .connection-box .authentication-box h2, .connection-box .authentication-box h3 {
-  margin-bottom: 10px;
+  margin-bottom: 18px;
 }
-/* line 13, ../sass/_box.scss */
+/* line 12, ../sass/_box.scss */
 .connection-box .authentication-box h2 {
   font-size: 18px;
 }
-/* line 17, ../sass/_box.scss */
+/* line 16, ../sass/_box.scss */
 .connection-box .authentication-box h3 {
-  font-size: 20px;
+  font-size: 18px;
 }
 /* line 21, ../sass/_box.scss */
 .connection-box .authentication-box .box-section {
@@ -780,15 +780,15 @@ h2 {
 }
 /* line 8, ../sass/_box.scss */
 .profile .profile-header h2, .profile .profile-header h3 {
-  margin-bottom: 10px;
+  margin-bottom: 18px;
 }
-/* line 13, ../sass/_box.scss */
+/* line 12, ../sass/_box.scss */
 .profile .profile-header h2 {
   font-size: 18px;
 }
-/* line 17, ../sass/_box.scss */
+/* line 16, ../sass/_box.scss */
 .profile .profile-header h3 {
-  font-size: 20px;
+  font-size: 18px;
 }
 /* line 21, ../sass/_box.scss */
 .profile .profile-header .box-section {
@@ -933,15 +933,15 @@ h2 {
 }
 /* line 8, ../sass/_box.scss */
 .profile .profile-panels h2, .profile .profile-panels h3 {
-  margin-bottom: 10px;
+  margin-bottom: 18px;
 }
-/* line 13, ../sass/_box.scss */
+/* line 12, ../sass/_box.scss */
 .profile .profile-panels h2 {
   font-size: 18px;
 }
-/* line 17, ../sass/_box.scss */
+/* line 16, ../sass/_box.scss */
 .profile .profile-panels h3 {
-  font-size: 20px;
+  font-size: 18px;
 }
 /* line 21, ../sass/_box.scss */
 .profile .profile-panels .box-section {
@@ -1275,14 +1275,67 @@ h2 {
 .society-public > div {
   margin-bottom: 24px;
 }
-/* line 8, ../sass/_society_public.scss */
+/* line 9, ../sass/_society_public.scss */
 .society-public .society-public-details > div {
   line-height: 24px;
 }
-/* line 10, ../sass/_society_public.scss */
+/* line 11, ../sass/_society_public.scss */
 .society-public .society-public-details > div span {
   font-size: 18px;
   margin-right: 10px;
+}
+
+/* line 3, ../sass/_payment.scss */
+.payment .payment-amount {
+  text-align: center;
+  text-align: center;
+  font-size: 32px;
+  width: 200px;
+  margin: auto;
+  background-color: #3d3d3d;
+  color: white;
+  padding: 24px;
+  border-radius: 5px;
+  margin-bottom: 24px;
+}
+/* line 18, ../sass/_payment.scss */
+.payment .payment-paid {
+  border: 2px solid #3d3d3d;
+  border-radius: 5px;
+  text-align: center;
+  font-size: 32px;
+  padding: 18px;
+}
+/* line 26, ../sass/_payment.scss */
+.payment .payment-has-stripe {
+  text-align: center;
+}
+/* line 28, ../sass/_payment.scss */
+.payment .payment-has-stripe button {
+  margin: 0 9px;
+}
+/* line 37, ../sass/_payment.scss */
+.payment .payment-create-method .box-section input.cc-exp-month {
+  width: 100px;
+  margin-right: 18px;
+  display: inline;
+}
+/* line 42, ../sass/_payment.scss */
+.payment .payment-create-method .box-section input.cc-exp-year {
+  width: 100px;
+  margin-right: 18px;
+  display: inline;
+}
+/* line 47, ../sass/_payment.scss */
+.payment .payment-create-method .box-section input.cc-cvc {
+  width: 100px;
+  display: inline;
+}
+/* line 54, ../sass/_payment.scss */
+.payment .payment-footnote {
+  margin-top: 24px;
+  font-size: 12px;
+  text-align: center;
 }
 
 /* line 2, ../sass/_footer.scss */
