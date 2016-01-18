@@ -675,9 +675,11 @@ let step society =
 
 
 let step society =
-  Lwt_mutex.with_lock
-    step_lock
-    (fun () -> step society)
+  try_lwt
+    Lwt_mutex.with_lock
+      step_lock
+      (fun () -> step society)
+  with exn -> Lwt_log.ign_error_f ~exn "can't step society %d" society ; return_unit
 
 let push society call =
   lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in
@@ -762,6 +764,7 @@ let check_all_crons () =
       let start = Calendar.now () in
       return (Calendar.rem start (Calendar.Period.second (Calendar.second start)))
     | Some m -> return (Calendar.add m (Calendar.Period.minute 1)) in
+
   try_lwt
 
   lwt to_awake, _ =
@@ -769,7 +772,7 @@ let check_all_crons () =
     (fun acc uid ->
       try_lwt
         match_lwt $society(uid)->mode with
-        | Object_society.Sandbox -> return (Some (uid :: acc)) (* don't wake up cron jobs for sandboxed societies *)
+        | Object_society.Sandbox -> return (Some acc) (* don't wake up cron jobs for sandboxed societies *)
         | _ ->
           lwt playbook = $society(uid)->playbook in
           let playbook = Registry.get playbook in
@@ -790,7 +793,8 @@ let check_all_crons () =
                 Playbook.crontabs) in
           match !need_to_be_waken_up with
           | false -> return (Some acc)
-          | true -> return (Some (uid :: acc)) with _ -> return (Some acc))
+          | true -> return (Some (uid :: acc))
+       with _ -> return (Some acc))
           []
           None
           (-1)

@@ -171,6 +171,8 @@ open View_payment
 let builder = function
     None -> pcdata ""
   | Some bundle ->
+
+
     let view = bundle.payment in
 
     let payment_amount =
