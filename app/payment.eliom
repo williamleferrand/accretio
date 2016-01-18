@@ -215,7 +215,7 @@ let builder = function
               button
                 ~button_type:`Button
                 ~a:[ a_onclick (fun _ -> perform (stripe.stripe_customer, stripe.stripe_last4)) ]
-                [ pcdata "Use card ending in " ; pcdata stripe.stripe_last4 ]
+                [ pcdata "Pay using card ending in " ; pcdata stripe.stripe_last4 ]
             in
             let use_another_card =
               button
@@ -223,7 +223,7 @@ let builder = function
                 ~a:[ a_onclick (fun _ -> update_payment_type (`CreatePaymentMethod (Some stripe))) ]
                 [ pcdata "Use another card" ]
             in
-            div ~a:[ a_class [ "payment-has-stripe" ]] [
+            div ~a:[ a_class [ "box" ; "payment-has-stripe" ]] [
               use_current_stripe ; use_another_card
             ]
           | `CreatePaymentMethod (stripe_option) ->
@@ -272,15 +272,16 @@ let builder = function
                   ~button_type:`Button
                   [ pcdata "Use card ending in " ; pcdata stripe.stripe_last4 ]
             in
-            div ~a:[ a_class [ "payment-create-method" ]] [
-              div [
+            div ~a:[ a_class [ "box"; "payment-create-method" ]] [
+              h3 [ pcdata "Use a new credit or debit card" ] ;
+              div ~a:[ a_class [ "box-section" ]] [
                 cc_number ;
-             ] ;
-             div [
-               cc_exp_month ; cc_exp_year ; cc_cvc ;
-             ] ;
-              div [
-                button ~button_type:`Button ~a:[ a_onclick add_card ] [ pcdata "Add card" ] ;
+              ] ;
+              div ~a:[ a_class [ "box-section" ]] [
+                cc_exp_month ; cc_exp_year ; cc_cvc
+              ] ;
+              div ~a:[ a_class [ "box-action" ]] [
+                button ~button_type:`Button ~a:[ a_onclick add_card ] [ pcdata "Process payment" ] ;
                 use_current_stripe_option ;
               ] ;
             ])
@@ -292,6 +293,9 @@ let builder = function
       h1 [ pcdata view.label ] ;
       payment_amount ;
       R.node payment_method ;
+      div ~a:[ a_class [ "payment-footnote" ]] [
+        pcdata "Payments are secured by Stripe. Accretio doesn't store your payment information"
+      ]
     ]
 
 let dom = Template.apply %retrieve builder

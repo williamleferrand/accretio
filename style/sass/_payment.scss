@@ -1,3 +1,61 @@
 .payment {
 
+    .payment-amount {
+
+        text-align: center ;
+        text-align: center;
+        font-size: 32px;
+        width: 200px;
+        margin: auto;
+        background-color: $grey;
+        color: white;
+        padding: 24px;
+        border-radius: 5px;
+        margin-bottom: 24px ;
+    }
+
+
+    .payment-paid {
+        border: 2px solid $grey ;
+        border-radius: 5px;
+        text-align: center;
+        font-size: 32px;
+        padding: 18px;
+    }
+
+    .payment-has-stripe {
+        text-align:center;
+        button {
+            margin: 0 9px;
+        }
+
+
+    }
+
+    .payment-create-method {
+        .box-section {
+            input.cc-exp-month {
+                width: 100px ;
+                margin-right: 18px ;
+                display: inline ;
+            }
+            input.cc-exp-year {
+                width: 100px ;
+                margin-right: 18px ;
+                display: inline ;
+            }
+            input.cc-cvc {
+                width: 100px ;
+                display: inline ;
+            }
+        }
+    }
+
+    .payment-footnote {
+        margin-top: 24px ;
+        font-size: 12px ;
+        text-align: center ;
+    }
+
+
 }
