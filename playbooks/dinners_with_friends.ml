@@ -86,8 +86,9 @@ let schedule_dinner context () =
             ~content:[
               pcdata "Greetings" ; br () ;
               br () ;
-              pcdata "There are enough potential participants for another dinner. " ;
-              pcdata "When is the next dinner? Please give me a ISO date."
+              pcdata "There are enough potential participants for another dinner. " ; br () ;
+              br () ;
+              pcdata "When is the next dinner? Please give me a ISO 8601 date. (eg 2013-05-15T08:30:0)"
             ]
             () in
         return `None
