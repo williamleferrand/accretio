@@ -35,6 +35,8 @@ let tag_already_invited = sprintf "alreadynotified%f"
 let tag_attending = sprintf "attending%f"
 let tag_not_attending = sprintf "notattending%f"
 
+let timer_reminder = sprintf "reminder%d%f"
+
 (* stages *********************************************************************)
 
 let ask_for_new_crontab context () =
@@ -83,7 +85,10 @@ let crontab_updated context (message, crontab) =
 let do_nothing _ _ =
   return `None
 
-let tick _ _ =
+let tick_schedule_bbq _ _ =
+  return `Tick
+
+let tick_ask_for_date _ _ =
   return `Tick
 
 let schedule_bbq context () =
@@ -155,7 +160,7 @@ let forward_or_ask_date message =
   lwt content = $message(message)->content in
   try
     ignore (Str.search_forward (Str.regexp_string_case_fold "alterdate") content 0) ;
-    return (Some `AskForDate)
+    return (Some (`AskForDate message))
   with Not_found -> return (Some (`Message message))
 
 let send_invitations context message =
@@ -203,7 +208,13 @@ let send_invitations context message =
                  ]
                  ()
              in
-             lwt _ = context.tag_member ~member ~tags:[ tag_already_invited (Calendar.to_unixfloat date) ] in return (count + 1))
+             lwt _ = context.tag_member ~member ~tags:[ tag_already_invited (Calendar.to_unixfloat date) ] in
+             lwt _ = context.set_timer
+                       ~label:(timer_reminder member (Calendar.to_unixfloat date))
+                       ~duration:(Calendar.Period.lmake ~day:3 ())
+                       (`RemindMember (member, Calendar.to_unixfloat date))
+             in
+             return (count + 1))
        0
        participants
      in
@@ -236,6 +247,7 @@ let mark_attending context message =
     let date = Calendar.from_unixfloat (float_of_string date) in
     lwt _ = context.tag_member ~member ~tags:[ tag_attending (Calendar.to_unixfloat date) ] in
     lwt _ = context.untag_member ~member ~tags:[tag_not_attending (Calendar.to_unixfloat date) ] in
+    lwt _ = context.cancel_timers ~query:(timer_reminder member (Calendar.to_unixfloat date)) in
     lwt _ =
       context.forward_to_supervisor
         ~message
@@ -266,6 +278,7 @@ let mark_not_attending context message =
     let date = Calendar.from_unixfloat (float_of_string date) in
     lwt _ = context.tag_member ~member ~tags:[ tag_not_attending (Calendar.to_unixfloat date) ] in
     lwt _ = context.untag_member ~member ~tags:[ tag_attending (Calendar.to_unixfloat date) ] in
+    lwt _ = context.cancel_timers ~query:(timer_reminder member (Calendar.to_unixfloat date)) in
     lwt _ =
       context.forward_to_supervisor
         ~message
@@ -297,7 +310,32 @@ let create_dashboard context date =
   in
   return `None
 
-
+let remind_member context (member, date) =
+  context.log_info "reminding member %d about event %f" member date ;
+  let date = Calendar.from_unixfloat date in
+  match_lwt context.get ~key:(key_event_message (Calendar.to_unixfloat date)) with
+    None -> return `None
+  | Some message ->
+    lwt name = $member(member)->name in
+    lwt _ =
+      context.message_member
+        ~data:[ key_date, string_of_float (Calendar.to_unixfloat date)]
+        ~member
+        ~subject:(Printf.sprintf "(Reminder, please RSVP) %s / %s" context.society_name (CalendarLib.Printer.Calendar.sprint "%B %d" date))
+        ~content:[
+          (match name with "" -> pcdata "Dear member," | _ as name -> pcdata (sprintf "Dear %s," name)) ; br () ;
+          br () ;
+          pcdata "Quick question, will you join us on " ; pcdata (CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), at %I:%M %p?" date) ; br () ;
+          br () ;
+          pcdata message ;
+          br () ;
+          pcdata "Give us a heads up by simply replying yes or no to this email!" ; br () ;
+          br () ;
+          pcdata "Thanks,"
+        ]
+        ()
+    in
+    return `None
 
 (* the playbook ***************************************************************)
 
@@ -306,21 +344,21 @@ PARAMETERS
 
 PLAYBOOK
 
-  #import core_join_request
-
   *ask_for_new_crontab<forward> ~> `Message of email ~> update_crontab<forward> ~> `Message of email ~> update_crontab
                                                         update_crontab ~> `CrontabUpdated of int * string ~> crontab_updated
 
             crontab_updated<simple_yes_no> ~> `No of email ~> do_nothing
-            crontab_updated ~> `Yes of email ~> tick ~> `Tick ~> schedule_bbq
+            crontab_updated ~> `Yes of email ~> tick_schedule_bbq ~> `Tick ~> schedule_bbq
 
                                                                                 parse_date<forward> ~> `Message of email ~> parse_date
   *schedule_bbq ~> `AskForDate ~> ask_for_date<forward> ~> `Message of email ~> parse_date ~> `AskForCustomMessageOrAnotherDate of float ~> ask_for_custom_message_or_another_date
    schedule_bbq ~> `AskForCustomMessageOrAnotherDate of float ~> ask_for_custom_message_or_another_date
 
-   ask_for_custom_message_or_another_date<forward_or_ask_date> ~> `AskForDate ~> ask_for_date                         mark_attending ~> `No of email ~> mark_not_attending
+   ask_for_custom_message_or_another_date<forward_or_ask_date> ~> `AskForDate of email ~> tick_ask_for_date ~> `Tick ~> ask_for_date              mark_attending ~> `No of email ~> mark_not_attending
    ask_for_custom_message_or_another_date ~> `Message of email ~> send_invitations<simple_yes_no> ~> `Yes of email ~> mark_attending<simple_yes_no> ~> `Yes of email ~> mark_attending
                                                                   send_invitations ~> `No of email ~> mark_not_attending<simple_yes_no> ~> `No of email ~> mark_not_attending
                                                                                                       mark_not_attending ~> `Yes of email ~> mark_attending
+          send_invitations ~> `RemindMember of int * float ~> remind_member<simple_yes_no> ~> `Yes of email ~> mark_attending
+                                                              remind_member ~> `No of email ~> mark_not_attending
 
   *create_dashboard_current_run ~> `CreateDashboard of float ~> create_dashboard

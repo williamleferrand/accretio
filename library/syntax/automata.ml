@@ -24,7 +24,7 @@ open Ast
 
 module StringSet = Set.Make(String)
 
-type opt = Tickable | Mailbox | MessageStrategies of string list
+type opt = Tickable | Mailbox | MessageStrategies of string list | ExternalMailbox
 
 module Vertex = struct
 
@@ -75,7 +75,7 @@ module Edge = struct
     match ty with
       <:ctyp< `$uid:constr$ >> -> constr
     | <:ctyp< `$uid:constr$ of $args$ >> -> Printf.sprintf "%s(%s)" constr (ty_to_string args)
-    | _ -> "edge"
+    | _ -> "email out to member"
 
 end
 
@@ -453,14 +453,66 @@ module Dot = Graph.Graphviz.Dot(struct
 
     let default_edge_attributes _ = []
     let get_subgraph _ = None
-    let vertex_attributes v = [ `Shape `Ellipse ; `HtmlLabel (Vertex.stage v) ]
+    let vertex_attributes v =
+      match List.mem ExternalMailbox (Vertex.options v) with
+        false -> [ `Shape `Ellipse ; `HtmlLabel (Vertex.stage v) ]
+      | true -> [ `Shape `Diamond ; `HtmlLabel (Vertex.stage v) ]
+
     let vertex_name v = Vertex.stage v
     let default_vertex_attributes _ = []
-    let graph_attributes _ = [ `Page (8.5, 11.0) ; `Margin 0.0 ]
+    let graph_attributes _ = [ ]
 
   end)
 
+
+let inject_mailboxes graph =
+  (* we add fake edges so that the printed graph show emails as external edges *)
+  G.fold_vertex
+    (fun stage acc ->
+       let is_mailable =
+         G.fold_succ_e
+           (fun transition acc ->
+              match G.E.label transition with
+                <:ctyp< `$uid:_$ of email >> -> true
+              | _ -> acc)
+           graph
+           stage
+           (Vertex.is_mailable stage)
+       in
+       match is_mailable with
+         false ->
+         let acc = G.add_vertex acc stage in
+         G.fold_succ_e
+           (fun edge acc -> G.add_edge_e acc edge)
+           graph
+           stage
+           acc
+       | true ->
+         let mailbox =
+           {
+             Vertex.stage = "mailbox_" ^ Vertex.stage stage ;
+             options = [ ExternalMailbox ] ;
+             path = [] ;
+           } in
+         let acc = G.add_vertex acc stage in
+         let acc = G.add_vertex acc mailbox in
+         let acc =
+           G.add_edge acc stage mailbox
+         in
+         G.fold_succ_e
+           (fun edge acc ->
+              match G.E.label edge with
+                <:ctyp< `$uid:_$ of email >> -> G.add_edge_e acc (G.E.create mailbox (G.E.label edge) (G.E.dst edge))
+              | _ -> G.add_edge_e acc edge)
+           graph
+           stage
+           acc)
+    graph
+    G.empty
+
+
 let graph_to_string graph =
+  let graph = inject_mailboxes graph in
   let buffer = Buffer.create 1024 in
   let formatter = Format.formatter_of_buffer buffer in
   Dot.fprint_graph formatter graph;
@@ -477,6 +529,7 @@ let dump_automata _loc automata =
   close_out oc
 
 let print_automata _loc automata =
+  let automata = inject_mailboxes automata in
   let original_file = Loc.file_name _loc in
   let original_prefix = Filename.chop_extension original_file in
   let original_prefix = Filename.concat (Filename.dirname original_prefix) ("dot_" ^ Filename.basename original_prefix) in
