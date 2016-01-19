@@ -31,6 +31,7 @@ let key_current_run = "current-run"
 let key_crontab = "crontab"
 let key_date = "date"
 let key_event_message = sprintf "event-message-%f"
+let key_count = sprintf "count-participants-%f-%d"
 let tag_already_invited = sprintf "alreadynotified%f"
 let tag_attending = sprintf "attending%f"
 let tag_not_attending = sprintf "notattending%f"
@@ -44,7 +45,7 @@ let ask_for_new_crontab context () =
     context.message_supervisor
       ~subject:"Update crontab"
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
         pcdata "What crontab do you want to use moving forward?"; br ();
       ]
@@ -110,7 +111,7 @@ let ask_for_date context () =
     context.message_supervisor
       ~subject:"Next date?"
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
         pcdata "When do you want to hold the next event?" ; pcdata " Please send me a date using the ISO 8601 format, such as in 2013-05-15T08:30:00" ; br () ;
       ]
@@ -142,7 +143,7 @@ let ask_for_custom_message_or_another_date context date =
       ~subject:(CalendarLib.Printer.Calendar.sprint "Custom message for the even on %B %d" date)
       ~data:[ key_date, string_of_float (Calendar.to_unixfloat date) ]
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
         pcdata "The next event will take place on " ;
         pcdata (CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), at %I:%M %p." date) ; br () ;
@@ -230,6 +231,7 @@ let send_invitations context message =
 
 let mark_attending context message =
   lwt message = context.get_original_message ~message in
+  lwt content = context.get_message_content ~message in
   lwt member = context.get_message_sender ~message in
   match_lwt context.get_message_data ~message ~key:key_date with
     None ->
@@ -244,16 +246,27 @@ let mark_attending context message =
     in
     return `None
   | Some date ->
+
+    (* let's try to grab the number of participants *)
+    let regexp = Str.regexp "[0-9]+" in
+    let number_of_participants =
+      try
+        let _ = Str.search_forward regexp content in
+        int_of_string (Str.matched_string content)
+      with Not_found -> 1
+    in
+
     let date = Calendar.from_unixfloat (float_of_string date) in
     lwt _ = context.tag_member ~member ~tags:[ tag_attending (Calendar.to_unixfloat date) ] in
     lwt _ = context.untag_member ~member ~tags:[tag_not_attending (Calendar.to_unixfloat date) ] in
     lwt _ = context.cancel_timers ~query:(timer_reminder member (Calendar.to_unixfloat date)) in
+    lwt _ = context.set ~key:(key_count (Calendar.to_unixfloat date) member) ~value:(string_of_int number_of_participants) in
     lwt _ =
       context.forward_to_supervisor
         ~message
         ~subject:(sprintf "You got a positive response for the event on %s" (CalendarLib.Printer.Calendar.sprint "%B %d" date))
         ~content:[
-          pcdata "I marked this response as positive. Reply yes/no to change that if needed."
+          pcdata "I marked this response as positive, with " ; pcdata (string_of_int number_of_participants) ; pcdata " participants. Reply yes/no and a number to change that if needed."
         ]
         ()
     in
@@ -298,13 +311,24 @@ let create_dashboard_current_run context () =
 let create_dashboard context date =
   let date = Calendar.from_unixfloat date in
   lwt participants = context.search_members ~query:(tag_attending (Calendar.to_unixfloat date)) () in
+  lwt count =
+    Lwt_list.fold_left_s
+      (fun acc member ->
+         match_lwt context.get ~key:(key_count (Calendar.to_unixfloat date) member) with
+           None -> return (acc + 1)
+         | Some count -> return (acc + int_of_string count))
+      0
+      participants
+  in
+
   lwt _ =
     context.message_supervisor
       ~subject:(Printf.sprintf "Headcount for the event on %s" (CalendarLib.Printer.Calendar.sprint "%B %d" date))
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
-        pcdata "So far, there are " ; pcdata (string_of_int (List.length participants)) ; pcdata " confirmed participants to the event." ; br () ;
+        pcdata "So far, there are " ; pcdata (string_of_int count) ; pcdata " confirmed participants to the event (brought by " ;
+        pcdata (string_of_int (List.length participants)) ; pcdata " participants)" ; br () ;
       ]
       ()
   in
