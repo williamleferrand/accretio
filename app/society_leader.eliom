@@ -65,6 +65,8 @@ let retrieve uid =
     let module P = (val playbook : Api.PLAYBOOK) in
     P.automata, P.triggers, P.mailables, P.email_actions
   in
+  let triggers = List.fast_sort (fun (_, s1) (_, s2) -> String.compare s1 s2) triggers in
+
   return
     {
       uid ;
