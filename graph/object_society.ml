@@ -80,6 +80,7 @@ type t = {
   shortlink : string ;
 
   blacklist : [ `Unregistered | `Banned ] edges ;
+  payments : [ `Payment ] edges ;
 
 } with vertex
   (

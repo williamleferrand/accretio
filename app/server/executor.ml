@@ -511,6 +511,7 @@ let context_factory mode society =
 
           $payment(payment.Object_payment.uid)<-callback_success = Some callback_success ;
           $payment(payment.Object_payment.uid)<-callback_failure = Some callback_failure ;
+          lwt _ = $society(society)<-payments += (`Payment, payment.Object_payment.uid) in
           return (Some payment.Object_payment.uid)
 
     let payment_direct_link ~payment =
