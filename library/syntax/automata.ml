@@ -24,7 +24,7 @@ open Ast
 
 module StringSet = Set.Make(String)
 
-type opt = Tickable | Mailbox | MessageStrategies of string list
+type opt = Tickable | Mailbox | MessageStrategies of string list | ExternalMailbox
 
 module Vertex = struct
 
@@ -75,7 +75,7 @@ module Edge = struct
     match ty with
       <:ctyp< `$uid:constr$ >> -> constr
     | <:ctyp< `$uid:constr$ of $args$ >> -> Printf.sprintf "%s(%s)" constr (ty_to_string args)
-    | _ -> "edge"
+    | _ -> "email out to member"
 
 end
 
@@ -176,7 +176,7 @@ let outbound_dispatcher allow_none _loc automata stage schedule =
     (fun edge acc ->
        let dest = Vertex.stage (G.E.dst edge) in
        match G.E.label edge with
-       | <:ctyp< `$uid:_$ of email >> -> acc (* messages can't be emitted from the stage *)
+      (*   | <:ctyp< `$uid:_$ of email >> -> acc (* messages can't be emitted from the stage *) *)
        (* | <:ctyp< `Message of int >> -> acc (* messages transitions can't be emitted from the stage itself *) *)
        | <:ctyp< `$uid:constr$ >> ->
           if allow_none then
@@ -200,20 +200,6 @@ let outbound_dispatcher allow_none _loc automata stage schedule =
     automata
     stage
     (if allow_none then [ <:match_case< `None -> None >> ] else [])
-
-let outbound_dispatcher_message _loc automata stage schedule =
-  G.fold_succ_e
-    (fun edge acc ->
-       let dest = Vertex.stage (G.E.dst edge) in
-       match G.E.label edge with
-       | <:ctyp< `$uid:constr$ of $args$ >> ->
-         <:match_case< `$uid:constr$ args ->
-                                  let args = $lid:"serialize_" ^ dest$ args in
-                                  Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
-       | _ -> acc)
-    automata
-    stage
-    []
 
 let steps _loc automata =
   G.fold_vertex
@@ -419,7 +405,7 @@ let dispatch_message_automatically _loc automata =
     G.fold_vertex
       (fun stage acc ->
          let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage ^ "(automatic dispatch)") in
-         let dispatcher = outbound_dispatcher_message _loc automata stage <:expr< Immediate >> in
+         let dispatcher = outbound_dispatcher false _loc automata stage <:expr< Immediate >> in
 
          let strategies =
            List.fold_left
@@ -453,7 +439,7 @@ let dispatch_message_automatically _loc automata =
       [ <:match_case< _ -> Lwt.return_none >> ]
   in
   <:str_item< value dispatch_message_automatically message stage =
-let _ = Lwt_log.ign_info_f "dispatch_message_automatically: %d , stage is %s" message stage in
+    let _ = Lwt_log.ign_info_f "dispatch_message_automatically: %d , stage is %s" message stage in
     match stage with [ $list:cases$ ]
   >>
 
@@ -467,14 +453,66 @@ module Dot = Graph.Graphviz.Dot(struct
 
     let default_edge_attributes _ = []
     let get_subgraph _ = None
-    let vertex_attributes v = [ `Shape `Ellipse ; `HtmlLabel (Vertex.stage v) ]
+    let vertex_attributes v =
+      match List.mem ExternalMailbox (Vertex.options v) with
+        false -> [ `Shape `Ellipse ; `HtmlLabel (Vertex.stage v) ]
+      | true -> [ `Shape `Diamond ; `HtmlLabel (Vertex.stage v) ]
+
     let vertex_name v = Vertex.stage v
     let default_vertex_attributes _ = []
-    let graph_attributes _ = [ `Page (8.5, 11.0) ; `Margin 0.0 ]
+    let graph_attributes _ = [ ]
 
   end)
 
+
+let inject_mailboxes graph =
+  (* we add fake edges so that the printed graph show emails as external edges *)
+  G.fold_vertex
+    (fun stage acc ->
+       let is_mailable =
+         G.fold_succ_e
+           (fun transition acc ->
+              match G.E.label transition with
+                <:ctyp< `$uid:_$ of email >> -> true
+              | _ -> acc)
+           graph
+           stage
+           (Vertex.is_mailable stage)
+       in
+       match is_mailable with
+         false ->
+         let acc = G.add_vertex acc stage in
+         G.fold_succ_e
+           (fun edge acc -> G.add_edge_e acc edge)
+           graph
+           stage
+           acc
+       | true ->
+         let mailbox =
+           {
+             Vertex.stage = "mailbox_" ^ Vertex.stage stage ;
+             options = [ ExternalMailbox ] ;
+             path = [] ;
+           } in
+         let acc = G.add_vertex acc stage in
+         let acc = G.add_vertex acc mailbox in
+         let acc =
+           G.add_edge acc stage mailbox
+         in
+         G.fold_succ_e
+           (fun edge acc ->
+              match G.E.label edge with
+                <:ctyp< `$uid:_$ of email >> -> G.add_edge_e acc (G.E.create mailbox (G.E.label edge) (G.E.dst edge))
+              | _ -> G.add_edge_e acc edge)
+           graph
+           stage
+           acc)
+    graph
+    G.empty
+
+
 let graph_to_string graph =
+  let graph = inject_mailboxes graph in
   let buffer = Buffer.create 1024 in
   let formatter = Format.formatter_of_buffer buffer in
   Dot.fprint_graph formatter graph;
@@ -491,6 +529,7 @@ let dump_automata _loc automata =
   close_out oc
 
 let print_automata _loc automata =
+  let automata = inject_mailboxes automata in
   let original_file = Loc.file_name _loc in
   let original_prefix = Filename.chop_extension original_file in
   let original_prefix = Filename.concat (Filename.dirname original_prefix) ("dot_" ^ Filename.basename original_prefix) in

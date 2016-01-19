@@ -511,6 +511,7 @@ let context_factory mode society =
 
           $payment(payment.Object_payment.uid)<-callback_success = Some callback_success ;
           $payment(payment.Object_payment.uid)<-callback_failure = Some callback_failure ;
+          lwt _ = $society(society)<-payments += (`Payment, payment.Object_payment.uid) in
           return (Some payment.Object_payment.uid)
 
     let payment_direct_link ~payment =
@@ -814,9 +815,8 @@ let rec start_cron () =
       Lwt.fail exn
   in
   let now = Calendar.now () in
-  Printer.Calendar.print "now: %c\n" now ;
-  Printer.Calendar.print "next_minute: %c\n" next_minute ;
-  print_endline "---" ;
+
+  Lwt_log.ign_info_f "Running crons, %s %s" (Printer.Calendar.sprint "now: %c" now) (Printer.Calendar.sprint "next_minute: %c" next_minute) ;
   if next_minute < now then
     start_cron ()
   else

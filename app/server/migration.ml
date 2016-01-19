@@ -96,10 +96,22 @@ let reset_message_transport () =
     None
     (-1)
 
+let reattach_payments () =
+  Lwt_log.ign_info_f "reattach_payments" ;
+  Object_payment.Store.fold_flat_lwt
+    (fun _ uid ->
+      lwt society = $payment(uid)->society in
+      lwt _ = $society(society)<-payments += (`Payment, uid) in
+      return (Some ()))
+    ()
+    None
+    (-1)
+
 let run () =
   lwt _ = create_playbook_threads () in
   lwt _ = reset_message_transport () in
   lwt _ = reset_all_stacks () in
+  lwt _ = reattach_payments () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in

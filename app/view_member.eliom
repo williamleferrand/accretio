@@ -68,4 +68,8 @@ open Eliom_content.Html5.D
 let format member =
   pcdata member.name
 
+
+let format_message member =
+  span [ pcdata member.name ; pcdata " " ; pcdata member.email ]
+
 }}

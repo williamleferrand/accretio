@@ -46,7 +46,7 @@ let request_payment context (member, label, amount, evidence_message) =
       match evidence with
         [] ->
         [
-          pcdata "Hi," ; br () ;
+          pcdata "Greetings," ; br () ;
           br ()  ;
           pcdata "Thanks for your participation to " ; pcdata context.society_name ; pcdata ", I hope you enjoyed it!" ; br () ;
           br () ;
@@ -62,7 +62,7 @@ let request_payment context (member, label, amount, evidence_message) =
         ]
       | _ ->
         [
-          pcdata "Hi," ; br () ;
+          pcdata "Greetings," ; br () ;
           br () ;
           pcdata "Thanks for your participation to " ; pcdata context.society_name ; pcdata ", I hope you enjoyed it!" ; br () ;
           br () ;
@@ -104,7 +104,7 @@ let payment_alert_supervisor context (member, label, amount) =
     context.message_supervisor
       ~subject:"Couldn't create payment"
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
         pcdata "I couldn't create an payment for " ; pcdata email ; pcdata ", amount is " ; pcdata (Printf.sprintf "$%.2f" amount) ; pcdata "." ; br () ;
         br () ;
@@ -127,7 +127,7 @@ let remind_member_of_payment context (member, label, payment, attempts) =
           ~data:[ key_payment, Ys_uid.to_string payment ]
           ~subject:(Printf.sprintf "Missed payment for %s" label)
           ~content:[
-            pcdata "Hi," ; br () ;
+            pcdata "Greetings," ; br () ;
             br () ;
             pcdata "Member " ; pcdata email ; pcdata " hasn't responded about payment " ; pcdata (Ys_uid.to_string payment) ; pcdata "." ; br () ;
             br () ;
@@ -149,7 +149,7 @@ let remind_member_of_payment context (member, label, payment, attempts) =
         ~data:[ key_payment, Ys_uid.to_string payment ]
         ~subject:label
         ~content:[
-          pcdata "Hi," ; br ();
+          pcdata "Greetings," ; br ();
           br () ;
           pcdata "Sorry for the reminder; would you mind visiting the link below to settle this transaction?" ; br () ;
           br () ;
@@ -194,6 +194,58 @@ let payment_success context (member, payment) =
 let do_nothing _ _ =
   return `None
 
+let remind_all context () =
+  let open Ys_uid in
+  context.log_info "reminding users about all the missing invoices" ;
+  lwt payments = $society(context.society)->payments in
+  lwt payments =
+    Lwt_list.fold_left_s
+      (fun payments (`Payment, uid) ->
+         match_lwt $payment(uid)->(state, member) with
+          | Object_payment.Paid, _ -> return payments
+          | _, member ->
+            let v =
+              try
+                UidMap.find member payments
+              with _ -> [] in
+            return (UidMap.add member (uid :: v) payments))
+      UidMap.empty
+      payments in
+  let payments = UidMap.bindings payments in
+  lwt _ =
+    Lwt_list.iter_s
+      (fun (member, payments) ->
+         let payments = Ys_list.take 10 payments in
+         lwt links =
+           Lwt_list.map_s
+             (fun payment ->
+                lwt payment_direct_link = context.payment_direct_link ~payment in
+                lwt label = $payment(payment)->label in
+                return (li [ Raw.a ~a:[ a_href (uri_of_string (fun () -> payment_direct_link)) ] [ pcdata label ]]))
+             payments
+         in
+
+         lwt _ =
+           context.message_member
+             ~member
+             ~subject:(Printf.sprintf "(Reminder) You have %d payment(s) requests on Accretio" (List.length payments))
+             ~content:[
+               pcdata "Greetings," ; br ();
+               br () ;
+               pcdata "Sorry for the reminder but it looks like " ;
+               pcdata (string_of_int (List.length payments)) ; pcdata " payment(s) are waiting to be settled. Would you mind checking out the link(s) below?" ; br () ;
+               br () ;
+               ul links ;
+               br () ;
+               pcdata "If you have any question, please get in touch!" ; br ()
+             ]
+             ()
+         in
+         return_unit)
+      payments
+   in
+   return `None
+
 (* the plumbing *)
 
 COMPONENT
@@ -202,3 +254,6 @@ COMPONENT
  request_payment ~> `RemindMemberOfPayment of (int * string * int * int) ~> remind_member_of_payment ~> `RemindMemberOfPayment of (int * string * int * int) ~> remind_member_of_payment
  request_payment ~> `PaymentSuccess of (int * int) ~> payment_success
  request_payment ~> `PaymentFailure of (int * int) ~> do_nothing
+
+
+ *remind_all

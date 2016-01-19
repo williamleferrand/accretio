@@ -120,4 +120,5 @@ let _ =
      lwt _ = register (module Accretio_grooming) in
      lwt _ = register (module Accretio_sanity) in
      lwt _ = register (module Ecd_field_trips) in
+     lwt _ = register (module Monthly_bbq) in
      return_unit)

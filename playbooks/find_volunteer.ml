@@ -52,7 +52,7 @@ let look_for_candidate context () =
     None -> return `AlertSupervisor
   | Some run_id ->
     let run_id = Int64.of_string run_id in
-    match_lwt context.search_members ~query:("active -" ^ (tag_refused run_id)) () with
+    match_lwt context.search_members ~query:("hasparticipated -" ^ (tag_refused run_id)) () with
       [] -> return `NoVolunteer
     | _ as participants ->
       let member = List.nth participants (Random.int (List.length participants)) in

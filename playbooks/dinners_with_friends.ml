@@ -84,10 +84,11 @@ let schedule_dinner context () =
             ~subject:"When is the next dinner?"
             ~data:[ key_run_id, Int64.to_string run_id ]
             ~content:[
-              pcdata "Hi" ; br () ;
+              pcdata "Greetings" ; br () ;
               br () ;
-              pcdata "There are enough potential participants for another dinner. " ;
-              pcdata "When is the next dinner? Please give me a ISO date."
+              pcdata "There are enough potential participants for another dinner. " ; br () ;
+              br () ;
+              pcdata "When is the next dinner? Please give me a ISO 8601 date. (eg 2013-05-15T08:30:0)"
             ]
             () in
         return `None
@@ -296,7 +297,7 @@ let create_dashboard context () =
      context.message_supervisor
        ~subject:(sprintf "Dasbhoard for run %Ld" run_id)
        ~content:[
-         pcdata "Hi," ; br () ;
+         pcdata "Greetings," ; br () ;
          br () ;
          pcdata "Here are the registered participants:" ; br () ;
          br () ;
@@ -342,7 +343,7 @@ let not_enough_participants context run_id =
         ~member
         ~subject:"Summary for next week's dinner"
         ~content:[
-          pcdata "Hi," ; br () ;
+          pcdata "Greetings," ; br () ;
           br () ;
           pcdata "Unfortunately, it looks like there isn't enough participants this time. Thanks for your suggestion and let's do something later!"
         ]
@@ -367,7 +368,7 @@ let ask_volunteer_to_book context run_id =
           ~data:[ key_run_id, Int64.to_string run_id ]
           ~subject:"Summary for next week's dinner"
           ~content:[
-            pcdata "Hi," ; br () ;
+            pcdata "Greetings," ; br () ;
             br () ;
             pcdata "Great news, there are " ; pcdata (string_of_int (List.length participants)) ; pcdata " participants to next week's dinner!" ; br () ;
             br () ;
@@ -437,7 +438,7 @@ let unresponsive_volunteer context run_id =
       ~subject:"Unresponsive volunteer"
       ~data:[ key_run_id, Int64.to_string run_id ]
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
         pcdata "Volunteer in run " ; pcdata (Int64.to_string run_id) ; pcdata " hasn't confirmed the dinner. You're needed" ; br () ;
       ]
@@ -507,7 +508,7 @@ let confirm_to_all_participants context message =
                  ~subject:"Dinner confirmation"
                  ~content:[
                    Unsafe.data ("<script type=\"application/ld+json\"\>" ^ gcal ^ "</script>") ;
-                   pcdata "Hi," ; br () ;
+                   pcdata "Greetings," ; br () ;
                    br () ;
                    pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
                    br () ;
@@ -536,7 +537,7 @@ let make_announcement_run_id context run_id =
       ~data:[ key_run_id, Int64.to_string run_id ]
       ~subject:"Please type your announcement"
       ~content:[
-        pcdata "Hi" ; br () ;
+        pcdata "Greetings" ; br () ;
         br () ;
         pcdata "Please reply with your announcement above"
       ]
@@ -605,7 +606,7 @@ in
         ~data:[ key_run_id, Int64.to_string run_id ]
         ~subject:"Debriefing of the Dinner"
         ~content:[
-          pcdata "Hi," ; br () ;
+          pcdata "Greetings," ; br () ;
           br () ;
           pcdata "Please edit the following list of participants, leaving only those who came and haven't paid yet. Please attach the receipt and print the total cost to be splitted among participants at the top of the message" ; br () ;
           br () ;
@@ -686,10 +687,7 @@ let split_payment context message =
 
 (* the playbook ***************************************************************)
 
-
 PARAMETERS
-  (* - "How often?", "period"
-   - "Geographical area?", "geography" *)
    - "Minimum number of participants", "min-participants"
    - "Maximum number of participants", "max-participants"
 
