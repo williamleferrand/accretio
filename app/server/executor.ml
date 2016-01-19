@@ -814,9 +814,8 @@ let rec start_cron () =
       Lwt.fail exn
   in
   let now = Calendar.now () in
-  Printer.Calendar.print "now: %c\n" now ;
-  Printer.Calendar.print "next_minute: %c\n" next_minute ;
-  print_endline "---" ;
+
+  Lwt_log.ign_info_f "Running crons, %s %s" (Printer.Calendar.sprint "now: %c" now) (Printer.Calendar.sprint "next_minute: %c" next_minute) ;
   if next_minute < now then
     start_cron ()
   else

@@ -111,6 +111,25 @@ let crontab_of_string s =
   let lexbuf = Lexing.from_string s in
   Cron_parser.crontab Cron_lexer.token lexbuf
 
+let crontab_to_string crontab =
+  let to_string = function
+    | Star None -> "*"
+    | Star (Some d) -> Printf.sprintf "*/%d" d
+    | Range ((b, e), None) -> Printf.sprintf "%d-%d" b e
+    | Range ((b, e), Some d) -> Printf.sprintf "%d-%d/%d" b e d
+    | List l -> String.concat "," (List.map string_of_int l)
+    | Int i -> string_of_int i
+  in
+  String.concat " "
+    [
+      to_string crontab.minute ;
+      to_string crontab.hour ;
+      to_string crontab.day_of_the_month ;
+      to_string crontab.month_of_the_year ;
+      to_string crontab.day_of_the_week ;
+      to_string crontab.year ;
+    ]
+
 let evaluate crontab date =
 
   let check_modulus modulus d = d mod modulus == 0 in
@@ -145,3 +164,16 @@ let stream_of_crontab crontab start =
          reference := Calendar.add !reference (Calendar.Period.minute 1) ;
          Some !reference) in
   Lwt_stream.filter (evaluate crontab) minutes
+
+
+let find_next_execution_date crontab =
+  let now = Calendar.now () in
+  let rec check_time date attempt =
+    if attempt < 0 then
+      None
+    else
+      match evaluate crontab date with
+        true -> Some date
+      | false -> check_time (Calendar.add date (Calendar.Period.minute 1)) (attempt - 1)
+  in
+  check_time now 86400

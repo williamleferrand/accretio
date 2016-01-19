@@ -176,7 +176,7 @@ let outbound_dispatcher allow_none _loc automata stage schedule =
     (fun edge acc ->
        let dest = Vertex.stage (G.E.dst edge) in
        match G.E.label edge with
-       | <:ctyp< `$uid:_$ of email >> -> acc (* messages can't be emitted from the stage *)
+      (*   | <:ctyp< `$uid:_$ of email >> -> acc (* messages can't be emitted from the stage *) *)
        (* | <:ctyp< `Message of int >> -> acc (* messages transitions can't be emitted from the stage itself *) *)
        | <:ctyp< `$uid:constr$ >> ->
           if allow_none then
@@ -200,20 +200,6 @@ let outbound_dispatcher allow_none _loc automata stage schedule =
     automata
     stage
     (if allow_none then [ <:match_case< `None -> None >> ] else [])
-
-let outbound_dispatcher_message _loc automata stage schedule =
-  G.fold_succ_e
-    (fun edge acc ->
-       let dest = Vertex.stage (G.E.dst edge) in
-       match G.E.label edge with
-       | <:ctyp< `$uid:constr$ of $args$ >> ->
-         <:match_case< `$uid:constr$ args ->
-                                  let args = $lid:"serialize_" ^ dest$ args in
-                                  Ys_executor.({ stage = $str:dest$ ; args ; schedule = $schedule$ ; created_on = Ys_time.now () }) >> :: acc
-       | _ -> acc)
-    automata
-    stage
-    []
 
 let steps _loc automata =
   G.fold_vertex
@@ -419,7 +405,7 @@ let dispatch_message_automatically _loc automata =
     G.fold_vertex
       (fun stage acc ->
          let _loc = Loc.mk (Loc.file_name _loc ^ ": " ^ Vertex.stage stage ^ "(automatic dispatch)") in
-         let dispatcher = outbound_dispatcher_message _loc automata stage <:expr< Immediate >> in
+         let dispatcher = outbound_dispatcher false _loc automata stage <:expr< Immediate >> in
 
          let strategies =
            List.fold_left
@@ -453,7 +439,7 @@ let dispatch_message_automatically _loc automata =
       [ <:match_case< _ -> Lwt.return_none >> ]
   in
   <:str_item< value dispatch_message_automatically message stage =
-let _ = Lwt_log.ign_info_f "dispatch_message_automatically: %d , stage is %s" message stage in
+    let _ = Lwt_log.ign_info_f "dispatch_message_automatically: %d , stage is %s" message stage in
     match stage with [ $list:cases$ ]
   >>
 

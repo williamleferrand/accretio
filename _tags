@@ -14,6 +14,7 @@
 # generic server tags
 ################################################################################
 
+<app/server/*.cmx> and not <app/server/mu_server*>: for-pack(Mu_server)
 <app/server/*.ml{,i}>: pkg_bin_prot, pkg_threads, pkg_lwt.syntax, pkg_aws, syntax_camlp4o, pkg_rtree,pkg_calendar, pkg_ocamlgraph, pkg_atdgen
 
 <app/server/*.ml{,i}> and not <app/server/object_*> and not <app/server/ys_*> : pkg_js_of_ocaml.syntax
