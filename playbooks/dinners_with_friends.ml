@@ -724,3 +724,7 @@ PLAYBOOK
  *create_dashboard
 
 (* the cron part isn't easy as we want to make it dependent from the parameter above *)
+
+
+CRON remind_all "14 8 * * 2 *"
+CRON schedule_dinner "27 10 * * 2 *"
