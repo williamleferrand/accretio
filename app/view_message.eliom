@@ -79,7 +79,7 @@ open Eliom_content.Html5.D
 
 let format_interlocutor = function
     | Stage stage -> [ pcdata "Stage " ; pcdata stage ]
-    | Member member -> [ pcdata "Member " ; View_member.format member ]
+    | Member member -> [ pcdata "Member " ; View_member.format_message member ]
     | CatchAll -> [ pcdata "CatchAll" ]
 
 let format view =

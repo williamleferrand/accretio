@@ -36,16 +36,24 @@ jsstatic:
 	yuicompressor static/js-static.js -o static/js-static.min.js
 
 server:
-	ocamlbuild -use-menhir app/server/dev.cma
 	ocamlbuild -use-menhir app/server/mu_server.cma
+
+native:
+	ocamlbuild -use-menhir app/server/mu_server.cmxs
 
 all: client server
 
 run:
 	ocsigenserver -c resources/node.xml
 
+run-native:
+	ocsigenserver -c resources/node-native.xml
+
 run-prod:
 	ocsigenserver -c resources/prod-nginx.xml
+
+run-prod-native:
+	ocsigenserver -c resources/prod-nginx-native.xml
 
 debug:
 	ocsigenserver -c resources/node.xml -V
