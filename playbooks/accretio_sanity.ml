@@ -46,18 +46,30 @@ let test_api_member_functions context () =
           | [ 42 ] ->
             begin
               match_lwt context.check_tag_member ~member ~tag:unique_tag with
-              | false -> return `Failure
+              | false ->
+                context.log_info "the member hasn't retained the tag" ;
+                return `Failure
               | true ->
                 lwt _ = context.remove_member ~member in
                 match_lwt context.search_members ~query:unique_tag () with
-                | [] -> return `Success
-                | _ -> return `Failure
+                | [] ->
+                  context.log_info "success" ;
+                  return `Success
+                | _ ->
+                  context.log_info "failed, the member still has the unique tag" ;
+                  return `Failure
             end
-          | _ -> return `Failure
+          | _ ->
+            context.log_info "failed, no member with the unique tag" ;
+            return `Failure
         end
-      | _ -> return `Failure
+      | _ ->
+        context.log_info "the member hasn't retained the tag" ;
+        return `Failure
     end
-  | _ -> return `Failure
+  | _ ->
+    context.log_info "there are members wit hteh unique tag" ;
+    return `Failure
 
 (* other stages ***************************************************************)
 
