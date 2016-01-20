@@ -32,11 +32,17 @@ let get_exn db = detach (LevelDB.get_exn db)
 let get db = detach (LevelDB.get db)
 
 (* we only use the async leveldb put *)
-let put =
-  LevelDB.put ~sync:false
+let put db key value =
+  ignore_result
+    (detach
+       (fun () -> LevelDB.put ~sync:true db key value)
+       ())
 
-let delete =
-  LevelDB.delete ~sync:false
+let delete db key =
+  ignore_result
+    (detach
+       (fun () -> LevelDB.delete ~sync:true db key)
+       ())
 
 module Batch =
 struct
@@ -44,12 +50,7 @@ struct
   let get_exn db = detach (Array.map (LevelDB.get_exn db))
   let get db = detach (Array.map (LevelDB.get db))
 
-  let make_writebatch = LevelDB.Batch.make
-  let commit_writebatch db = detach (LevelDB.Batch.write ~sync:true db)
-  let put_writebatch = LevelDB.Batch.put
-  let commit_writebatch_async db = LevelDB.Batch.write ~sync:false db
 
-  let get_exn_blocking db = Array.map (LevelDB.get_exn db)
 end
 
 let max_key_blocking db =

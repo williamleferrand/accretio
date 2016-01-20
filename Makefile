@@ -47,13 +47,13 @@ run:
 	ocsigenserver -c resources/node.xml
 
 run-native:
-	ocsigenserver -c resources/node-native.xml
+	ocsigenserver.opt -c resources/node-native.xml
 
 run-prod:
 	ocsigenserver -c resources/prod-nginx.xml
 
 run-prod-native:
-	ocsigenserver -c resources/prod-nginx-native.xml
+	ocsigenserver.opt -c resources/prod-nginx-native.xml
 
 debug:
 	ocsigenserver -c resources/node.xml -V
