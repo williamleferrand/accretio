@@ -21,6 +21,7 @@
 (* this is a super band aid module - it should just go away *)
 
 open Lwt
+open Ys_uid
 
 
 let reset_all_boxes () =
@@ -101,7 +102,11 @@ let reattach_payments () =
   Object_payment.Store.fold_flat_lwt
     (fun _ uid ->
       lwt society = $payment(uid)->society in
-      lwt _ = $society(society)<-payments += (`Payment, uid) in
+      lwt _ = $society(society)<-payments %% (fun payments ->
+        let uids = set_of_edges payments in
+        let uids = UidSet.add uid uids in
+        List.map (fun uid -> (`Payment, uid)) (UidSet.elements uids))
+      in
       return (Some ()))
     ()
     None
@@ -111,6 +116,7 @@ let run () =
   lwt _ = create_playbook_threads () in
   lwt _ = reset_message_transport () in
   lwt _ = reset_all_stacks () in
+
   lwt _ = reattach_payments () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
