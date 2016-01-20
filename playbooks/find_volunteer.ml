@@ -30,7 +30,7 @@ let alert_supervisor context () =
     context.message_supervisor
       ~subject:"Manual action is needed"
       ~content:[
-        pcdata "Hi," ; br () ;
+        pcdata "Greetings," ; br () ;
         br () ;
         pcdata "Please connect to your dashboard and check the society. You can also use this direct link:" ; br () ;
         br () ;
@@ -68,7 +68,7 @@ let look_for_candidate context () =
           ~data:[ key_run_id, Int64.to_string run_id ]
           ~member
           ~content:[
-            pcdata "Hi," ; br () ;
+            pcdata "Greetings," ; br () ;
             br () ;
             span [ pcdata tagline ] ; br () ;
           ]
