@@ -43,9 +43,9 @@ sig
   val log_warning : ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
-  val message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
-  val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
-  val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> unit Lwt.t
+  val message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
+  val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
+  val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
 
 end
 
@@ -142,7 +142,7 @@ let context_factory mode society =
           in
           lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = false })), uid) in
           log_info "message attached from member %d to society %d" member society ;
-          return_unit
+          return (Some uid)
 
         let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
           let flat_content = ref "" in
@@ -154,10 +154,10 @@ let context_factory mode society =
           match_lwt $message(message)->origin with
           | Object_message.CatchAll ->
             log_error "can't reply_to message %d, it was sent by the catchall??" message ;
-            return_unit
+            return_none
           | Object_message.Stage _ ->
             log_error "can't reply_to message %d, it was sent by a stage" message ;
-            return_unit
+            return_none
           | Object_message.Member member ->
             message_member ~member ~subject:("Re: "^subject) ~content ()
 
@@ -233,7 +233,7 @@ let context_factory mode society =
             in
             lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
             lwt _ = Notify.api_send_message ?in_reply_to reference ~attachments society stage subject member content in
-            return_unit
+            return (Some uid)
 
         let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
           send_message ~data ~attachments member subject content
@@ -243,10 +243,10 @@ let context_factory mode society =
           match_lwt $message(message)->origin with
           | Object_message.CatchAll ->
             log_error "can't reply_to message %d, it was sent by the catchall??" message ;
-            return_unit
+            return_none
           | Object_message.Stage _ ->
             log_error "can't reply_to message %d, it was sent by a stage" message ;
-            return_unit
+            return_none
           | Object_message.Member member ->
             match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
@@ -298,10 +298,10 @@ let context_factory mode society =
                   data)
           in
           lwt reference = $message(uid)->reference in
-          lwt _ = Notify.api_forward_message ~attachments reference society stage subject leader message in
+          lwt _ = Notify.api_forward_message ~attachments reference society stage subject leader message content in
 
           lwt _ = $society(society)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = true })), uid) in
-          return_unit
+          return (Some uid)
 
       end
       in (module Mode_Specifics: MODE_SPECIFICS)

@@ -77,18 +77,20 @@ let send_message_to_participants context message =
   lwt _ =
     Lwt_list.iter_p
       (fun member ->
-         context.message_member
-           ~member
-           ~subject:"Interested in some bread?"
-           ~content:[
-             pcdata "Hi," ; br () ;
-             br () ;
-             pcdata content ;
-             br () ;
-             pcdata "Cheers," ; br () ;
-             pcdata "William"
-           ]
-      ())
+         lwt _ =
+           context.message_member
+             ~member
+             ~subject:"Interested in some bread?"
+             ~content:[
+               pcdata "Hi," ; br () ;
+               br () ;
+               pcdata content ;
+               br () ;
+               pcdata "Cheers," ; br () ;
+               pcdata "William"
+             ]
+             ()
+         in return_unit)
       members
   in
   return `None

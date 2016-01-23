@@ -65,6 +65,7 @@ let request_to_join (society, email, content) =
     return (Some ())
 
 let request_to_join = server_function ~name:"society-public-request-to-join" Json.t<int * string * string> request_to_join
+
 }}
 
 {client{
