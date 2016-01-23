@@ -48,22 +48,23 @@ let send_email_to_swimmers context temperature =
   lwt _ =
     Lwt_list.iter_p
       (fun member ->
-         context.message_member
-           ~member
-           ~subject:"Want to go swimming this Saturday?"
-           ~content:[
-             pcdata "Hi," ; br () ;
-             br () ;
-             pcdata "The water temperature at Aquatic Park is " ; pcdata temperature ; pcdata "°F, according to the NOAA API. " ;
-             pcdata "Do you want to go test the waters this Saturday at 8am? We'll meet in front of the South End Rowing Club and hop in the sauna after a short swim :-)" ; br () ;
-             br () ;
+         lwt _ =
+           context.message_member
+             ~member
+             ~subject:"Want to go swimming this Saturday?"
+             ~content:[
+               pcdata "Hi," ; br () ;
+               br () ;
+               pcdata "The water temperature at Aquatic Park is " ; pcdata temperature ; pcdata "°F, according to the NOAA API. " ;
+               pcdata "Do you want to go test the waters this Saturday at 8am? We'll meet in front of the South End Rowing Club and hop in the sauna after a short swim :-)" ; br () ;
+               br () ;
              pcdata "Let me know!" ; br () ;
-             br () ;
-             pcdata "Cheers," ;
-             br () ;
-             pcdata "William"
-           ]
-           ())
+               br () ;
+               pcdata "Cheers," ;
+               br () ;
+               pcdata "William"
+             ]
+             () in return_unit)
       participants
   in
   return `None

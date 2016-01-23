@@ -83,17 +83,18 @@ let forward_suggestion_to_all_members context message =
     lwt _ =
       Lwt_list.iter_p
         (fun member ->
-           context.message_member
-             ~member
-             ~subject:"Want to do something with the kids this weekend?"
-             ~content:[
-               pcdata "Hi," ; br () ;
-               br () ;
-               pcdata organizer ; pcdata "suggests that we " ; pcdata suggestion ; br () ;
-               br () ;
-               pcdata "Would you like to join?" ; br () ;
-             ]
-             ())
+           lwt _ =
+             context.message_member
+               ~member
+               ~subject:"Want to do something with the kids this weekend?"
+               ~content:[
+                 pcdata "Hi," ; br () ;
+                 br () ;
+                 pcdata organizer ; pcdata "suggests that we " ; pcdata suggestion ; br () ;
+                 br () ;
+                 pcdata "Would you like to join?" ; br () ;
+               ]
+               () in return_unit)
         members
     in
     return `None
@@ -125,19 +126,21 @@ let confirm_event context message =
     lwt _ =
       Lwt_list.iter_p
         (fun member ->
-           context.message_member
-             ~member
-             ~subject:"This weekend's children activity"
-             ~content:[
-               pcdata "Hi," ; br () ;
-               br () ;
-               pcdata "Looks like we'll be " ; pcdata (string_of_int (List.length members)) ; pcdata " this week at " ; br () ;
-               br () ;
-               pcdata suggestion ; br () ;
-               br () ;
-               pcdata "Looking forward to it!" ; br () ;
-             ]
-             ())
+           lwt _ =
+             context.message_member
+               ~member
+               ~subject:"This weekend's children activity"
+               ~content:[
+                 pcdata "Hi," ; br () ;
+                 br () ;
+                 pcdata "Looks like we'll be " ; pcdata (string_of_int (List.length members)) ; pcdata " this week at " ; br () ;
+                 br () ;
+                 pcdata suggestion ; br () ;
+                 br () ;
+                 pcdata "Looking forward to it!" ; br () ;
+               ]
+               ()
+           in return_unit)
         members
     in
     return `None

@@ -39,7 +39,7 @@ server:
 	ocamlbuild -use-menhir app/server/mu_server.cma
 
 native:
-	ocamlbuild -use-menhir app/server/mu_server.cmxs
+	ocamlbuild -use-menhir app/server/mu_server_native.cmxs
 
 all: client server
 

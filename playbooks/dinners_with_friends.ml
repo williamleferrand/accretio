@@ -43,6 +43,8 @@ let key_date = sprintf "dinner-with-friend-date-%Ld"
 let key_negative_replies_in_a_row = sprintf "dinner-with-friends-negative-replies-in-a-row-%d"
 let tag_timer_volunteer_booking = sprintf "timervolunteerbooking%Ld"
 let tag_has_participated = "hasparticipated"
+let key_email_thread_anchor = sprintf "email-thread-anchor-%Ld-%d"
+let tag_not_newbie = "notnewbie"
 
 (* some helpers ***************************************************************)
 
@@ -176,46 +178,14 @@ let forward_yelp_link_to_all_members context message =
     match_lwt context.get ~key:(key_volunteer run_id) with
       None -> return `None
     | Some volunteer ->
-      match_lwt get_date context run_id with
-        None -> return `None
-      | Some date ->
-        let volunteer = int_of_string volunteer in
-        lwt content = context.get_message_content ~message in
-        lwt _ = context.set ~key:(key_suggestion run_id) ~value:content in
-        lwt participants = context.search_members ~query:(sprintf "active -volunteer%Ld" run_id) () in
-        lwt volunteer = $member(volunteer)->name in
-
-        let date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date in
-        lwt _ =
-          Lwt_list.iter_s
-            (fun member ->
-               match_lwt context.check_tag_member ~member ~tag:(tag_notified run_id) with
-               | true ->
-                 context.log_info "skipping member %d in run %Ld" member run_id ;
-                 return_unit
-               | false ->
-                 lwt _ =
-                   context.message_member
-                     ~member
-                     ~data:[ key_run_id, Int64.to_string run_id ]
-                     ~subject:"Dinner with friends?"
-                     ~content:[
-                       pcdata "Hello!" ; br () ;
-                       br () ;
-                       pcdata volunteer ; pcdata " has a great suggestion for the next dinner: " ; br () ;
-                       br () ;
-                       Raw.a ~a:[ a_href (uri_of_string (fun () -> content)) ] [ pcdata content ] ; br () ;
-                       br () ;
-                       pcdata "We would meet on " ; pcdata date ; br () ;
-                       br () ;
-                       pcdata "Are you in?" ; br () ;
-                     ]
-                     ()
-                 in
-                 context.tag_member ~member ~tags:[ tag_notified run_id ])
-            participants
-        in
-        return `None
+      lwt content = context.get_message_content ~message in
+      lwt _ = context.set ~key:(key_suggestion run_id) ~value:content in
+      lwt _ =
+        context.set_timer
+          ~duration:(Calendar.Period.lmake ~day:2 ~hour:12 ())
+          (`NotifyParticipants run_id)
+      in
+      return (`NotifyParticipants run_id)
 
 let mark_member_as_not_joining context message =
   match_lwt context.get_message_data ~message ~key:key_run_id with
@@ -412,7 +382,7 @@ let remind_volunteer context (run_id, number_of_reminders) =
           ~data:[ key_run_id, Int64.to_string run_id ]
           ~subject:"Summary for next week's dinner"
           ~content:[
-            pcdata "Hello," ; br () ;
+            pcdata "Greetings," ; br () ;
             br () ;
             pcdata "Sorry for the reminder but we need to confirm the dinner to all participants so that they can plan accordingly :)" ; br () ;
             br () ;
@@ -502,19 +472,20 @@ let confirm_to_all_participants context message =
         lwt _ =
           Lwt_list.iter_s
             (fun member ->
-               context.message_member
-                 ~member
-                 ~data:[ key_run_id, Int64.to_string run_id ]
-                 ~subject:"Dinner confirmation"
-                 ~content:[
-                   Unsafe.data ("<script type=\"application/ld+json\"\>" ^ gcal ^ "</script>") ;
-                   pcdata "Greetings," ; br () ;
-                   br () ;
-                   pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
-                   br () ;
-                   pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
-                 ]
-                 ())
+               lwt _ =
+                 context.message_member
+                   ~member
+                   ~data:[ key_run_id, Int64.to_string run_id ]
+                   ~subject:"Dinner confirmation"
+                   ~content:[
+                     Unsafe.data ("<script type=\"application/ld+json\"\>" ^ gcal ^ "</script>") ;
+                     pcdata "Greetings," ; br () ;
+                     br () ;
+                     pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
+                     br () ;
+                     pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
+                   ]
+                   () in return_unit)
             participants
         in
 
@@ -684,6 +655,114 @@ let split_payment context message =
           return `None
         end
 
+let notify_participants context run_id =
+  context.log_info "reminding all participants for run_id %Ld" run_id ;
+  lwt participants = context.search_members ~query:(sprintf "active -%s -%s" (tag_joining run_id) (tag_not_joining run_id)) () in
+  context.log_info "found %d participants to contact" (List.length participants) ;
+  match_lwt context.get ~key:(key_suggestion run_id) with
+    None -> return `None
+  | Some content ->
+    match_lwt context.get ~key:(key_volunteer run_id) with
+      None -> return `None
+    | Some volunteer ->
+      let volunteer = Ys_uid.of_string volunteer in
+      match_lwt get_date context run_id with
+        None -> return `None
+      | Some date ->
+        lwt volunteer_name = $member(volunteer)->name in
+        let date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date in
+        lwt _ =
+          Lwt_list.iter_s
+            (fun member ->
+               lwt message_uid_option =
+                 match_lwt context.get ~key:(key_email_thread_anchor run_id member) with
+                   Some message ->
+                   let message = Ys_uid.of_string message in
+                   context.reply_to
+                     ~message
+                     ~data:[ key_run_id, Int64.to_string run_id ]
+                     ~content:[
+                       pcdata "Greetings," ; br () ;
+                       br () ;
+                       pcdata "I'm wrapping up the headcount for the next dinner, on " ; pcdata date ; pcdata "." ; br () ;
+                       br () ;
+                       pcdata "Would you like to join us?" ; br () ;
+                     ]
+                     ()
+                 | None ->
+                   match_lwt context.check_tag_member ~member ~tag:tag_not_newbie with
+                     false ->
+                     lwt _ = context.tag_member ~member ~tags:[ tag_not_newbie] in
+                     context.message_member
+                       ~member
+                       ~data:[ key_run_id, Int64.to_string run_id ]
+                       ~subject:("You have been invited to the " ^ context.society_name ^ " group")
+                       ~content:[
+                         pcdata "Greetings," ; br () ;
+                         br () ;
+                         pcdata "I hope you are having a great week! " ; br () ;
+                         br () ;
+                         span [ pcdata context.society_description ] ; br () ;
+                         br () ;
+                         pcdata "This week, " ; pcdata volunteer_name ; pcdata " made a great suggestion for the next dinner: " ; br () ;
+                         br () ;
+                         Raw.a ~a:[ a_href (uri_of_string (fun () -> content)) ] [ pcdata content ] ; br () ;
+                         br () ;
+                         pcdata "We would meet on " ; pcdata date ; br () ;
+                         br () ;
+                         pcdata "Would you like to join us?" ; br () ;
+                       ]
+                       ()
+                   | true ->
+                     context.message_member
+                       ~member
+                       ~data:[ key_run_id, Int64.to_string run_id ]
+                       ~subject:("New event in the " ^ context.society_name ^ " group")
+                       ~content:[
+                         pcdata "Greetings," ; br () ;
+                         br () ;
+                         pcdata "I hope you are having a great week! " ; br () ;
+                         br () ;
+                         pcdata volunteer_name ; pcdata " has a great suggestion for the next dinner: " ; br () ;
+                         br () ;
+                         Raw.a ~a:[ a_href (uri_of_string (fun () -> content)) ] [ pcdata content ] ; br () ;
+                         br () ;
+                         pcdata "We would meet on " ; pcdata date ; br () ;
+                         br () ;
+                         pcdata "Are you in?" ; br () ;
+                       ]
+                       ()
+               in
+               match message_uid_option with
+                 None -> return_unit
+               | Some uid ->
+                 lwt _ = context.set ~key:(key_email_thread_anchor run_id member) ~value:(Ys_uid.to_string uid) in
+                 return_unit)
+            participants
+        in
+        lwt _ =
+          context.message_member
+            ~member:volunteer
+            ~subject:"Quick update"
+            ~content:[
+              pcdata "Greetings," ; br () ;
+              br () ;
+              pcdata "Quick update about the dinner: I just sent a reminder to the members of the group, we'll be able to wrap up a list of participants very soon." ; br ();
+              br () ;
+              pcdata "Thanks for organizing that one!" ; br ()
+            ]
+            ()
+        in
+        return `None
+
+let notify_participants_current_run context () =
+   match_lwt context.get ~key:(key_run_id) with
+    None ->
+    context.log_info "no run id found, can't notify participants" ;
+    return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    return (`RunId run_id)
 
 (* the playbook ***************************************************************)
 
@@ -704,7 +783,7 @@ PLAYBOOK
                                                      set_date_and_ask_for_custom_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message
    *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message<content> ~> `Content of string ~> find_volunteer_with_tagline
                                                      look_for_candidate ~> `NoVolunteer ~> no_volunteer
-                                                     return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members
+                                                     return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members ~> `NotifyParticipants of int64 ~> notify_participants
 
        candidate_with_message ~> `Message of int ~> mark_sender_as_volunteer ~> `Message of int ~> review_yelp_link
 
@@ -718,8 +797,9 @@ PLAYBOOK
                                                                                                                            remind_volunteer ~> `Booked of email ~> confirm_to_all_participants
 
        *debrief_current_run ~> `DebriefRunId of int64 ~> debrief<forward> ~> `Message of email ~> split_payment ~> `Message of email ~> split_payment
-       split_payment ~> `RequestPayment of (int * string * float * int) ~> request_payment
+        split_payment ~> `RequestPayment of (int * string * float * int) ~> request_payment
 
+ *notify_participants_current_run ~> `RunId of int64 ~> notify_participants
 
  *create_dashboard
 
