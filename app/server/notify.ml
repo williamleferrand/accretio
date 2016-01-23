@@ -505,10 +505,9 @@ let api_send_message ?(attachments=[]) ?in_reply_to reference society destinatio
          })
     locators
 
-let api_forward_message ?(attachments=[]) reference society destination subject member original =
+let api_forward_message ?(attachments=[]) reference society destination subject member original content =
   lwt locators = uids_to_locators [ member ] in
   lwt shortlink = $society(society)->shortlink in
-  lwt content = $message(original)->content in
   Lwt_list.iter_p
     (fun locator ->
        enqueue_message
@@ -519,7 +518,7 @@ let api_forward_message ?(attachments=[]) reference society destination subject 
            reply_to = Some (shortlink, destination) ;
            attachments ;
            subject ;
-           content = [ pcdata content ] ;
+           content ;
          })
     locators
 
