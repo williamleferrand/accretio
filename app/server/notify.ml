@@ -65,6 +65,7 @@ module Throttler =
       let hash _ = 1 end)
 
 type message = {
+  uid : uid option ;
   locator : locator ;
   references : string option ; (* the parent in case we are forwarding the email *)
   in_reply_to : string option ; (* this is the message Id we're replying from *)
@@ -174,6 +175,7 @@ let send_batches () =
                 in
                 lwt _ = pusher#push
                   {
+                    uid = None ;
                     subject ;
                     attachments = [] ;
                     references = None ; in_reply_to = None ; reply_to = None ;
@@ -306,7 +308,12 @@ let dequeue_messages =
                  ~creds:Vault.creds
                  ~raw_message) ()
       >>= fun message_id ->
-      Lwt_log.info_f "email to %s successfully sent, message_id is %s" message.locator.email message_id
+      Lwt_log.ign_info_f "email to %s successfully sent, message_id is %s" message.locator.email message_id ;
+      match message.uid with
+        None -> return_unit
+      | Some uid ->
+        $message(uid)<-transport = (Object_message.(Email { offset = 0 ; message_id })) ;
+        return_unit
     with exn -> Lwt_log.error_f ~exn "couldn't send email to %s: %s" message.locator.email (Printexc.to_string exn)
   in
   ignore_result (Lwt_stream.iter_s send message_queue)
@@ -333,6 +340,7 @@ let send_welcome_message uid =
   let locator = { uid; name; email } in
   enqueue_message ~immediate:true
     {
+      uid = None ;
       attachments = [] ;
       subject ="Welcome!" ;
       references = None ;
@@ -355,6 +363,7 @@ let send_recovery_message uid token =
   let locator = { uid; name; email } in
   enqueue_message ~immediate:true
     {
+      uid = None ;
       attachments = [] ;
       subject ="Password recovery" ;
       references = None ;
@@ -389,6 +398,7 @@ let send_feedback session feedback contact_info =
     } in
   enqueue_message
     {
+      uid = None ;
       locator ;
       references = None ;
       in_reply_to = None ;
@@ -423,6 +433,7 @@ let new_message thread message =
       (fun locator ->
          enqueue_message
            {
+             uid = None ;
              locator ;
              references = None ;
              in_reply_to = None ;
@@ -446,6 +457,7 @@ let new_message thread message =
       (fun locator ->
          enqueue_message
            {
+             uid = None ;
              locator ;
              references = None ;
              in_reply_to = None ;
@@ -471,6 +483,7 @@ let send_direct_message sender target message =
     (fun locator ->
        enqueue_message
          {
+           uid = None ;
            locator ;
            references = None ; in_reply_to = None ; reply_to = None ;
            attachments = [] ;
@@ -495,6 +508,7 @@ let api_send_message ?(attachments=[]) ?in_reply_to reference society destinatio
     (fun locator ->
        enqueue_message
          {
+           uid = None ;
            locator ;
            references = Some reference ;
            in_reply_to ;
@@ -512,6 +526,7 @@ let api_forward_message ?(attachments=[]) reference society destination subject 
     (fun locator ->
        enqueue_message
          {
+           uid = None ;
            locator ;
            references = Some reference ;
            in_reply_to = None ;
@@ -530,6 +545,7 @@ let check_society society =
     (fun locator ->
        enqueue_message
          {
+           uid = None ;
            locator ;
            references = None ;
            in_reply_to = None ;
@@ -559,6 +575,7 @@ let send_message message =
     (fun locator ->
        enqueue_message
          {
+           uid = None ;
            locator ;
            references = Some reference ;
            in_reply_to = None ;
