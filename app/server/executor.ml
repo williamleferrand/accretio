@@ -151,15 +151,12 @@ let context_factory mode society =
 
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
-          match_lwt $message(message)->origin with
-          | Object_message.CatchAll ->
-            log_error "can't reply_to message %d, it was sent by the catchall??" message ;
-            return_none
-          | Object_message.Stage _ ->
-            log_error "can't reply_to message %d, it was sent by a stage" message ;
-            return_none
-          | Object_message.Member member ->
+          match_lwt $message(message)->(origin, destination) with
+          | Object_message.Member member, _ | _, Object_message.Member member ->
             message_member ~member ~subject:("Re: "^subject) ~content ()
+          | _ ->
+            log_error "can't reply_to message %d" message ;
+            return_none
 
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt original_content = $message(message)->content in
@@ -240,20 +237,18 @@ let context_factory mode society =
 
         let reply_to ~message ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
-          match_lwt $message(message)->origin with
-          | Object_message.CatchAll ->
-            log_error "can't reply_to message %d, it was sent by the catchall??" message ;
-            return_none
-          | Object_message.Stage _ ->
-            log_error "can't reply_to message %d, it was sent by a stage" message ;
-            return_none
-          | Object_message.Member member ->
-            match_lwt $message(message)->transport with
+          match_lwt $message(message)->(origin, destination) with
+          | Object_message.Member member, _
+          | _, Object_message.Member member ->
+            (match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
               log_warning "can't reply_to message %d, no transport, doing direct message" message ;
               send_message ~data member ("Re: "^subject) content
             | Object_message.Email email ->
-              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member ("Re: "^subject) content
+              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member ("Re: "^subject) content)
+          | _ ->
+            log_error "can't reply_to message %d" message ;
+            return_none
 
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt leader = $society(society)->leader in
@@ -362,6 +357,9 @@ let context_factory mode society =
       lwt data = $society(society)->data in
       return
         (try Some (List.assoc key data) with Not_found -> None)
+
+    let delete ~key =
+      $society(society)<-data %% (fun data -> List.remove_assoc key data)
 
     (* message primitives *)
 
@@ -553,6 +551,7 @@ let context_factory mode society =
 
       set ;
       get ;
+      delete ;
 
       get_message_content ;
       get_message_sender ;

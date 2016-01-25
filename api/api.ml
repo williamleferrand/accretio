@@ -67,6 +67,7 @@ type 'output context =
 
     set : key:string -> value:string -> unit Lwt.t ;
     get : key:string -> string option Lwt.t ;
+    delete : key:string -> unit Lwt.t ;
 
     (* messages primitives *)
 

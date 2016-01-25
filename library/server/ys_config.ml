@@ -98,6 +98,11 @@ let imap_prefix = "imap-prefix"
 
 let notify_monitoring_email = "notify-monitoring-email"
 
+let yelp_consumer_key = "yelp-consumer-key"
+let yelp_consumer_secret = "yelp-consumer-secret"
+let yelp_token = "yelp-token"
+let yelp_token_secret = "yelp-token-secret"
+
 let required =
   [
     db_root_dir ;
@@ -128,6 +133,10 @@ let required =
     imap_pass ;
     imap_mbox ;
     notify_monitoring_email ;
+    yelp_consumer_key ;
+    yelp_consumer_secret ;
+    yelp_token ;
+    yelp_token_secret ;
   ]
 
 (* other values are read from the xml configuration file ***********************)
