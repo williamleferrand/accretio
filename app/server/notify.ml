@@ -208,7 +208,7 @@ let write_list list =
 
 let create_message message =
   let m = ref "" in
-  Printer.print_list (append_to_reference m) message.content ;
+  Printer.print_list (append_to_reference m) ([ html (head (title (pcdata "")) []) (body (message.content)) ]) ;
 
   Lwt_log.ign_info_f "shipping message %s" !m ;
 

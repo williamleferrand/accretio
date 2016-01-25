@@ -300,7 +300,7 @@ let check_participation context () =
       let volunteer = int_of_string volunteer in
       lwt participants = context.search_members ~query:(tag_joining run_id) () in
       match List.filter (fun uid -> uid <> volunteer) participants with
-        [] -> return (`NotEnoughParticipants run_id)
+     (*   [] -> return (`NotEnoughParticipants run_id) *)
       | _ -> return (`AskVolunteerToBook run_id)
 
 let not_enough_participants context run_id =
@@ -416,6 +416,72 @@ let unresponsive_volunteer context run_id =
   in
   return `None
 
+let make_gcal context volunteer date party_size suggestion =
+  try_lwt
+    match_lwt Ys_yelp.get_business suggestion with
+      None -> return ""
+    | Some business ->
+
+      Lwt_log.ign_info_f "found business: %s" (business) ;
+
+      let open Yojson.Basic in
+      let open Util in
+
+      let business = from_string business in
+
+      let name = business |> member "name" |> to_string in
+      let phone = business |> member "phone" |> to_string in
+
+      let city = business |> member "location" |> member "city" |> to_string in
+      let state_code = business |> member "location" |> member "state_code" |> to_string in
+      let postal_code = business |> member "location" |> member "postal_code" |> to_string in
+      let country_code = business |> member "location" |> member "country_code" |> to_string in
+
+      let addresses = business |> member "location" |> member "address" |> to_list |> filter_string in
+      let address = List.hd addresses in
+
+      lwt volunteer_name = $member(volunteer)->name in
+      let iso_date = CalendarLib.Printer.Calendar.sprint iso_date date in
+
+      let gcal =
+        `Assoc [
+          "@context", `String "http://schema.org" ;
+          "@type", `String "FoodEstablishmentReservation" ;
+
+          "reservationNumber", `String "012345" ;
+          "reservationStatus", `String "http://schema.org/Confirmed" ;
+
+          "underName", `Assoc [
+            "@type", `String "Person" ;
+            "name", `String volunteer_name ] ;
+
+          "reservationFor", `Assoc [
+            "@type", `String "FoodEstablishment" ;
+            "name", `String name ;
+            "address", `Assoc [
+              "@type", `String "PostalAddress" ;
+              "streetAddress", `String address ;
+              "addressLocality", `String city ;
+              "addressRegion", `String state_code ;
+              "postalCode", `String postal_code ;
+              "addressCountry", `String country_code ;
+            ] ;
+            "telephone", `String phone ;
+          ] ;
+
+          "startTime", `String iso_date ;
+
+          "partySize", `String (string_of_int party_size)
+        ]
+      in
+
+
+    let gcal = Yojson.Basic.to_string gcal in
+    return ("<script type=\"application/ld+json\">" ^ gcal ^ "</script>")
+
+  with exn -> context.log_error ~exn "couldn't extract the yelp info for the suggestion" ;
+    return ""
+
 let confirm_to_all_participants context message =
   match_lwt context.get_message_data ~message ~key:key_run_id with
     None -> return `None
@@ -438,56 +504,58 @@ let confirm_to_all_participants context message =
         lwt participants = context.search_members ~query:(tag_joining run_id) () in
         let participants = List.filter (fun uid -> uid <> volunteer) participants in
 
-        let iso_date = CalendarLib.Printer.Calendar.sprint iso_date date in
-
-        let gcal =
-          `Assoc [
-            "@context", `String "http://schema.org" ;
-            "@type", `String "EventReservation" ;
-
-            "reservationNumber", `String "012345" ;
-            "reservationStatus", `String "http://schema.org/Confirmed" ;
-
-            (* "restaurantUrl", `String suggestion ; *)
-            "underName", `Assoc [
-              "@type", `String "Person" ;
-              "name", `String volunteer_name ] ;
-
-            "reservationFor", `Assoc [
-              "@type", `String "[Accretio] Dinner with friends" ;
-              "name", `String "Dinner" ;
-              "startDate", `String iso_date ;
-              "location", `Assoc [
-                "@type", `String "Place" ;
-                "name", `String suggestion ;
-                ]
-            ]
-          ]
-        in
-
-        let gcal = Yojson.Basic.to_string gcal in
+        (* This requires google registration ..
+           lwt gcal = make_gcal context volunteer date (List.length participants + 1) suggestion in *)
 
         let date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date in
 
         lwt _ =
           Lwt_list.iter_s
             (fun member ->
-               lwt _ =
-                 context.message_member
-                   ~member
-                   ~data:[ key_run_id, Int64.to_string run_id ]
-                   ~subject:"Dinner confirmation"
-                   ~content:[
-                     Unsafe.data ("<script type=\"application/ld+json\"\>" ^ gcal ^ "</script>") ;
-                     pcdata "Greetings," ; br () ;
-                     br () ;
-                     pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
-                     br () ;
-                     pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
-                   ]
-                   () in return_unit)
+               lwt message_uid_option =
+                 match_lwt context.get ~key:(key_email_thread_anchor run_id member) with
+                   Some message ->
+                   let message = Ys_uid.of_string message in
+                   context.reply_to
+                     ~message
+                     ~data:[ key_run_id, Int64.to_string run_id ]
+                     ~content:[
+                       pcdata "Greetings," ; br () ;
+                       br () ;
+                       pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
+                       br () ;
+                       pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
+                     ]
+                     ()
+                 | None ->
+                   context.message_member
+                     ~member
+                     ~data:[ key_run_id, Int64.to_string run_id ]
+                     ~subject:"Dinner confirmation"
+                     ~content:[
+                       pcdata "Greetings," ; br () ;
+                       br () ;
+                       pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
+                       br () ;
+                       pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
+                     ]
+                     () in
+               match message_uid_option with
+                 None -> return_unit
+               | Some uid ->
+                 Lwt_log.ign_info_f "message sent to member %d, message id is %d" member uid ;
+                 lwt _ = context.set ~key:(key_email_thread_anchor run_id member) ~value:(Ys_uid.to_string uid) in
+                 return_unit)
             participants
         in
+
+        lwt _ =
+          context.reply_to
+            ~message
+            ~content:[ pcdata "Thanks, see you there!" ]
+            ()
+        in
+
 
         return `None
 
@@ -825,8 +893,8 @@ PLAYBOOK
 
        candidate_with_message ~> `Message of int ~> mark_sender_as_volunteer ~> `Message of int ~> review_yelp_link
 
-       forward_yelp_link_to_all_members ~> `NotJoining of email ~> mark_member_as_not_joining ~> `RemoveMember of email ~> remove_member
-       forward_yelp_link_to_all_members ~> `Joining of email ~> mark_member_as_joining
+       notify_participants ~> `NotJoining of email ~> mark_member_as_not_joining ~> `RemoveMember of email ~> remove_member
+       notify_participants ~> `Joining of email ~> mark_member_as_joining
 
        *check_participation ~> `NotEnoughParticipants of int64 ~> not_enough_participants
         check_participation ~> `AskVolunteerToBook of int64 ~> ask_volunteer_to_book ~>  `Booked of email ~> confirm_to_all_participants

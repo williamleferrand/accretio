@@ -46,6 +46,7 @@
 
 <app/server/dev>: linkall
 <app/server/mu_server*>: linkall
+<app/server/ys_yelp*>: pkg_sociaml_oauth_client, pkg_cohttp.lwt
 
 ################################################################################
 # generic client tags
