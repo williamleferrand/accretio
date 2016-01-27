@@ -153,7 +153,7 @@ let context_factory mode society =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _ | _, Object_message.Member member ->
-            message_member ~member ~subject:("Re: "^subject) ~content ()
+            message_member ~member ~subject:(subject) ~content ()
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none
@@ -243,9 +243,9 @@ let context_factory mode society =
             (match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
               log_warning "can't reply_to message %d, no transport, doing direct message" message ;
-              send_message ~data member ("Re: "^subject) content
+              send_message ~data member (subject) content
             | Object_message.Email email ->
-              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member ("Re: "^subject) content)
+              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member (subject) content)
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none

@@ -19,10 +19,14 @@ open Message_parsers
 
 let has_already_declined = sprintf "core-invite-has-already-declined-%d"
 let tag_timer_reminder = sprintf "core-invite-reminded-%d"
+let key_email_anchor = sprintf "core-invite-anchor-%d"
 
 let invite context message =
   lwt content = context.get_message_content ~message in
   let emails = Ys_email.get_all_emails content in
+
+  lwt supervisor = $society(context.society)->leader in
+  lwt supervisor_name = $member(supervisor)->name in
 
   lwt already_members, already_declined, invited =
     Lwt_list.fold_left_s
@@ -47,19 +51,25 @@ let invite context message =
              Some _ -> return (already_members, (member, email) :: already_declined, invited)
            | None ->
              lwt _ =
+               match_lwt
                context.message_member
                  ~member
                  ~subject:context.society_name
                  ~content:[
-                   pcdata "Hi," ; br () ;
+                   pcdata "Greetings," ; br () ;
                    br () ;
-                   pcdata "I'm running a group called " ; i [ pcdata context.society_name ] ; pcdata "."; br () ;
+                   pcdata "I'm running a group called " ; i [ pcdata context.society_name ] ; pcdata ". "; pcdata context.society_description ; br ();
                    br () ;
-                   pcdata context.society_description ; br ();
+                   pcdata "Would you like to be notified about the upcoming events? No signup is necessary; we usually organize activities by email." ; br () ;
                    br () ;
-                   pcdata "Would you be interested in joining us? No signup is necessary; we usually organize events simply via email." ; br () ;
+                   pcdata "Looking forward to hearing from you," ; br () ;
+                   br () ;
+                   pcdata supervisor_name ;
                  ]
-                 ()
+                 () with
+                 None -> return_unit
+               | Some message_id ->
+                 context.set ~key:(key_email_anchor member) ~value:(Ys_uid.to_string message_id)
              in
              lwt _ =
                context.set_timer
@@ -99,18 +109,31 @@ let remind context member =
   lwt _ =
     context.cancel_timers ~query:(tag_timer_reminder member)
   in
-  lwt _ =
-    context.message_member
-      ~member
-      ~subject:context.society_name
-      ~content:[
-        pcdata "Apologies for the resend, but I thought that you might have missed my previous message." ; br () ;
-        br () ;
-        pcdata "Would you be interested in joining our " ; i [ pcdata context.society_name ] ; pcdata " group?" ;
-      ]
-      ()
-  in
-  return `None
+  match_lwt context.get ~key:(key_email_anchor member) with
+    None ->
+    lwt _ =
+      context.message_member
+        ~member
+        ~subject:context.society_name
+        ~content:[
+          pcdata "My apologies for the reminder, but maybe have you missed my previous email." ; br () ;
+          br () ;
+          pcdata "Would you be interested in hearing more about our " ; i [ pcdata context.society_name ] ; pcdata " group?" ;
+        ]
+        ()
+    in
+    return `None
+  | Some message ->
+    let message = Ys_uid.of_string message in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[
+          pcdata "My apologies for the reminder, but maybe have you missed my previous email - would you be interested in hearing more about our group?" ;
+        ]
+        ()
+    in
+    return `None
 
 let accepted context message =
   lwt member = context.get_message_sender ~message in
@@ -123,7 +146,7 @@ let accepted context message =
     context.reply_to
       ~message
       ~content:[
-        pcdata "Great thanks!" ; pcdata " I added you to the list of participants, stay tuned!" ; br ()
+        pcdata "Great, I added you to the list of participants, stay tuned!" ; br ()
       ]
       ()
   in
@@ -145,8 +168,22 @@ let declined context message =
   in
   return `None
 
+let initialize_invites context () =
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Who do you want to invite?"
+      ~content:[
+        pcdata "Greetings," ; br () ;
+        br () ;
+        pcdata "Who do you want to invite? Just send me a bunch of emails and I'll figure out who to get in touch with" ; br ()
+      ]
+      ()
+  in
+  return `None
 
 COMPONENT
+
+   *initialize_invites<forward> ~> `Message of email ~> invite<forward> ~> `Message of email ~> invite
 
                                     remind ~> `Declined of email ~> declined ~> `Accepted of email ~> accepted
   -invite ~> `RemindMember of int ~> remind ~> `Accepted of email ~> accepted
