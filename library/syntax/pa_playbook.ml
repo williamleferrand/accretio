@@ -217,7 +217,7 @@ EXTEND Gram
   graph:
     [
       [
-        chains = LIST1 [ chain ] -> chains
+        chains = LIST0 [ chain ] -> chains
       ]
     ] ;
 
