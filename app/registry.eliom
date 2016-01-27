@@ -122,4 +122,6 @@ let _ =
      lwt _ = register (module Ecd_field_trips) in
      lwt _ = register (module Monthly_bbq) in
      lwt _ = register (module Flying_club) in
+     lwt _ = register (module Flying_club) in
+     lwt _ = register (module Field_trips) in
      return_unit)
