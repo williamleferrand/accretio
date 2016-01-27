@@ -183,7 +183,7 @@ let initialize_invites context () =
 
 COMPONENT
 
-   *initialize_invites<forward> ~> `Message of email ~> invite<forward> ~> `Message of email ~> invite
+   *initialize_invites<forward> ~> `Message of email ~> invite
 
                                     remind ~> `Declined of email ~> declined ~> `Accepted of email ~> accepted
   -invite ~> `RemindMember of int ~> remind ~> `Accepted of email ~> accepted
