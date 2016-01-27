@@ -25,6 +25,7 @@ let key_number_of_rejections = sprintf "number-of-rejections-%d"
 let process_join_request context message =
   lwt member = context.get_message_sender ~message in
   context.log_info "processing a join request from member %d" member ;
+  lwt preferred_email = $member(member)->preferred_email in
   lwt _ =
     context.forward_to_supervisor
       ~message
@@ -33,7 +34,9 @@ let process_join_request context message =
       ~content:[
         pcdata "Hi," ; br () ;
         br () ;
-        pcdata "You have a new join request. Do you want to add this member to the group? (just reply 'yes' or 'no')" ; br () ;
+        pcdata "You have a new join request from ";
+        pcdata preferred_email ;
+        pcdata ". Do you want to add this member to the group? (just reply 'yes' or 'no')" ; br () ;
       ]
       ()
   in

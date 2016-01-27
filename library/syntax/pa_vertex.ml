@@ -835,7 +835,10 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
 
     value db =
         let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ in
-        Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir;
+        Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+
+    value compact () =
+        Ys_persistency.compact db ;
 
     value (generate_uid, check_uid) =
         let high_uid =

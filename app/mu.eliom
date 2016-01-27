@@ -38,6 +38,7 @@ let register_page_no_param ~path ~extract_service () =
        ~content_type:"text/html"
        (fun options pp ->
           lwt _ = Shunt.apply options in
+          lwt _ = Migration.load_all_and_check_for_errors () in
           lwt session = Sessions.get () in
           lwt service = extract_service session in
           let pipe = Live.pipe in

@@ -31,12 +31,14 @@ let shutdown = detach LevelDB.close
 let get_exn db = detach (LevelDB.get_exn db)
 let get db = detach (LevelDB.get db)
 
-(* we only use the async leveldb put *)
 let put =
   LevelDB.put ~sync:true
 
 let delete =
   LevelDB.delete ~sync:true
+
+let compact db =
+  LevelDB.compact_range db ~from_key:None ~to_key:None
 
 module Batch =
 struct
