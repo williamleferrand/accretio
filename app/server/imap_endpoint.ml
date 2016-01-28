@@ -251,16 +251,16 @@ let process_email =
                   None ->
                   Lwt_log.ign_info_f "no head_plain ??" ;
                   return_none
-                | Some reply ->
-                  lwt head = Ys_reply_parser.parse_reply reply in
-                  return (Some head)
+                | Some raw ->
+                  lwt head = Ys_reply_parser.parse_reply raw in
+                  return (Some (raw, head))
               in
 
               match head_plain with
                 None ->
                 Lwt_log.ign_error_f "no head in message %d" (Uint32.to_int offset) ;
                 return_none
-              | Some content ->
+              | Some (raw, content) ->
 
                 let subject =
                   List.fold_left
@@ -297,6 +297,7 @@ let process_email =
                     ~reference:(Object_message.create_reference content)
                     ~references
                     ~attachments
+                    ~raw
                     () with
                 | `Object_already_exists _ ->
                   Lwt_log.ign_info_f "message already exists" ;
@@ -306,6 +307,7 @@ let process_email =
                   lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
                   Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
                   (* should we add the member to the society automatically?? *)
+
                   if target_stage = "" then
                     return (Some society)
                   else

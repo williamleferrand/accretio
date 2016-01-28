@@ -72,7 +72,7 @@ type t = {
 
   stack : stack ;
   sidecar : stack ; (* to be written by the api method, before being merged into the main stack *)
-  tombstones : int64s ;
+  tombstones : stack ;
 
   history : history ;
 

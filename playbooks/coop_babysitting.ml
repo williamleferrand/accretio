@@ -1,7 +1,7 @@
 (*
- * flying club
+ * coop_babysitting
  *
- * this playbook connects pilots and non pilots to organize sightseeing trips
+ * this playbook helps parents taking turns at babysitting
  *
  * william@accret.io
  *
@@ -23,8 +23,8 @@ let _ =
   CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.UTC_Plus (-8))
 
 let author = "william@accret.io"
-let name = "Flying club"
-let description = "This playbook connects pilots and non pilots to schedule sightseeing trips"
+let name = "Coop babysitting"
+let description = "This playbook helps parents taking turns at babysitting"
 
 let version = 0
 

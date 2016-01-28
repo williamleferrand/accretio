@@ -80,6 +80,8 @@ type t = {
   action : action ;
   attachments : attachments ;
 
+  raw : string ;
+
 } with vertex
   (
     {
