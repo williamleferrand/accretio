@@ -180,13 +180,14 @@ in
 return_unit
 
 let run () =
+  lwt _ = reset_society_tombstones () in
+
   lwt _ = create_playbook_threads () in
   lwt _ = reset_message_transport () in
   lwt _ = reset_all_stacks () in
 
   lwt _ = reattach_payments () in
   lwt _ = load_all_and_check_for_errors () in
-  lwt _ = reset_society_tombstones () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in
@@ -197,4 +198,5 @@ let run () =
   (* lwt _ = all_members_locked_are_ghosts () in *)
   (* lwt _ = touch_all_names () in *)
   (* lwt _ = recompute_followers_for_thoughts () in *)
+
   return_unit
