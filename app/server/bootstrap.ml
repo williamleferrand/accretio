@@ -94,4 +94,6 @@ let run () =
   (* setting the timzeone *)
   (* CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ; *)
 
-  return_unit
+(* activating the crons *)
+
+  Executor.start_cron ()
