@@ -29,6 +29,7 @@ open Eliom_content.Html5.D
 let description = "Automate what makes you thrive"
 
 let common ?(title="Accretio") ?(description=description) mixpanel_id version =
+  let app_id = Ys_config.get_string (Ys_config.fb_app_id) in
   html (* ~a:[ a_manifest (uri_of_string (fun () -> "/manifest_" ^ version ^".manifest")) ] *)
     (head (Eliom_content.Html5.D.title (pcdata "Accretio")) [
         meta ~a:([a_charset "utf-8"; a_content "text/html"; a_http_equiv "Content-Type"]) () ;
@@ -38,6 +39,7 @@ let common ?(title="Accretio") ?(description=description) mixpanel_id version =
 
         meta ~a:[ a_property "og:description"; a_content description ] () ;
         meta ~a:[ a_property "og:type"; a_content "website" ] () ;
+        meta ~a:[ a_property "fb:app_id"; a_content app_id ] () ;
         meta ~a:[ a_property "og:title"; a_content title ] () ;
         meta ~a:[ a_property "og:site_name"; a_content "https://accret.io" ] () ;
         link ~rel: [ `Other "apple-touch-icon" ] ~href:(uri_of_string (fun () -> "/logoaccretio_blue.png")) () ;
