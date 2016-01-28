@@ -1,12 +1,9 @@
-Mu
-
 Help
 Settings
 Recover
 
 Admin
 Authentication
-
 
 Lambda_member
 Lambda_thread
@@ -23,11 +20,13 @@ Dashboard
 Logs
 Loader
 
-
-Executor
-
 Society_leader
 Society_public
 Society
 
+
+Executor
+Migration
+Bootstrap
+Mu
 Payment
