@@ -162,6 +162,23 @@ let load_all_and_check_for_errors () =
   Gc.compact () ;
   return_unit
 
+let reset_society_tombstones () =
+  Lwt_log.ign_info_f "resetting society tombstones" ;
+  lwt _ =
+    Object_society.Store.fold_flat_lwt
+      (fun _ uid ->
+         try_lwt
+           lwt _ = $society(uid)->tombstones in
+           return (Some ())
+         with _ ->
+         $society(uid)<-tombstones = [] ;
+         return (Some ()))
+      ()
+      None
+      (-1)
+in
+return_unit
+
 let run () =
   lwt _ = create_playbook_threads () in
   lwt _ = reset_message_transport () in
@@ -169,6 +186,7 @@ let run () =
 
   lwt _ = reattach_payments () in
   lwt _ = load_all_and_check_for_errors () in
+  lwt _ = reset_society_tombstones () in
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in

@@ -30,7 +30,6 @@ open Ys_executor
 
 open Api
 
-module SetInt64 = Set.Make(Int64)
 module SetString = Set.Make(String)
 
 (* the context factory -- there is a little bit a first class module magic
@@ -389,8 +388,14 @@ let context_factory mode society =
           None -> return_unit
         | Some label ->
           log_info "setting timer %s" label ;
-          lwt _ = $society(society)<-timers += (`Label label, Int64.to_int call.created_on) in
-          return_unit
+          match_lwt Object_timer.Store.create
+                      ~society
+                      ~call
+                      () with
+          | `Object_already_created _ -> return_unit
+          | `Object_created timer ->
+            lwt _ = $society(society)<-timers += (`Label label, timer.Object_timer.uid) in
+            return_unit
       with exn ->
         Lwt_log.ign_error_f ~exn "error when setting the timer" ;
         log_error ~exn "error when setting the timer" ; return_unit
@@ -398,15 +403,18 @@ let context_factory mode society =
     let cancel_timers = fun ~query ->
       lwt timers = Object_society.Store.search_timers society query in
       log_info "cancelling %d timers using query '%s'" (List.length timers) query ;
-      let timers =
-        List.fold_left
-          (fun acc timestamp ->
-             SetInt64.add (Int64.of_int timestamp) acc)
-          SetInt64.empty
-          timers
-      in
-      lwt _ = $society(society)<-timers %% (List.filter (fun (`Label _, timer) -> not (SetInt64.mem (Int64.of_int timer) timers))) in
-      lwt _ = $society(society)<-tombstones %% (fun timestamps -> SetInt64.elements timers @ timestamps) in
+      lwt calls =
+        Lwt_list.fold_left_s
+          (fun acc uid ->
+             try_lwt
+               lwt call = $timer(uid)->call in
+               return (call :: acc)
+             with _ -> return acc)
+          []
+       timers in
+      let timers = List.fold_left (fun acc uid -> UidSet.add uid acc) UidSet.empty timers in
+      lwt _ = $society(society)<-timers %% (List.filter (fun (`Label _, timer) -> not (UidSet.mem timer timers))) in
+      lwt _ = $society(society)<-tombstones %% (fun tombstones -> calls @ tombstones) in
       return_unit
 
     let rec get_original_message ~message =
@@ -654,18 +662,13 @@ let step society =
       (* deleting all the inflight calls that were cancelled *)
       lwt _ = $society(society)<-stack %%% (fun stack ->
           lwt tombstones = $society(society)->tombstones in
-          let timers =
-            List.fold_left
-              (fun acc timestamp ->
-                 SetInt64.add timestamp acc)
-              SetInt64.empty
-              tombstones
-          in
+          $society(society)<-tombstones = [] ;
           return
             (List.filter
-               (fun call -> not (SetInt64.mem call.created_on timers))
+               (fun call -> not (List.mem call tombstones))
                stack))
       in
+
       match_lwt $society(society)->stack with
       | stack when List.exists is_due stack -> unstack ()
       | _ -> return_unit
