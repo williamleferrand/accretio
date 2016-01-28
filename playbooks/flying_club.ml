@@ -22,13 +22,14 @@ open Message_parsers
 let _ =
   CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.UTC_Plus (-8))
 
-
 let author = "william@accret.io"
 let name = "Flying club"
 let description = "This playbook connects pilots and non pilots to schedule sightseeing trips"
 
 let version = 0
 
+
+(* the playbook ***************************************************************)
 
 PLAYBOOK
 

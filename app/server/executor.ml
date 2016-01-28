@@ -158,7 +158,7 @@ let context_factory mode society =
             return_none
 
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
-          lwt original_content = $message(message)->content in
+          lwt original_content = $message(message)->raw in
           let content =
             content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
           in
@@ -252,7 +252,7 @@ let context_factory mode society =
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt leader = $society(society)->leader in
           let subject = Printf.sprintf "[Accretio] [%s] %s" society_name subject in
-          lwt reference, original_content, attachments = $message(message)->(reference, content, attachments) in
+          lwt reference, original_content, attachments = $message(message)->(reference, raw, attachments) in
           let content =
             content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
           in
