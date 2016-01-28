@@ -124,4 +124,5 @@ let _ =
      lwt _ = register (module Flying_club) in
      lwt _ = register (module Flying_club) in
      lwt _ = register (module Field_trips) in
+     lwt _ = register (module Coop_babysitting) in
      return_unit)
