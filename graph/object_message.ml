@@ -81,6 +81,7 @@ type t = {
   attachments : attachments ;
 
   raw : string ;
+
 } with vertex
   (
     {
