@@ -179,7 +179,7 @@ let dom_recover token =
          >>= function
            | Recovered session ->
              Sessions.connect session ;
-             Service.goto Service.Agora ;
+             Service.goto Service.Landing ;
              return_unit
            | InvalidToken -> Help.error "This recovery link is invalid"; return_unit)
   in
