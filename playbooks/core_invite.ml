@@ -60,7 +60,7 @@ let invite context message =
                    br () ;
                    pcdata "I'm running a group called " ; i [ pcdata context.society_name ] ; pcdata ". "; pcdata context.society_description ; br ();
                    br () ;
-                   pcdata "Would you like to be notified about the upcoming events? No signup is necessary; we usually organize activities by email." ; br () ;
+                   pcdata "Would you like to be notified about the upcoming events? No signup is necessary; we usually organize ourselves by email." ; br () ;
                    br () ;
                    pcdata "Looking forward to hearing from you," ; br () ;
                    br () ;
