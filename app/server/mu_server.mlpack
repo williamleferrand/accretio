@@ -9,7 +9,6 @@ Lambda_member
 Lambda_thread
 
 Updater
-Member
 Playbook
 
 Landing
@@ -18,7 +17,6 @@ Imap_endpoint
 Dashboard
 
 Logs
-Loader
 
 Society_leader
 Society_public

@@ -99,6 +99,8 @@ let dispatch service : 'a option React.signal =
   | Landing -> Landing.dom ()
   | Society (_, uid) -> Society.dom uid
   | Payment (_, uid) -> Payment.dom uid
+  | Settings -> Settings.dom ()
+  | RequestRecovery -> wrap (Recover.dom_request_recovery ())
   | _ -> S.const None
 (*
   | Landing -> Landing.dom ()
