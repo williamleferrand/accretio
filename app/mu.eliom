@@ -44,10 +44,11 @@ let register_page_no_param ~path ~extract_service () =
           let mixpanel_id = Ys_config.get_string "mixpanel-id" in
           let fb_app_id = Ys_config.get_string Ys_config.fb_app_id in
           let stripe_publishable_key = Ys_config.get_string Ys_config.stripe_publishable_key in
+          let url = (Ys_config.get_string "url-prefix")^"/"^(String.concat "/" path) in
           ignore {unit{
               Bootstrap.init %service %pipe %session %fb_app_id %stripe_publishable_key
             }} ;
-          Lwt.return (Nutshell.common mixpanel_id version)))
+          Lwt.return (Nutshell.common mixpanel_id version url)))
 
 let register_page ~path ~get_params ~extract_service () =
   ignore
@@ -63,10 +64,12 @@ let register_page ~path ~get_params ~extract_service () =
           let mixpanel_id = Ys_config.get_string "mixpanel-id" in
           let fb_app_id = Ys_config.get_string Ys_config.fb_app_id in
           let stripe_publishable_key = Ys_config.get_string Ys_config.stripe_publishable_key in
+          let to_and_from = Eliom_parameter.get_to_and_from get_params in
+          let url = (Ys_config.get_string "url-prefix")^"/"^(String.concat "/" path) ^ "/" ^ (to_and_from.to_string (gp)) in
           ignore {unit{
               Bootstrap.init %service %pipe %session %fb_app_id %stripe_publishable_key
             }} ;
-          Lwt.return (Nutshell.common mixpanel_id version)))
+          Lwt.return (Nutshell.common mixpanel_id version url)))
 
 let register_page_with_title ~path ~get_params ~extract_service () =
   ignore
@@ -82,10 +85,12 @@ let register_page_with_title ~path ~get_params ~extract_service () =
           let mixpanel_id = Ys_config.get_string "mixpanel-id" in
           let fb_app_id = Ys_config.get_string Ys_config.fb_app_id in
           let stripe_publishable_key = Ys_config.get_string Ys_config.stripe_publishable_key in
+          let to_and_from = Eliom_parameter.get_to_and_from get_params in
+          let url = (Ys_config.get_string "url-prefix")^"/"^(String.concat "/" path) ^ "/" ^ (to_and_from.to_string (gp)) in
           ignore {unit{
               Bootstrap.init %service %pipe %session %fb_app_id %stripe_publishable_key
             }} ;
-          Lwt.return (Nutshell.common ?title ?description mixpanel_id version)))
+          Lwt.return (Nutshell.common ?title ?description mixpanel_id version url)))
 
 let update_invite_code =
   function
