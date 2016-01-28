@@ -164,10 +164,10 @@ open Vault
 
 let body () =
   div ~a:[ a_class [ "nutshell" ]] [
-    R.node (S.map format_message message) ;
-    Header.dom () ;
+ pcdata "this loads fine" ;   R.node (S.map format_message message) ;
+ (*   Header.dom () ;
     R.node (S.map (function None -> pcdata "" | Some popup -> popup) Popup.anchor) ;
     div ~a:[ a_class ["nutshell-inner" ]] [ R.node container ] ;
-  ]
+  *) ]
 
 }}
