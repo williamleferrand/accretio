@@ -88,7 +88,7 @@ struct
           in
           <:expr<
             Lwt.bind
-             (Ys_persistency.Batch.get $uid:obj$.Store.db [| $list:keys$ |])
+             (Ys_persistency.Ocsipersist.Batch.get $uid:obj$.Store.db [| $list:keys$ |])
              (fun data_options ->
                (* now we need to remap this array to a tuple of results
                   which isn't super trivial to do in parallel *)

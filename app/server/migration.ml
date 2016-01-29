@@ -28,10 +28,10 @@ let reset_all_boxes () =
   Lwt_log.ign_info_f "resetting all in/out boxes" ;
   Object_society.Store.fold_flat_lwt
     (fun _ uid ->
-       $society(uid)<-inbox = [] ;
-       $society(uid)<-outbox = [] ;
-       $society(uid)<-stack = [] ;
-       $society(uid)<-history = [] ;
+       lwt _ = $society(uid)<-inbox = [] in
+       lwt _ = $society(uid)<-outbox = [] in
+       lwt _ = $society(uid)<-stack = [] in
+       lwt _ = $society(uid)<-history = [] in
        Lwt_log.ign_info_f "society %d inboxes / outboxes reset" uid ;
        return_none)
     ()
@@ -49,14 +49,16 @@ let reset_all_stacks () =
            return_unit
          with _ ->
            Lwt_log.ign_info_f "resetting stack for society %d" uid ;
-           $society(uid)<-stack = [] ; return_unit in
+           lwt _ = $society(uid)<-stack = [] in
+           return_unit in
        lwt _ =
          try_lwt
            lwt sidecar = $society(uid)->sidecar in
            return_unit
          with _ ->
            Lwt_log.ign_info_f "resetting sidecar for society %d" uid ;
-           $society(uid)<-sidecar = [] ; return_unit in
+           lwt _ = $society(uid)<-sidecar = [] in
+           return_unit in
        return (Some ()))
     ()
     None
@@ -77,7 +79,7 @@ let create_playbook_threads () =
                      ~context:[ `Playbook, uid ]
                      () with
          | `Object_created thread ->
-           $playbook(uid)<-thread = thread.Object_thread.uid ;
+           lwt _ = $playbook(uid)<-thread = thread.Object_thread.uid in
            return (Some ()))
       ()
       None
@@ -91,7 +93,7 @@ let reset_message_transport () =
          lwt _ = $message(uid)->transport in
          return (Some ())
        with _ ->
-          $message(uid)<-transport = Object_message.NoTransport ;
+          lwt _ = $message(uid)<-transport = Object_message.NoTransport in
           return (Some ()))
     ()
     None
@@ -155,11 +157,6 @@ let load_all_and_check_for_errors () =
       (-1)
   in
   Gc.compact () ;
-  Object_member.Store.compact () ;
-  Object_message.Store.compact () ;
-  Object_playbook.Store.compact () ;
-  Object_society.Store.compact () ;
-  Gc.compact () ;
   return_unit
 
 let reset_society_tombstones () =
@@ -171,7 +168,7 @@ let reset_society_tombstones () =
            lwt _ = $society(uid)->tombstones in
            return (Some ())
          with _ ->
-         $society(uid)<-tombstones = [] ;
+         lwt _ = $society(uid)<-tombstones = [] in
          return (Some ()))
       ()
       None
@@ -179,7 +176,33 @@ let reset_society_tombstones () =
 in
 return_unit
 
+
+let move_to_ocsipersist () =
+  Lwt_log.ign_info "moving all leveldb data to ocsipersist!" ;
+  Lwt_list.iter_s
+    (fun name ->
+       let name = Ys_config.get_string "db-root-dir" ^ "/" ^ name in
+       Ys_persistency.Siphon.from_leveldb_to_ocsipersist name)
+    [
+      "object_image" ;
+      "object_member" ;
+      "object_member_by_emails" ;
+      "object_member_by_recovery_token" ;
+      "object_member_by_shunts" ;
+      "object_message" ;
+      "object_message_by_reference" ;
+      "object_payment" ;
+      "object_payment_by_shortlink" ;
+      "object_playbook" ;
+      "object_playbook_by_hash" ;
+      "object_society" ;
+      "object_society_by_shortlink" ;
+      "object_thread" ;
+      "object_timer"
+    ]
+
 let run () =
+ (* lwt _ = move_to_ocsipersist () in *)
   lwt _ = reset_society_tombstones () in
 
   lwt _ = create_playbook_threads () in
@@ -188,6 +211,7 @@ let run () =
 
   lwt _ = reattach_payments () in
   lwt _ = load_all_and_check_for_errors () in
+
   (* lwt _ = reset_all_boxes () in *)
   (* reset_all_cohorts () ; *)
   (* lwt _ = relink_all_transitions () in

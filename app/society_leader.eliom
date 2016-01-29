@@ -93,7 +93,7 @@ let update_mode (uid, mode) =
               Sandbox -> Object_society.Sandbox
             | Public -> Object_society.Public
             | Private -> Object_society.Private in
-          $society(uid)<-mode = mode' ;
+          lwt _ = $society(uid)<-mode = mode' in
           return (Some mode))
 
 let update_mode = server_function ~name:"society-leader-update-mode" Json.t<int * mode> update_mode
@@ -320,7 +320,7 @@ let reply_message (society, message, content) =
           match_lwt Playbook.dispatch_message_automatically uid stage with
           | None -> return (Some true)
           | Some call ->
-            $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+            lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
             lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
             ignore_result (Executor.step society) ;
             return (Some true))
@@ -347,7 +347,7 @@ let create_message_and_trigger_stage (society, sender, content, stage) =
        match_lwt Playbook.dispatch_message_automatically uid stage with
        | None -> return (Some ())
        | Some call ->
-         $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+         lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
          lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
          ignore_result (Executor.step society) ;
          return (Some ()))
@@ -398,7 +398,7 @@ let dispatch_message_manually (message, destination) =
             Lwt_log.ign_info_f "couldn't create a call for message %d, from stage %s to destination %s" message stage destination ;
             return (Some false)
           | Some call ->
-            $message(message)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+            lwt _ = $message(message)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
             lwt _ = Executor.push_and_execute society call in
             return (Some true))
 

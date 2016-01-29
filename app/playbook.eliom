@@ -104,14 +104,14 @@ let make_public playbook =
   protected_connected
     (fun session ->
        Lwt_log.ign_info_f "making playbook %d public" playbook ;
-       $playbook(playbook)<-scope = Ys_scope.Public ;
+       lwt _ = $playbook(playbook)<-scope = Ys_scope.Public in
        return (Some View_playbook.Public))
 
 let make_private playbook =
   protected_connected
     (fun session ->
        Lwt_log.ign_info_f "making playbook %d private" playbook ;
-       $playbook(playbook)<-scope = Ys_scope.Private ;
+       lwt _ = $playbook(playbook)<-scope = Ys_scope.Private in
        return (Some View_playbook.Private))
 
 let make_public = server_function ~name:"playbook-make-public" Json.t<int> make_public

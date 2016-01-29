@@ -159,8 +159,29 @@ let context_factory mode society =
 
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt original_content = $message(message)->raw in
+          lwt original_origin, original_destination = $message(message)->(origin, destination) in
+          let format_interlocutor =
+            function
+              Object_message.Stage stage ->
+              return (Printf.sprintf "Stage %s" stage)
+            | Object_message.Member member ->
+              lwt name, preferred_email = $member(member)->(name, preferred_email) in
+              return (Printf.sprintf "Member %s <%s>" name preferred_email)
+            | Object_message.CatchAll ->
+              return "CatchAll"
+          in
+
+          lwt origin = format_interlocutor original_origin in
+          lwt destination = format_interlocutor original_destination in
+
           let content =
-            content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
+            content @ [
+              br () ; br () ;
+              pcdata "-----" ; br () ; br () ;
+              pcdata "From: " ; pcdata origin ; br () ;
+              pcdata "To: " ; pcdata destination ; br () ;
+              br () ;
+              pcdata original_content ]
           in
           let flat_content = ref "" in
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
@@ -253,8 +274,32 @@ let context_factory mode society =
           lwt leader = $society(society)->leader in
           let subject = Printf.sprintf "[Accretio] [%s] %s" society_name subject in
           lwt reference, original_content, attachments = $message(message)->(reference, raw, attachments) in
+
+          lwt original_origin, original_destination = $message(message)->(origin, destination) in
+          let format_interlocutor =
+            function
+              Object_message.Stage stage ->
+              return (Printf.sprintf "Stage %s" stage)
+            | Object_message.Member member ->
+              lwt name, preferred_email = $member(member)->(name, preferred_email) in
+              return (Printf.sprintf "Member %s <%s>" name preferred_email)
+            | Object_message.CatchAll ->
+              return "CatchAll"
+          in
+
+          lwt origin = format_interlocutor original_origin in
+          lwt destination = format_interlocutor original_destination in
+
           let content =
-            content @ [ br () ; br () ; pcdata "-----" ; br () ; br () ; pcdata original_content ]
+            content @ [ br () ;
+                        br () ;
+                        pcdata "-----" ; br () ;
+                        br () ;
+                        pcdata "From: " ; pcdata origin ; br () ;
+                        pcdata "To: " ; pcdata destination ; br () ;
+                        br () ;
+                        pcdata original_content
+                      ]
           in
           let flat_content = ref "" in
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
@@ -515,8 +560,8 @@ let context_factory mode society =
           let callback_success = Stage_Specifics.outbound_dispatcher 0 (on_success payment.Object_payment.uid) in
           let callback_failure = Stage_Specifics.outbound_dispatcher 0 (on_failure payment.Object_payment.uid) in
 
-          $payment(payment.Object_payment.uid)<-callback_success = Some callback_success ;
-          $payment(payment.Object_payment.uid)<-callback_failure = Some callback_failure ;
+          lwt _ = $payment(payment.Object_payment.uid)<-callback_success = Some callback_success in
+          lwt _ = $payment(payment.Object_payment.uid)<-callback_failure = Some callback_failure in
           lwt _ = $society(society)<-payments += (`Payment, payment.Object_payment.uid) in
           return (Some payment.Object_payment.uid)
 
@@ -662,7 +707,7 @@ let step society =
       (* deleting all the inflight calls that were cancelled *)
       lwt _ = $society(society)<-stack %%% (fun stack ->
           lwt tombstones = $society(society)->tombstones in
-          $society(society)<-tombstones = [] ;
+          lwt _ = $society(society)<-tombstones = [] in
           return
             (List.filter
                (fun call -> not (List.mem call tombstones))

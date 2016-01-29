@@ -147,7 +147,7 @@ let perform_with_token (uid, token) =
         let stripe = Object_member.({
             stripe_customer = customer.ReplyCreateCustomer.id ;
             stripe_last4 = data.Sources.last4 }) in
-        $member(member)<-stripe = Some stripe ;
+        lwt _ = $member(member)<-stripe = Some stripe in
         perform (uid, customer.ReplyCreateCustomer.id, data.Sources.last4) in
   return (Some (View_payment.to_state state))
 
