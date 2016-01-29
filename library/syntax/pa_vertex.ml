@@ -125,31 +125,31 @@ edges ;
         <:str_item<
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_string"$ uid key =
-            Ys_persistency.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
+            Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
 
           value $lid:"unset_"^field^"_by_string"$ key =
-            Ys_persistency.delete $lid:db_name$ (String.lowercase key) ;
+            Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key) ;
 
           value $lid:"find_by_"^field$ key =
              Lwt.bind
-                (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                 (fun
                    [ None -> Lwt.return_none
                    | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
 
           value $lid:"is_"^field^"_assigned_to_other"$ uid key =
             Lwt.bind
-               (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid' when Ys_uid.of_string uid' <> uid -> Lwt.return True
                  | _ -> Lwt.return False ]) ;
 
           value $lid:"is_"^field^"_assigned"$ key =
             Lwt.bind
-               (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid -> Lwt.return (Some (Ys_uid.of_string uid))
                  | _ -> Lwt.return_none ]) ;
@@ -161,17 +161,17 @@ edges ;
         <:str_item<
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_string"$ uid key =
-            Ys_persistency.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
+            Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
 
           value $lid:"unset_"^field^"_by_string"$ key =
-            Ys_persistency.delete $lid:db_name$ (String.lowercase key) ;
+            Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key) ;
 
           value $lid:"find_by_"^field$ key =
              Lwt.bind
-                (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                 (fun
                    [ None -> Lwt.return_none
                    | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
@@ -181,7 +181,7 @@ edges ;
             [ None -> Lwt.return False
             | Some key ->
                Lwt.bind
-                 (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                 (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                  (fun
                    [ Some uid' when Ys_uid.of_string uid' <> uid -> Lwt.return True
                    | _ -> Lwt.return False ]) ] ;
@@ -191,7 +191,7 @@ edges ;
             [ None -> Lwt.return_none
             | Some key ->
                Lwt.bind
-                 (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                 (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                  (fun
                    [ Some uid -> Lwt.return (Some (Ys_uid.of_string uid))
                    | _ -> Lwt.return_none ]) ] ;
@@ -203,21 +203,21 @@ edges ;
         <:str_item<
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_strings"$ uid keys =
-            List.iter
-               (fun key -> Ys_persistency.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid))
+            Lwt_list.iter_s
+               (fun key -> Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid))
                keys ;
 
           value $lid:"unset_"^field^"_by_strings"$ keys =
-            List.iter
-               (fun key -> Ys_persistency.delete $lid:db_name$ (String.lowercase key))
+            Lwt_list.iter_s
+               (fun key -> Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key))
                keys ;
 
           value $lid:"find_by_"^(String.sub field 0 (String.length field - 1))$ key =
             Lwt.bind
-               (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ None -> Lwt.return_none
                  | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
@@ -228,7 +228,7 @@ edges ;
           value $lid:"is_"^field^"_assigned_to_other"$ uid keys =
             Lwt.bind
                (Lwt_list.map_p
-                 (fun key -> Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                 (fun key -> Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                  keys)
                (fun bindings ->
                     Lwt.return (List.fold_left (fun acc -> fun [ Some uid' when Ys_uid.of_string uid' <> uid -> True | _ -> acc ]) False bindings)) ;
@@ -237,7 +237,7 @@ edges ;
           value $lid:"is_"^field^"_assigned"$ keys =
             Lwt.bind
                (Lwt_list.map_p
-                 (fun key -> Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                 (fun key -> Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                  keys)
                (fun bindings ->
                     Lwt.return (List.fold_left (fun acc -> fun [ Some uid -> Some (Ys_uid.of_string uid) | _ -> acc ]) None bindings)) ;
@@ -260,24 +260,24 @@ edges ;
 
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_string"$ uid key =
-            Ys_persistency.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
+            Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
 
           value $lid:"unset_"^field^"_by_string"$ key =
-            Ys_persistency.delete $lid:db_name$ (String.lowercase key) ;
+            Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key) ;
 
           value $lid:"find_by_"^field$ key =
              Lwt.bind
-                (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+                (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                 (fun
                    [ None -> Lwt.return_none
                    | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
 
           value $lid:"is_"^field^"_assigned_to_other"$ uid key =
             Lwt.bind
-               (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid' when Ys_uid.of_string uid' <> uid -> Lwt.return True
                  | _ -> Lwt.return False ]) ;
@@ -285,7 +285,7 @@ edges ;
 
           value $lid:"is_"^field^"_assigned"$ key =
             Lwt.bind
-               (Ys_persistency.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid -> Lwt.return (Some (Ys_uid.of_string uid))
                  | _ -> Lwt.return_none ]) ;
@@ -325,7 +325,7 @@ let rec generate_set_functions _loc aliases builders = function
         do {
           ignore ($wrap_with_modules _loc (<:expr< $lid:("bin_write_"^lid)$ >>) modules$ buf v ~pos:0) ;
           Bin_prot.Common.blit_buf_string buf s size ;
-          Ys_persistency.put db $wrap_field _loc field$ s }
+          Ys_persistency.Ocsipersist.put db $wrap_field _loc field$ s }
        >>
 
   | _ -> assert false
@@ -350,13 +350,8 @@ let rec generate_get_functions _loc required builders = function
          breaks the (desirable) possibility to call some of the get__ inside
          some of the builders *)
       value rec $lid:"get_"^field$ uid =
-       if not (check_uid uid) then
-         (Lwt.bind
-             (Lwt_log.info_f "couldn't find uid %d" uid)
-             (fun () -> Lwt.fail Not_found))
-       else
          Lwt.bind
-          (Ys_persistency.get db $wrap_field _loc field$)
+          (Ys_persistency.Ocsipersist.get db $wrap_field _loc field$)
           (fun
             [ None ->
                   $try
@@ -409,7 +404,6 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
             Lwt.bind
                ($lid:"get_"^field$ uid)
                (fun v_old ->
-
                    $match assoc field alias_mapper with
                      | `PlainTextEdge ->
                        <:expr<
@@ -417,11 +411,17 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                          Lwt.bind
                            ($lid:"remove_"^field$ uid v_old)
                            (fun () ->
-                             do {
-                              Unsafe.$lid:"set_"^field$ uid v_new ;
-                              Lwt.bind ($lid:"insert_"^field$ uid v_new) (fun () -> Lwt.return v_new) })  >>
+                             Lwt.bind
+                               (Unsafe.$lid:"set_"^field$ uid v_new)
+                               (fun () ->
+                                  Lwt.bind
+                                    ($lid:"insert_"^field$ uid v_new)
+                                    (fun () -> Lwt.return v_new) ))  >>
                      | _ ->
-           <:expr< let v_new = patch v_old in do { Unsafe.$lid:"set_"^field$ uid v_new ; Lwt.return v_new } >> $)) ;
+                       <:expr< let v_new = patch v_old in
+                               Lwt.bind
+                                 (Unsafe.$lid:"set_"^field$ uid v_new)
+                                 (fun () -> Lwt.return v_new) >> $)) ;
 
     value $lid:"patch_lwt_"^field$ uid patch =
         Lwt_mutex.with_lock
@@ -430,7 +430,12 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
             Lwt.bind
                ($lid:"get_"^field$ uid)
                (fun v_old ->
-                  Lwt.bind (patch v_old) (fun v_new -> do { Unsafe.$lid:"set_"^field$ uid v_new ; Lwt.return v_new }))) ;
+                  Lwt.bind
+                     (patch v_old)
+                     (fun v_new ->
+                        Lwt.bind
+                          (Unsafe.$lid:"set_"^field$ uid v_new)
+                          (fun () -> Lwt.return v_new )))) ;
 
      value $lid:"attach_to_"^field$ uid e2 =
                 $lid:"patch_"^field$ uid (fun res -> [ e2 :: res ]) ;
@@ -473,9 +478,9 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                                         Lwt.bind
                                             (patch v_old)
                                             (fun v_new ->
-                                                do {
-                                                  Unsafe.$lid:"set_"^field$ uid v_new ;
-                                                  Lwt.return v_new }))) >>
+                                               Lwt.bind
+                                                 (Unsafe.$lid:"set_"^field$ uid v_new)
+                                                 (fun () -> Lwt.return v_new )))) >>
            | _ -> <:expr< () >> $ ;
 
       value $lid:"patch_"^field$ uid patch =
@@ -491,8 +496,7 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                        let v_new = patch v_old in
                        do {
                         $lid:"insert_"^field$ uid v_new ;
-                        Unsafe.$lid:"set_"^field$ uid v_new ;
-                        Lwt.return_unit }
+                        Unsafe.$lid:"set_"^field$ uid v_new }
                       >>
                      | `String when List.mem field uniques ->
                        <:expr<
@@ -502,11 +506,15 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                             (fun
                                [ True -> Lwt.return_false
                                | False ->
-                                 do {
-                                  $lid:"unset_"^field^"_by_string"$ v_old ;
-                                  $lid:"set_"^field^"_by_string"$ uid v_new ;
-                                  Unsafe.$lid:"set_"^field$ uid v_new ;
-                                  Lwt.return_true } ]) >>
+                                  Lwt.bind
+                                    ($lid:"unset_"^field^"_by_string"$ v_old)
+                                    (fun () ->
+                                      Lwt.bind
+                                        ($lid:"set_"^field^"_by_string"$ uid v_new)
+                                        (fun () ->
+                                          Lwt.bind
+                                            (Unsafe.$lid:"set_"^field$ uid v_new)
+                                            (fun () -> Lwt.return_true))) ]) >>
                      | `StringFun constr when List.mem field uniques ->
                        <:expr<
                          let v_new = patch v_old in
@@ -522,15 +530,18 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                                    match $constr$ v_new with
                                     [ Some v_new -> $lid:"set_"^field^"_by_string"$ uid v_new
                                     | None -> () ] ;
-                                  Unsafe.$lid:"set_"^field$ uid v_new ;
-                                  Lwt.return_true } ]) >>
+                                  Lwt.bind
+                                    (Unsafe.$lid:"set_"^field$ uid v_new)
+                                    (fun () -> Lwt.return_true) } ]) >>
                      | `String ->
                        <:expr<
                          let v_new = patch v_old in
-                         do { $lid:"unset_"^field^"_by_string"$ v_old ;
-                              $lid:"set_"^field^"_by_string"$ uid v_new ;
-                              Unsafe.$lid:"set_"^field$ uid v_new ;
-                              Lwt.return_unit } >>
+                         Lwt.bind
+                            ($lid:"unset_"^field^"_by_string"$ v_old)
+                            (fun () ->
+                               Lwt.bind
+                                 ($lid:"set_"^field^"_by_string"$ uid v_new)
+                                 (fun () -> Unsafe.$lid:"set_"^field$ uid v_new)) >>
                      | `Strings when List.mem field uniques ->
                        <:expr<
                          let v_new = patch v_old in
@@ -539,24 +550,30 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                             (fun
                                [ True -> Lwt.return_false
                                | False ->
-                                 do {
-                                  $lid:"unset_"^field^"_by_strings"$ v_old ;
-                                  $lid:"set_"^field^"_by_strings"$ uid v_new ;
-                                  Unsafe.$lid:"set_"^field$ uid v_new ;
-                                  Lwt.return_true } ]) >>
+                                  Lwt.bind
+                                    ($lid:"unset_"^field^"_by_strings"$ v_old)
+                                    (fun () ->
+                                       Lwt.bind
+                                         ($lid:"set_"^field^"_by_strings"$ uid v_new)
+                                         (fun () ->
+                                           Lwt.bind
+                                            (Unsafe.$lid:"set_"^field$ uid v_new)
+                                            (fun () -> Lwt.return_true))) ]) >>
                      | `Strings ->
                        <:expr<
                          let v_new = patch v_old in
-                         do { $lid:"unset_"^field^"_by_strings"$ v_old ;
-                              $lid:"set_"^field^"_by_strings"$ uid v_new ;
-                              Unsafe.$lid:"set_"^field$ uid v_new ;
-                              Lwt.return_unit } >>
+                         Lwt.bind
+                            ($lid:"unset_"^field^"_by_strings"$ v_old)
+                            (fun () ->
+                                Lwt.bind
+                                  ($lid:"set_"^field^"_by_strings"$ uid v_new)
+                                  (fun () -> Unsafe.$lid:"set_"^field$ uid v_new)) >>
                      | `PlainText ->
                        <:expr<
                          let v_new = patch v_old in
-                         do {
-                              Unsafe.$lid:"set_"^field$ uid v_new ;
-                              $lid:"insert_"^field$ uid v_new } >>
+                         Lwt.bind
+                           (Unsafe.$lid:"set_"^field$ uid v_new)
+                           (fun () -> $lid:"insert_"^field$ uid v_new) >>
                      | `PlainTextEdge ->
                        <:expr<
                          let v_new = patch v_old in
@@ -565,8 +582,9 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                            (fun () ->
                              do {
                               Lwt_log.ign_info_f "patching an edge with plaintextedges" ;
-                              Unsafe.$lid:"set_"^field$ uid v_new ;
-                              $lid:"insert_"^field$ uid v_new })  >>
+                              Lwt.bind
+                                (Unsafe.$lid:"set_"^field$ uid v_new)
+                                (fun () -> $lid:"insert_"^field$ uid v_new) })  >>
 
                      | `PlainTextAndString when List.mem field uniques ->
                        <:expr<
@@ -576,23 +594,32 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                             (fun
                                [ True -> Lwt.return_false
                                | False ->
-                                 do {
-                                  $lid:"unset_"^field^"_by_string"$ v_old ;
-                                  $lid:"set_"^field^"_by_string"$ uid v_new ;
-                                  Unsafe.$lid:"set_"^field$ uid v_new ;
                                   Lwt.bind
-                                    ($lid:"insert_"^field$ uid v_new)
-                                    (fun () -> Lwt.return_true) } ]) >>
+                                    ($lid:"unset_"^field^"_by_string"$ v_old)
+                                    (fun () ->
+                                      Lwt.bind
+                                         ($lid:"set_"^field^"_by_string"$ uid v_new)
+                                         (fun () ->
+                                            Lwt.bind
+                                               (Unsafe.$lid:"set_"^field$ uid v_new)
+                                               (fun () ->
+                                                 Lwt.bind
+                                                   ($lid:"insert_"^field$ uid v_new)
+                                                   (fun () -> Lwt.return_true)))) ]) >>
                      | `PlainTextAndString ->
                        <:expr<
                           let v_new = patch v_old in
-                         do {
-                              $lid:"unset_"^field^"_by_string"$ v_old ;
-                              $lid:"set_"^field^"_by_string"$ uid v_new ;
-                              Unsafe.$lid:"set_"^field$ uid v_new ;
-                              $lid:"insert_"^field$ uid v_new } >>
+                          Lwt.bind
+                             ($lid:"unset_"^field^"_by_string"$ v_old)
+                             (fun () ->
+                                Lwt.bind
+                                  ($lid:"set_"^field^"_by_string"$ uid v_new)
+                                  (fun () ->
+                                     Lwt.bind
+                                       (Unsafe.$lid:"set_"^field$ uid v_new)
+                                       (fun () -> $lid:"insert_"^field$ uid v_new))) >>
                      | _ ->
-                       <:expr< do { Unsafe.$lid:"set_"^field$ uid (patch v_old) ; Lwt.return_unit } >> $)) ;
+                       <:expr< Unsafe.$lid:"set_"^field$ uid (patch v_old) >> $)) ;
 
        >>
 
@@ -661,134 +688,130 @@ let rec generate_safe_setters _loc alias_mapper = function
 
 let rec extract_create_patterns _loc required alias_mapper builders = function
   | <:ctyp< $tp1$; $tp2$ >> ->
-    let patterns1, setters_lwt1, setters1, fields1 = extract_create_patterns _loc required alias_mapper builders tp1 in
-    let patterns2, setters_lwt2, setters2, fields2 = extract_create_patterns _loc required alias_mapper builders tp2 in
-    (patterns1 @ patterns2), (setters_lwt1 @ setters_lwt2), (setters1 @ setters2), (fields1 @ fields2)
+    let patterns1, setters_lwt1, fields1 = extract_create_patterns _loc required alias_mapper builders tp1 in
+    let patterns2, setters_lwt2, fields2 = extract_create_patterns _loc required alias_mapper builders tp2 in
+    (patterns1 @ patterns2), (setters_lwt1 @ setters_lwt2), (fields1 @ fields2)
 
-  | <:ctyp< uid : $tp$ >> -> ([], [], [], [ <:rec_binding< uid >> ])
-  | <:ctyp< created_on : $tp$ >> -> ([], [], [ <:expr< Unsafe.set_created_on uid created_on >> ], [ <:rec_binding< created_on >> ])
+  | <:ctyp< uid : $tp$ >> -> ([], [], [ <:rec_binding< uid >> ])
+  | <:ctyp< created_on : $tp$ >> -> ([], [ <:expr< Unsafe.set_created_on uid created_on >> ], [ <:rec_binding< created_on >> ])
 
   | <:ctyp< $lid:field$ : mutable $tp$ >> ->
     failwith "mutable fields are prohibited"
 
   | <:ctyp< $lid:field$ : $tp$ >> when List.mem field required ->
-    let setter_lwt, setter =
+    let setter_lwt =
       match assoc field alias_mapper with
       | `Spatial ->
-        [], [ <:expr<
-            do {
-                Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
-                $lid:"insert_"^field$ uid $lid:field$
-            }
+        [ <:expr<
+            Lwt.bind
+               (Unsafe.$lid:"set_"^field$ uid $lid:field$)
+               (fun () -> $lid:"insert_"^field$ uid $lid:field$)
+
           >> ]
       | `String ->
-        [], [ <:expr<
-            do {
-                Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
-                $lid:"set_"^field^"_by_string"$ uid $lid:field$
-            }
+        [ <:expr<
+            Lwt.bind
+              (Unsafe.$lid:"set_"^field$ uid $lid:field$)
+              (fun () -> $lid:"set_"^field^"_by_string"$ uid $lid:field$)
           >> ]
       | `StringFun constr ->
-        [], [ <:expr<
-            do {
-                Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
-                match $constr$ $lid:field$ with
+       [ <:expr<
+            Lwt.bind
+               (Unsafe.$lid:"set_"^field$ uid $lid:field$)
+               (fun () ->
+                   match $constr$ $lid:field$ with
                    [ Some v_new -> $lid:"set_"^field^"_by_string"$ uid v_new
-                   | None -> () ]
-            }
-          >> ]
+                   | None -> Lwt.return_unit ])
+         >> ]
       | `Strings ->
-        [], [ <:expr<
-            do {
-                Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
-                $lid:"set_"^field^"_by_strings"$ uid $lid:field$
-            }
+        [ <:expr<
+            Lwt.bind
+                (Unsafe.$lid:"set_"^field$ uid $lid:field$)
+                (fun () -> $lid:"set_"^field^"_by_strings"$ uid $lid:field$)
           >> ]
       | `PlainText ->
         [ <:expr<
-            do {
-              Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
-             $lid:"insert_"^field$ uid $lid:field$
-            }
-          >> ], []
+            Lwt.bind
+              (Unsafe.$lid:"set_"^field$ uid $lid:field$)
+              (fun () -> $lid:"insert_"^field$ uid $lid:field$)
+          >> ]
       | `PlainTextAndString ->
         [ <:expr<
-            do {
-             Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
-             $lid:"set_"^field^"_by_string"$ uid $lid:field$ ;
-             $lid:"insert_"^field$ uid $lid:field$
-            }
-          >> ], []
-        | _ -> [], [ <:expr< Unsafe.$lid:"set_"^field$ uid $lid:field$ >> ]
+            Lwt_list.join
+             [ Unsafe.$lid:"set_"^field$ uid $lid:field$ ;
+               $lid:"set_"^field^"_by_string"$ uid $lid:field$ ;
+               $lid:"insert_"^field$ uid $lid:field$ ] >>
+         ]
+        | _ -> [ <:expr< Unsafe.$lid:"set_"^field$ uid $lid:field$ >> ]
     in
       [ <:patt< ~ $lid:field$  >> ],
-      setter_lwt, setter,
+      setter_lwt,
       [ <:rec_binding< $lid:field$ >> ]
 
-  | <:ctyp< $lid:field$ : $tp$ >> ->
+ | <:ctyp< $lid:field$ : $tp$ >> ->
     let modules, lid = split_modules_ctyp field tp in
-    let setter_lwt, setter =
+    let setter_lwt =
       match assoc field alias_mapper with
       | `Spatial ->
-        [], [ <:expr<
+        [ <:expr<
             match $lid:field$ with
-            [ None -> ()
+            [ None -> Lwt.return_unit
             | Some v ->
-            do {
-              Unsafe.$lid:"set_"^field$ uid v ;
-               $lid:"insert_"^field$ uid v
-            }]  >> ]
+              Lwt.bind
+                 (Unsafe.$lid:"set_"^field$ uid v)
+                 (fun () -> $lid:"insert_"^field$ uid v) ]
+           >> ]
       | `StringFun constr ->
-        [], [ <:expr<
+        [ <:expr<
             match $lid:field$ with
-            [ None -> ()
+            [ None -> Lwt.return_unit
             | Some v ->
-            do {
-              Unsafe.$lid:"set_"^field$ uid v ;
-              match $constr$ v with
-                [ Some v -> $lid:"set_"^field^"_by_string"$ uid v
-                | None -> () ]
-            }]  >> ]
+              Lwt.bind
+                  (Unsafe.$lid:"set_"^field$ uid v)
+                  (fun () ->
+                     match $constr$ v with
+                      [ Some v -> $lid:"set_"^field^"_by_string"$ uid v
+                      | None -> Lwt.return_unit ])
+            ] >> ]
       | `String ->
-        [], [ <:expr<
+        [ <:expr<
             match $lid:field$ with
-            [ None -> ()
+            [ None -> Lwt.return_unit
             | Some v ->
-            do {
-              Unsafe.$lid:"set_"^field$ uid v ;
-              $lid:"set_"^field^"_by_string"$ uid v
-            }]  >> ]
+            Lwt.bind
+              (Unsafe.$lid:"set_"^field$ uid v)
+              (fun () -> $lid:"set_"^field^"_by_string"$ uid v) ]
+           >> ]
       | `PlainText ->
         [ <:expr<
            match $lid:field$ with
             [ None -> Lwt.return_unit
             | Some v ->
-            do {
-              Unsafe.$lid:"set_"^field$ uid v ;
-              $lid:"insert_"^field$ uid v
-            }]
-        >> ], []
+              Lwt.bind
+                (Unsafe.$lid:"set_"^field$ uid v)
+                (fun () -> $lid:"insert_"^field$ uid v)
+            ]
+        >> ]
       | `PlainTextAndString ->
         [ <:expr<
            match $lid:field$ with
             [ None -> Lwt.return_unit
             | Some v ->
-            do {
-              Unsafe.$lid:"set_"^field$ uid v ;
+            Lwt_list.join
+              [ Unsafe.$lid:"set_"^field$ uid v ;
               $lid:"set_"^field^"_by_string"$ uid v ;
               $lid:"insert_"^field$ uid v
-            }]
-        >> ], []
-
+            ]] >>
+        ]
       | _ ->
-          [], [ <:expr<
+          [ <:expr<
             match $lid:field$ with
-            [ None -> ()
+            [ None -> Lwt.return_unit
             | Some v -> Unsafe.$lid:"set_"^field$ uid v ] >> ]
     in
 
     [ <:patt< ? ($lid:field$) >> ],
-    setter_lwt, setter,
+    setter_lwt,
     [ <:rec_binding< $lid:field$ =
        match $lid:field$ with
        [ None -> $wrap_with_modules _loc (<:expr< $lid:"default_" ^ lid$ >>) modules$
@@ -820,7 +843,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
 
   let safe_setters = generate_safe_setters _loc alias_mapper tp in
 
-  let create_patterns, create_setters_lwt, create_setters, create_fields = extract_create_patterns _loc required alias_mapper builders tp in
+  let create_patterns, create_setters_lwt, create_fields = extract_create_patterns _loc required alias_mapper builders tp in
 
   let module_name = get_module_name _loc in
   <:str_item<
@@ -835,54 +858,54 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
 
     value db =
         let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ in
-        Ys_persistency.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+        Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
-    value compact () =
-        Ys_persistency.compact db ;
+    value uid_current = ref None ;
+    value uid_mutex = Lwt_mutex.create () ;
 
-    value (generate_uid, check_uid) =
-        let high_uid =
-           match Ys_persistency.max_key_blocking db with
-               [ None -> 0
-               | Some max_key -> Ys_uid.extract_from_key max_key ] in
-        let cid = ref high_uid in
-        ((fun () -> do { incr cid ; !cid }),
-         (fun uid -> uid <= !cid));
+    value generate_uid () =
+     Lwt_mutex.with_lock
+        uid_mutex
+        (fun () ->
+          Lwt.bind
+             (match uid_current.val with
+                [ Some uid -> Lwt.return uid
+                | None ->
+                   Lwt.bind
+                     (Ys_persistency.Ocsipersist.max_key db)
+                     (fun
+                        [ None -> Lwt.return 0
+                        | Some uid -> Lwt.return uid ]) ])
+             (fun cid ->
+                 do { uid_current.val := Some (cid + 1) ;
+                      Lwt.return (cid + 1) })) ;
 
     value iter_lwt f =
-        let high_uid =
-           match Ys_persistency.max_key_blocking db with
-               [ None -> 0
-               | Some max_key -> Ys_uid.extract_from_key max_key ] in
-        let rec iter uid =
-         if uid > high_uid then Lwt.return_unit else Lwt.bind (f uid) (fun () -> iter (uid + 1))
-        in
-        iter 1 ;
-
-    value fold f acc marker cardinal =
-        let high_uid =
-           match marker with
-               [ None -> match Ys_persistency.max_key_blocking db with
-                  [ None -> 0
-                  | Some max_key -> Ys_uid.extract_from_key max_key ]
-                | Some key -> key ] in
-        let rec aux acc uid remaining =
-          if (uid < 1) then
-             (acc, None)
-          else if remaining = 0 then
-             (acc, Some uid)
-          else
-             aux (f acc uid) (uid - 1) (remaining - 1)
-        in
-        aux acc high_uid cardinal ;
+          Lwt.bind
+             (Lwt.bind
+               (Ys_persistency.Ocsipersist.max_key db)
+               (fun
+                   [ None -> Lwt.return 0
+                  | Some max_key -> Lwt.return max_key ]))
+          (fun high_uid ->
+              let rec iter uid =
+                 if uid > high_uid then
+                    Lwt.return_unit
+                 else
+                    Lwt.bind (f uid) (fun () -> iter (uid + 1))
+              in iter 1) ;
 
     value fold_flat_lwt f acc marker cardinal =
-        let high_uid =
-           match marker with
-               [ None -> match Ys_persistency.max_key_blocking db with
-                  [ None -> 0
-                  | Some max_key -> Ys_uid.extract_from_key max_key ]
-                | Some key -> key ] in
+        Lwt.bind
+           (match marker with
+               [ None ->
+                   Lwt.bind
+                      (Ys_persistency.Ocsipersist.max_key db)
+                      (fun
+                         [ None -> Lwt.return 0
+                         | Some max_key -> Lwt.return max_key ])
+                | Some key -> Lwt.return key ])
+           (fun high_uid ->
         let rec aux acc uid remaining =
           if (uid < 1) then
              Lwt.return (acc, None)
@@ -894,7 +917,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
                (fun [ None -> aux acc (uid - 1) remaining
                     | Some acc -> aux acc (uid - 1) (remaining - 1) ])
         in
-        aux acc high_uid cardinal ;
+        aux acc high_uid cardinal) ;
 
     (* we need to set up aliases early on so that methods are available
        in the setters *)
@@ -907,10 +930,8 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
        $setters$ ;
      exception Not_found_unsafe;
      value get uid =
-        if not (check_uid uid) then
-          (Lwt.fail Not_found_unsafe)
-        else Lwt.bind
-          (Ys_persistency.Batch.get db [| $list:load_keys$ |])
+        Lwt.bind
+          (Ys_persistency.Ocsipersist.Batch.get db [| $list:load_keys$ |])
           (fun fields ->
             $List.fold_left
                (fun acc (s, f) -> <:expr< Lwt.bind ($s$) (fun $lid:f$ -> $acc$) >>)
@@ -951,7 +972,9 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
                <:expr<
                  (* there is no lock here, because there is no reason why anyone
                     would be hitting this uid before we return *)
-                 let uid = generate_uid () in
+                 Lwt.bind
+                   (generate_uid ())
+                   (fun uid ->
                  let created_on = Ys_time.now () in
 
                  (* leveldb calls are asynchronous and hopefully non-blocking, so we
@@ -970,9 +993,9 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
                       >>)
                     (List.fold_left
                       (fun acc s -> <:expr< Lwt.bind ($s$) (fun () -> $acc$) >>)
-                      <:expr< do { $list:(create_setters @ [ <:expr< let v = { $list:create_fields$ } in Lwt.return (`Object_created v) >> ])$ } >>
+                      <:expr< do { $list:([ <:expr< let v = { $list:create_fields$ } in Lwt.return (`Object_created v) >> ])$ } >>
                       create_setters_lwt)
-                    recursive$
+                    recursive$)
               >>
               uniques$ >>)
            create_patterns$ ;

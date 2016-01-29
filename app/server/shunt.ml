@@ -56,7 +56,7 @@ let apply = function
         | Object_member.Active ->
           Lwt_log.ign_info_f "shunt %s maps to member %d" shunt uid ;
           lwt _ = $member(uid)<-shunts %% (List.filter (fun s -> s <> shunt)) in
-          Object_member.Store.unset_shunts_by_strings [ shunt ] ;
+          lwt _ = Object_member.Store.unset_shunts_by_strings [ shunt ] in
           lwt _ = Vault.set uid in
           return_unit
         | _ ->

@@ -312,7 +312,7 @@ let dequeue_messages =
       match message.uid with
         None -> return_unit
       | Some uid ->
-        $message(uid)<-transport = (Object_message.(Email { offset = 0 ; message_id })) ;
+        lwt _ = $message(uid)<-transport = (Object_message.(Email { offset = 0 ; message_id })) in
         return_unit
     with exn -> Lwt_log.error_f ~exn "couldn't send email to %s: %s" message.locator.email (Printexc.to_string exn)
   in

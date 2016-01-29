@@ -45,55 +45,25 @@ let run () =
   lwt _ =
     let email = "william@accret.io" and password = "cisco1234" in
 
-    match Object_member.Store.check_uid 1 with
-    | false ->
-      Lwt_log.ign_info "original member doesn't exist" ;
-      lwt salt = fresh_salt () in
-      Object_member.Store.create
-        ~preferred_email:email
-        ~name:"William"
+    lwt salt = fresh_salt () in
+    Object_member.Store.create
+      ~preferred_email:email
+      ~name:"William"
         ~emails:[ email ; "william@themipsfactory.com" ]
         ~rights:Object_member.Admin
         ~authentication:(Password (salt, hash salt password))
         ()
-       >>= (function
-           | `Object_already_exists _ -> return_unit
-           | `Object_created obj -> Notify.send_welcome_message obj.Object_member.uid)
-     | true ->
-       Lwt_log.ign_info "original member does exist" ;
-       $member(1)<-rights = Object_member.Admin ;
-       lwt _ = $member(1)<-emails %% (fun _ -> [ email ; "warnegia@gmail.com" ; "william@themipsfactory.com" ]) in
-
-       return_unit
+    >>= (function
+        | `Object_already_exists _ ->
+          Lwt_log.ign_info "looks like the root member already exists" ;
+          return_unit
+        | `Object_created obj ->
+          Notify.send_welcome_message obj.Object_member.uid)
   in
-
-  Lwt_log.ign_info_f "let's find warnegia" ;
-
-  (* reconnecting warnegia *)
-  lwt _ =
-    let warnegia = "warnegia@gmail.com" in
-    match_lwt Object_member.Store.find_by_email warnegia with
-      None ->
-      Lwt_log.ign_info_f "reconnecting warnegia" ;
-      lwt _ = $member(1)<-emails %% (fun emails -> warnegia :: emails) in
-      return_unit
-    | Some 1 ->
-      Lwt_log.ign_info_f "warnegia exists" ;
-      return_unit
-    | Some uid ->
-      Lwt_log.ign_info_f "reconnecting warnegia after disconnecting from %d" uid ;
-      $member(uid)<-preferred_email = "accretio+warnegia@gmail.com" ;
-      lwt _ = $member(uid)<-emails %% (fun _ -> [ "accretio+warnegia@gmail.com" ]) in
-      lwt _ = $member(1)<-emails %% (fun emails -> warnegia :: emails) in
-      return_unit
-  in
-
-  (* creating a dummy payment *)
-
 
   (* setting the timzeone *)
-  (* CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ; *)
+  CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ;
 
-(* activating the crons *)
+  (* activating the crons *)
 
   Executor.start_cron ()

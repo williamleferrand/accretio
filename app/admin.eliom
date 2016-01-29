@@ -92,7 +92,7 @@ let apply_member_op =
              lwt _ = $member(uid)<-name %% (fun _ -> name) in
              return_true
            | MemberUpdatePreferredEmail email ->
-             $member(uid)<-preferred_email = email ;
+             lwt _ = $member(uid)<-preferred_email = email in
              $member(uid)<-emails %% (fun emails -> email :: List.filter (fun e -> e <> email) emails)
            | MemberAddEmail email ->
              $member(uid)<-emails %% (fun emails -> email :: List.filter (fun e -> e <> email) emails)
@@ -101,28 +101,28 @@ let apply_member_op =
            | MemberUpdateRecoveryToken token ->
              $member(uid)<-recovery_token %% (fun _ -> token)
            | MemberResetPassword ->
-             $member(uid)<-state = Object_member.Active ;
+             lwt _ = $member(uid)<-state = Object_member.Active in
              lwt token = Ys_random.random_string 48 in
              lwt _ = $member(uid)<-recovery_token %% (fun _ -> token) in
              lwt _ = Notify.send_recovery_message uid token in
              return_true
            | MemberMakeAdmin ->
-             $member(uid)<-rights = Object_member.Admin ;
+             lwt _ = $member(uid)<-rights = Object_member.Admin in
              return_true
            | MemberMakeDefault ->
-             $member(uid)<-rights = Object_member.Default ;
+             lwt _ = $member(uid)<-rights = Object_member.Default in
              return_true
            | MemberMakeArchived ->
-             $member(uid)<-state = Object_member.Archived ;
+             lwt _ = $member(uid)<-state = Object_member.Archived in
              return_true
            | MemberMakeGhost ->
-             $member(uid)<-state = Object_member.Ghost ;
+             lwt _ = $member(uid)<-state = Object_member.Ghost in
              return_true
            | MemberUpdateSettingsBatched choice ->
              lwt _ = $member(uid)<-settings %% (fun settings -> { settings with Object_member.email_notify_batch_emails = choice }) in
              return_true
            | MemberUpdateStatement statement ->
-             $member(uid)<-statement = statement ;
+             lwt _ = $member(uid)<-statement = statement in
              return_true
            | _ ->
              Lwt_log.ign_info "the member op has NOT been applied" ;
@@ -136,14 +136,14 @@ let apply_thread_op =
         (fun session ->
           match op with
           | ThreadUpdateOwner owner ->
-            $thread(uid)<-owner = owner ;
+            lwt _ = $thread(uid)<-owner = owner in
             return_true
           | ThreadUpdateSubject subject ->
-            $thread(uid)<-subject = subject ;
+            lwt _ = $thread(uid)<-subject = subject in
             return_true
           | ThreadMessagesReset ->
-            $thread(uid)<-messages = [] ;
-            $thread(uid)<-number_of_messages = 0 ;
+            lwt _ = $thread(uid)<-messages = [] in
+            lwt _ = $thread(uid)<-number_of_messages = 0 in
             return_true
           | _ -> return_true)
   )
@@ -532,7 +532,7 @@ open Helpers
 
 let builder_member uid v =
 
-  let mask_to_string = function
+(*  let mask_to_string = function
     | `Cohort weight -> Printf.sprintf "cohort (%d)" weight
   in
 
@@ -549,7 +549,7 @@ let builder_member uid v =
   in
 
   let string_to_member _ = `Member in
-
+*)
   div ~a:[ a_class [ "box" ]] [
 
     view uid ;
