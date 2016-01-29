@@ -18,7 +18,7 @@
  *)
 
 
-let regexp = Str.regexp "[a-zA-Z0-9\.\_-]+@[a-zA-Z0-9]+\.[a-zA-Z]+"
+let regexp = Str.regexp "[a-zA-Z0-9\._-]+@[a-zA-Z0-9-_\.]+\.[a-zA-Z]+"
 
 let get_all_emails text =
   List.fold_left

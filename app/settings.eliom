@@ -52,7 +52,7 @@ let update_password (old_password, new_password) =
          | false -> return (Some false)
          | true ->
            lwt salt = fresh_salt () in
-           $member(session.Vault.member_uid)<-authentication = (Password(salt, hash salt new_password)) ;
+           lwt _ = $member(session.Vault.member_uid)<-authentication = (Password(salt, hash salt new_password)) in
            return (Some true))
 
 let update_password = server_function ~name:"settings-update-password" Json.t<string * string> update_password

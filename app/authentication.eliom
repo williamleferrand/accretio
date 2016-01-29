@@ -81,7 +81,7 @@ let create_and_join name email password =
 (* we need to plug some merging logic here *)
 let update_and_join uid name email password =
   lwt salt = fresh_salt () in
-  $member(uid)<-preferred_email = email ;
+  lwt _ = $member(uid)<-preferred_email = email in
   match_lwt $member(uid)<-emails %% (fun emails -> email :: List.filter (fun e -> e <> email) emails) with
   | false ->
     (* is it even possible ?? *)
@@ -89,8 +89,8 @@ let update_and_join uid name email password =
     return JoinError
   | true ->
     lwt _ = $member(uid)<-name %% (fun _ -> name) in
-    $member(uid)<-authentication = (Password(salt, hash salt password)) ;
-    $member(uid)<-state = Active ;
+    lwt _ = $member(uid)<-authentication = (Password(salt, hash salt password)) in
+    lwt _ = $member(uid)<-state = Active in
     lwt session = Sessions.connect uid in
     return (JoinSuccess session)
 

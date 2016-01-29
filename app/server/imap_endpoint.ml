@@ -317,7 +317,7 @@ let process_email =
                       return (Some society)
                     | Some call ->
                       Lwt_log.ign_info_f "dispatching the message automatically succeeded for message %d and stage %s" message.Object_message.uid target_stage ;
-                      $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage ;
+                      lwt _ = $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
                       lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
                       return (Some society)
 
@@ -421,7 +421,6 @@ let wait_mail host port user pass mbox =
     in
     run sock i o c (`Cmd (Imap.login user pass)) >>= login
   | `Untagged _ -> assert false
-
 
 let _ =
   Lwt_log.ign_info_f "starting imap loop" ;

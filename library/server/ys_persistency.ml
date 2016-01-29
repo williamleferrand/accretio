@@ -24,33 +24,119 @@
 open Lwt
 open Lwt_preemptive
 
-let open_db_blocking ~cache_size = LevelDB.open_db ~cache_size
 
-let shutdown = detach LevelDB.close
 
-let get_exn db = detach (LevelDB.get_exn db)
-let get db = detach (LevelDB.get db)
+(* ocsipersist storage *)
 
-let put =
-  LevelDB.put ~sync:true
-
-let delete =
-  LevelDB.delete ~sync:true
-
-let compact db =
-  LevelDB.compact_range db ~from_key:None ~to_key:None
-
-module Batch =
+module Ocsipersist =
 struct
 
-  let get_exn db = detach (Array.map (LevelDB.get_exn db))
-  let get db = detach (Array.map (LevelDB.get db))
+  let open_db_blocking ~cache_size name =
+    let name = Filename.basename name in
+    Ocsipersist.open_table name
+
+  let get db key =
+    try_lwt
+      lwt value = Ocsipersist.find db key in
+      return (Some value)
+    with Not_found -> return_none
+
+  let put db key value =
+    Ocsipersist.add db key value
+
+  let delete db key =
+    Ocsipersist.remove db key
+
+  module Batch =
+  struct
+
+    let get db keys =
+      lwt results =
+        Lwt_list.map_s
+          (fun key -> get db key)
+          (Array.to_list keys)
+      in
+      return (Array.of_list results)
+
+  end
+
+  let max_key db =
+    try_lwt
+      lwt max_id =
+        Ocsipersist.fold_step
+          (fun key _ acc ->
+             return (max (Ys_uid.extract_from_key key) acc))
+          db
+          0
+      in
+      return (Some max_id)
+    with _ -> return_none
 
 end
 
-let max_key_blocking db =
-  let iterator = LevelDB.Iterator.make db in
-  LevelDB.Iterator.seek_to_last iterator ;
-  match LevelDB.Iterator.valid iterator with
-     | false -> None
-     | true -> Some (LevelDB.Iterator.get_key iterator)
+
+module LevelDBStorage =
+struct
+
+  let open_db_blocking ~cache_size = LevelDB.open_db ~cache_size
+
+  let get db = detach (LevelDB.get db)
+
+  let put db key value =
+    LevelDB.put ~sync:false db key value ;
+    return_unit
+
+  let delete db key =
+    LevelDB.delete ~sync:false db key ;
+    return_unit
+
+  module Batch =
+  struct
+
+    let get db = detach (Array.map (LevelDB.get db))
+
+  end
+
+  let max_key db =
+    try_lwt
+      let iterator = LevelDB.Iterator.make db in
+      LevelDB.Iterator.seek_to_last iterator ;
+      match LevelDB.Iterator.valid iterator with
+      | false -> return_none
+      | true -> return (Some (Ys_uid.extract_from_key (LevelDB.Iterator.get_key iterator)))
+    with _ -> return_none
+
+end
+
+
+
+module Siphon =
+struct
+
+  let from_leveldb_to_ocsipersist name =
+    Lwt_log.ign_info_f "migrating data from leveldb to ocsipersist for table %s" name ;
+    let dbin = LevelDBStorage.open_db_blocking ~cache_size:0 name in
+    let dbout = Ocsipersist.open_db_blocking ~cache_size:0 name in
+
+    let it = LevelDB.Iterator.make dbin in
+    LevelDB.Iterator.seek_to_first it ;
+
+    let rec drain () =
+      match LevelDB.Iterator.valid it with
+        false -> return_unit
+      | true ->
+        let key = LevelDB.Iterator.get_key it in
+        let value = LevelDB.Iterator.get_value it in
+        lwt _ = Ocsipersist.put dbout key value in
+        LevelDB.Iterator.next it ;
+        drain ()
+    in
+
+    lwt _ = drain () in
+
+    LevelDB.close dbin ;
+    Lwt_log.ign_info_f "transfer done!" ;
+    return_unit
+
+
+end

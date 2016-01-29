@@ -50,7 +50,7 @@ let request_recovery email =
         match_lwt $member(uid)<-recovery_token %% (fun _ -> token) with
         | false -> return ContactSupport
         | true ->
-          $member(uid)<-recovery_token_expiration_timestamp = (Unix.time () +. Ys_config.get_float "recovery-token-timeout");
+          lwt _ = $member(uid)<-recovery_token_expiration_timestamp = (Unix.time () +. Ys_config.get_float "recovery-token-timeout") in
           lwt _ = Notify.send_recovery_message uid token in
           return EmailSent
   with _ -> return EmailSent
@@ -68,13 +68,12 @@ let recover (token, password) =
       >>= function
       | None -> return InvalidToken
       | Some uid ->
-        $member(uid)->(recovery_token, recovery_token_expiration_timestamp)
-        >>= function
+        match_lwt $member(uid)->(recovery_token, recovery_token_expiration_timestamp) with
         | (recovery_token, recovery_token_expiration_timestamp) when recovery_token = token
                                                                   && recovery_token_expiration_timestamp >= Unix.time () ->
           (lwt salt = fresh_salt () in
-           $member(uid)<-authentication = Password(salt, hash salt password) ;
-           $member(uid)<-recovery_token_expiration_timestamp = 0.0 ;
+           lwt _ = $member(uid)<-authentication = Password(salt, hash salt password) in
+           lwt _ = $member(uid)<-recovery_token_expiration_timestamp = 0.0 in
            lwt session = Sessions.connect uid in
            return (Recovered session))
         | _ -> return InvalidToken
@@ -110,8 +109,7 @@ let dom_request_recovery () =
             | _ as email when not (Ys_email.is_valid email) -> update_state `IncorrectInput
             | _ as email ->
               Lwt.ignore_result
-                (%request_recovery email
-                 >>= function
+                (match_lwt %request_recovery email with
                  | AccountSuspended motive -> update_state (`AccountSuspended motive); return_unit
                  | AccountDisabled -> update_state `AccountDisabled; return_unit
                  | ContactSupport -> update_state `ContactSupport; return_unit
