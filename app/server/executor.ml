@@ -142,7 +142,7 @@ let context_factory mode society =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _ | _, Object_message.Member member ->
-            message_member ~member ~subject:(subject) ~content ()
+            message_member ~member ~subject:(subject) ~data ~content ()
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none
