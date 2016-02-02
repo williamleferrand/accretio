@@ -162,7 +162,7 @@ let ask_non_pilot_details context message =
     context.reply_to
       ~message
       ~content:[
-        pcdata "Great! Have you been in a small plane before?"
+        pcdata "Great! Have you been in a small place before?"
       ]
       ()
   in
