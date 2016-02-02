@@ -950,11 +950,12 @@ let extract_tagline context message =
     None ->
     return (`FindVolunteer content)
   | Some previous_run_id ->
+    let previous_run_id = Int64.of_string previous_run_id in
     match_lwt context.get_message_data ~message ~key:key_run_id with
       None -> return (`FindVolunteer content)
     | Some run_id ->
       let run_id = Int64.of_string run_id in
-      match_lwt context.search_members ~query:(tag_has_participated_run run_id) () with
+      match_lwt context.search_members ~query:(tag_has_participated_run previous_run_id) () with
         [] -> return (`FindVolunteer content)
       | _ as members ->
         lwt _ =
