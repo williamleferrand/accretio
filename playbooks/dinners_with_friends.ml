@@ -19,6 +19,9 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 open Message_parsers
+open Toolbox
+
+open Ys_uid
 
 let _ =
   CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.UTC_Plus (-8))
@@ -33,6 +36,7 @@ let version = 0
 (* local parameters *)
 
 let key_run_id = "dinner-with-friends-run-id"
+let key_previous_run_id = "dinner-with-friends-previous-run-id"
 let key_suggestion = sprintf "suggestion-%Ld"
 let key_volunteer = sprintf "dinner-with-friends-volunteer-%Ld"
 let tag_volunteer = sprintf "volunteer%Ld"
@@ -43,8 +47,11 @@ let key_date = sprintf "dinner-with-friend-date-%Ld"
 let key_negative_replies_in_a_row = sprintf "dinner-with-friends-negative-replies-in-a-row-%d"
 let tag_timer_volunteer_booking = sprintf "timervolunteerbooking%Ld"
 let tag_has_participated = "hasparticipated"
+let tag_has_participated_run = sprintf "hasparticipated%Ld"
 let key_email_thread_anchor = sprintf "email-thread-anchor-%Ld-%d"
 let tag_not_newbie = "notnewbie"
+let tag_volunteer_timer = sprintf "volunteer-timer-%Ld"
+let key_tagline = "tagline"
 
 (* some helpers ***************************************************************)
 
@@ -63,6 +70,12 @@ let get_date context run_id =
 
 let schedule_dinner context () =
   let run_id = Ys_time.now () in
+  lwt _ =
+    match_lwt context.get ~key:key_run_id with
+      None -> return_unit
+    | Some value ->
+      context.set ~key:key_previous_run_id ~value
+  in
   lwt _ = context.set ~key:key_run_id ~value:(Int64.to_string run_id) in
   lwt participants = context.search_members ~query:"active" () in
   let count_participants = List.length participants in
@@ -90,7 +103,7 @@ let schedule_dinner context () =
               br () ;
               pcdata "There are enough potential participants for another dinner. " ; br () ;
               br () ;
-              pcdata "When is the next dinner? Please give me a ISO 8601 date. (eg 2013-05-15T08:30:0)"
+              pcdata "When is the next dinner? Please give me a ISO 8601 date. (eg 2013-05-15T08:30:00)"
             ]
             () in
         return `None
@@ -657,7 +670,6 @@ in
     return `None
 
 let split_payment context message =
-  let open Ys_uid in
   match_lwt context.get_message_data ~message ~key:key_run_id with
     None -> return `None
   | Some run_id ->
@@ -674,14 +686,15 @@ let split_payment context message =
           (fun acc email ->
              match_lwt Object_member.Store.find_by_email email with
              | None -> return acc
-             | Some uid -> return (UidSet.add uid acc))
+             | Some uid ->
+               return (UidSet.add uid acc))
           UidSet.empty
           members
       in
       let members = UidSet.elements members in
       lwt _ =
         Lwt_list.iter_s
-          (fun member -> context.tag_member ~member ~tags:[ tag_has_participated ])
+          (fun member -> context.tag_member ~member ~tags:[ tag_has_participated ; tag_has_participated_run run_id ])
           members
       in
       let amount = ref 0.0 in
@@ -713,15 +726,76 @@ let split_payment context message =
                  context.set_timer ~duration:(Calendar.Period.lmake ~minute:1 ()) call)
               calls
           in
-          lwt _ =
-            context.reply_to
-              ~message
-              ~content:[ pcdata "Great, asking "; pcdata (string_of_int (List.length members)) ;
-                         pcdata (Printf.sprintf " members $%.2f each" owed) ]
-              ()
-          in
-          return `None
-        end
+
+          lwt _ = context.set_timer ~duration:(Calendar.Period.lmake ~minute:1 ()) (`CheckMembers message) in
+          return (`ThankOrganizer run_id)
+end
+
+
+let check_members context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return `None
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt members =  extract_members_from_message context message in
+    (* let's compute who didn't came *)
+    lwt registered_participants = context.search_members ~query:(tag_joining run_id) () in
+    let registered_participants = Ys_uid.of_list registered_participants in
+    let didnt_came = UidSet.diff registered_participants (UidSet.of_list members) in
+
+    lwt didnt_came =
+      Lwt_list.map_s
+        (fun member ->
+           lwt preferred_email, name = $member(member)->(preferred_email, name) in
+           return (li [ pcdata name ; pcdata " " ; pcdata preferred_email ]))
+        (UidSet.elements didnt_came)
+    in
+
+    lwt _ =
+      context.reply_to
+        ~message
+        ~data:[ key_run_id, Int64.to_string run_id ]
+        ~content:[
+          pcdata "The people below registered but didn't came. Reply with the list of the people that you would like to remove from the group" ;
+          br () ;
+          ul didnt_came ;
+        ]
+        ()
+  in
+  return `None
+
+let thank_organizer context run_id =
+  match_lwt context.get ~key:(key_volunteer run_id) with
+    None -> return `None
+  | Some member ->
+    let member = Ys_uid.of_string member in
+    lwt _ =
+      context.message_member
+        ~member
+        ~subject:"Thanks!"
+        ~content:[ pcdata "Thank you very much for organizing this dinner!" ]
+        ()
+    in
+    return `None
+
+let remove_members context message =
+  lwt members = extract_members_from_message context message in
+  lwt _ =
+    Lwt_list.iter_s
+      (fun member ->
+         context.log_info "removing member %d" member ;
+         context.remove_member ~member)
+      members
+  in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[ pcdata "Ok, I removed " ;
+                 pcdata (string_of_int (List.length members)) ;
+                 pcdata " members" ]
+      ()
+  in
+  return `None
 
 let notify_participants context (run_id, only_new_members) =
   context.log_info "reminding all participants for run_id %Ld" run_id ;
@@ -870,6 +944,63 @@ let reset_anchors_current_run context () =
       participants in
     return `None
 
+let extract_tagline context message =
+  lwt content = context.get_message_content ~message in
+  match_lwt context.get ~key:key_previous_run_id with
+    None ->
+    return (`FindVolunteer content)
+  | Some previous_run_id ->
+    match_lwt context.get_message_data ~message ~key:key_run_id with
+      None -> return (`FindVolunteer content)
+    | Some run_id ->
+      let run_id = Int64.of_string run_id in
+      match_lwt context.search_members ~query:(tag_has_participated_run run_id) () with
+        [] -> return (`FindVolunteer content)
+      | _ as members ->
+        lwt _ =
+          context.set_timer
+            ~label:(tag_volunteer_timer run_id)
+            ~duration:(Calendar.Period.lmake ~hour:24 ())
+            (`FindVolunteer content)
+        in
+        lwt members =
+          Lwt_list.map_s
+            (fun member ->
+               lwt preferred_email, name = $member(member)->(preferred_email, name) in
+               return (li [ pcdata name ; pcdata " " ; pcdata preferred_email ]))
+            members
+        in
+        lwt _ =
+          context.reply_to
+            ~message
+            ~data:[ key_run_id, Int64.to_string run_id ; key_tagline, content ]
+            ~content:[
+              pcdata "Do you want to pick up a member below? If you don't send me a volunteer within 24 hours, I'll make a random choice" ;
+              br () ;
+              ul members ;
+            ]
+            ()
+        in
+        return `None
+
+let extract_candidate context message =
+  match_lwt context.get_message_data ~message ~key:key_tagline with
+    None ->
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Can't find the attached tagline" ]
+        ()
+    in
+    return `None
+  | Some tagline ->
+    lwt members = extract_members_from_message context message in
+    match members with
+      [] -> return (`FindVolunteer tagline)
+    | member :: _ -> return (`FindVolunteerWithHint (tagline, member))
+
+
+
 (* the playbook ***************************************************************)
 
 PARAMETERS
@@ -887,7 +1018,10 @@ PLAYBOOK
    *make_announcement_current_run ~> `MakeAnnouncementRunId of int64 ~> make_announcement_run_id<forward> ~> `Message of email ~> prepare_announcement ~> `MakeAnnouncement of (string * int list) ~> make_announcement
 
                                                      set_date_and_ask_for_custom_message ~> `AskAgainForDate of int ~> ask_again_for_date<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message
-   *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message<content> ~> `Content of string ~> find_volunteer_with_tagline
+
+   extract_tagline<forward> ~> `Message of email ~> extract_candidate ~> `FindVolunteerWithHint of (string * int) ~> find_volunteer_with_tagline_and_hint
+                                                    extract_candidate ~> `FindVolunteer of string ~> find_volunteer_with_tagline
+   *schedule_dinner<forward> ~> `Message of email ~> set_date_and_ask_for_custom_message<forward> ~> `Message of email ~> extract_tagline ~> `FindVolunteer of string ~> find_volunteer_with_tagline
                                                      look_for_candidate ~> `NoVolunteer ~> no_volunteer
                                                      return_volunteer ~> `Volunteer of int ~> ask_volunteer_for_yelp_link<forward> ~> `Message of email ~> review_yelp_link<forward> ~> `Message of email ~> forward_yelp_link_to_all_members ~> `NotifyParticipants of (int64 * bool) ~> notify_participants
 
@@ -903,7 +1037,9 @@ PLAYBOOK
                                                                                                                            remind_volunteer ~> `Booked of email ~> confirm_to_all_participants
 
        *debrief_current_run ~> `DebriefRunId of int64 ~> debrief<forward> ~> `Message of email ~> split_payment ~> `Message of email ~> split_payment
+        split_payment ~> `ThankOrganizer of int64 ~> thank_organizer
         split_payment ~> `RequestPayment of (int * string * float * int) ~> request_payment
+        split_payment ~> `CheckMembers of int ~> check_members ~> `Message of email ~> remove_members
 
  *notify_participants_current_run ~> `RunId of (int64 * bool) ~> notify_participants
  *notify_participants_current_run_only_new_members ~> `RunId of (int64 * bool) ~> notify_participants
@@ -915,4 +1051,3 @@ PLAYBOOK
 
 
 CRON remind_all "14 8 * * 2 *"
-CRON schedule_dinner "27 10 * * 2 *"

@@ -47,6 +47,31 @@ let find_volunteer_with_tagline context tagline =
   lwt _ = context.set ~key:key_tagline ~value:tagline in
   return `FindCandidate
 
+let find_volunteer_with_tagline_and_hint context (tagline, member) =
+  let run_id = Ys_time.now () in
+  lwt _ = context.set ~key:key_run_id ~value:(Int64.to_string run_id) in
+  lwt _ = context.set ~key:key_tagline ~value:tagline in
+  context.log_info "asking member %d to volunteer" member ;
+  lwt _ =
+    context.message_member
+      ~subject:"Would you like to organize the next dinner?"
+      ~data:[ key_run_id, Int64.to_string run_id ]
+      ~member
+      ~content:[
+        pcdata "Greetings," ; br () ;
+        br () ;
+        span [ pcdata tagline ] ; br () ;
+      ]
+      ()
+  in
+  lwt _ =
+    context.set_timer
+      ~label:(tag_timer run_id member)
+      ~duration:(Calendar.Period.lmake ~hour:24 ())
+      (`CandidateDidntReplied (member, run_id))
+  in
+  return `None
+
 let look_for_candidate context () =
   match_lwt context.get ~key:key_run_id with
     None -> return `AlertSupervisor
@@ -124,6 +149,10 @@ let candidate_with_message context message =
 
 
 COMPONENT
+
+find_volunteer_with_tagline_and_hint ~> `No of email ~> candidate_declined
+find_volunteer_with_tagline_and_hint ~> `Yes of email ~> return_volunteer
+find_volunteer_with_tagline_and_hint ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied
 
                                                                                        candidate_declined ~> `AlertSupervisor ~> alert_supervisor
 find_volunteer_with_tagline ~> `FindCandidate ~> look_for_candidate ~> `No of email ~> candidate_declined ~> `FindCandidate ~> look_for_candidate

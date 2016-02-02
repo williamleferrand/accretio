@@ -202,25 +202,29 @@ let move_to_ocsipersist () =
     ]
 
 let run () =
- (* lwt _ = move_to_ocsipersist () in *)
-  lwt _ = reset_society_tombstones () in
+  try_lwt
+    (* lwt _ = move_to_ocsipersist () in *)
+    lwt _ = reset_society_tombstones () in
 
-  lwt _ = create_playbook_threads () in
-  lwt _ = reset_message_transport () in
-  lwt _ = reset_all_stacks () in
+    lwt _ = create_playbook_threads () in
+    lwt _ = reset_message_transport () in
+    lwt _ = reset_all_stacks () in
 
-  lwt _ = reattach_payments () in
-  lwt _ = load_all_and_check_for_errors () in
+    lwt _ = reattach_payments () in
+    lwt _ = load_all_and_check_for_errors () in
 
-  (* lwt _ = reset_all_boxes () in *)
-  (* reset_all_cohorts () ; *)
-  (* lwt _ = relink_all_transitions () in
-     lwt _ = inspect_parents () in
-     lwt _ = insert_owner_in_parent_cohort () in
-     lwt _ = archive_cohorts () in
-     lwt _ = update_all_pools () in *)
-  (* lwt _ = all_members_locked_are_ghosts () in *)
-  (* lwt _ = touch_all_names () in *)
-  (* lwt _ = recompute_followers_for_thoughts () in *)
+    (* lwt _ = reset_all_boxes () in *)
+    (* reset_all_cohorts () ; *)
+    (* lwt _ = relink_all_transitions () in
+       lwt _ = inspect_parents () in
+       lwt _ = insert_owner_in_parent_cohort () in
+       lwt _ = archive_cohorts () in
+       lwt _ = update_all_pools () in *)
+    (* lwt _ = all_members_locked_are_ghosts () in *)
+    (* lwt _ = touch_all_names () in *)
+    (* lwt _ = recompute_followers_for_thoughts () in *)
 
-  return_unit
+    return_unit
+  with exn ->
+    Lwt_log.ign_error_f ~exn "error caught while running the migrations" ;
+    return_unit
