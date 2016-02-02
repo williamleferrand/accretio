@@ -40,3 +40,24 @@ let extract_members_from_message context message =
       members
   in
   return (UidSet.elements members)
+
+
+(**
+  * adds a "run-id" tag to emails and get it / extracts it
+  * from all communications
+  *
+  *)
+
+let key_run_id = "toolbox-run-id"
+
+let new_run_id () = Ys_time.now ()
+
+let run_id_from_message context message =
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None ->
+    context.log_error "couldn't extract run-id from message %d" message ;
+    return_none
+  | Some run_id -> return (Some (Int64.of_string run_id))
+
+let data_run_id run_id =
+  [ key_run_id, Int64.to_string run_id ]

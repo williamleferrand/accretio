@@ -995,6 +995,13 @@ let extract_candidate context message =
     in
     return `None
   | Some tagline ->
+    lwt _ =
+      match_lwt context.get_message_data ~message ~key:key_run_id with
+       None -> return_unit
+      | Some run_id ->
+        let run_id = Int64.of_string run_id in
+        lwt _ = context.cancel_timers ~query:(tag_volunteer_timer run_id) in
+        return_unit in
     lwt members = extract_members_from_message context message in
     match members with
       [] -> return (`FindVolunteer tagline)
