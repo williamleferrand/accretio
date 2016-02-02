@@ -57,7 +57,7 @@ let find_organizer context run_id =
     in
     return `None
   | organizers ->
-    let member = List.nth organizers (List.length organizers) in
+    let member = List.nth organizers (Random.int (List.length organizers)) in
     lwt actives = context.search_members ~query:"active" () in
     context.log_info "picking up organizer %d" member ;
     lwt _ =
