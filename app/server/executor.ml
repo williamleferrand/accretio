@@ -120,17 +120,7 @@ let context_factory mode society =
             | `Object_already_exists (_, uid) -> return uid
             | `Object_created message -> return message.Object_message.uid
           in
-          lwt reference =
-            match reference with
-            | None -> $message(uid)->reference
-            | Some reference ->
-              match_lwt Object_message.Store.find_by_reference reference with
-                None -> $message(uid)->reference
-              | Some message ->
-                match_lwt $message(message)->references with
-                  [] -> $message(uid)->reference
-                | reference :: _ -> return reference
-          in
+          lwt reference = $message(uid)->reference in
           lwt _ =
             $society(society)<-data %% (fun store ->
                 List.fold_left
