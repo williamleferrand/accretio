@@ -140,6 +140,6 @@ PLAYBOOK
 
 *organize_field_trip ~> `FindOrganizer of int64 ~> find_organizer
 
-     find_orgszeanizer ~> `No of email ~> ask_someone_else ~> `FindOrganizer of int64 ~> find_organizer
+     find_organizer ~> `No of email ~> ask_someone_else ~> `FindOrganizer of int64 ~> find_organizer
      find_organizer ~> `YesWithDetails of email ~> ask_supervisor_to_summarize
      find_organizer ~> `Yes of email ~> ask_organizer_for_details<forward> ~> `Message of email ~> ask_supervisor_to_summarize
