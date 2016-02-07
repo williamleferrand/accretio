@@ -44,19 +44,20 @@ let run sock i o c v =
   let rec loop = function
     | `Await_src ->
       lwt rc = Lwt_ssl.read sock i 0 (Bytes.length i) in
-      if !debug_flag then Format.eprintf ">>> %d\n%s>>>\n%!" rc (String.sub i 0 rc);
+      Lwt_log.ign_debug_f ">>> %d\n%s>>>\n%!" rc (String.sub i 0 rc) ;
       Imap.src c i 0 rc;
       loop (Imap.run c `Await)
     | `Await_dst ->
       let rc = Bytes.length o - Imap.dst_rem c in
       lwt _ = write_fully o 0 rc in
-      if !debug_flag then Format.eprintf "<<< %d\n%s<<<\n%!" rc (String.sub o 0 rc);
+      Lwt_log.ign_debug_f "<<< %d\n%s<<<\n%!" rc (String.sub o 0 rc) ;
       Imap.dst c o 0 (Bytes.length o);
       loop (Imap.run c `Await)
     | `Untagged _ as r -> return r
     | `Ok _ -> return `Ok
     | `Error e ->
-      Format.eprintf "@[IMAP Error: %a@]@." Imap.pp_error e;
+      let s  = Format.asprintf "@[IMAP Error: %a@]@." Imap.pp_error e in
+      Lwt_log.ign_error_f "%s" s ;
       Lwt.fail ImapError
   in
   loop (Imap.run c v)
@@ -78,8 +79,8 @@ let rec never_stop f =
     lwt _ = f () in never_stop f
   with exn ->
     Lwt_log.ign_error_f ~exn "something weird happened, restarting: %s" (Printexc.to_string exn) ;
+    lwt _ = Lwt_unix.sleep 10. in
     never_stop f
-
 
 (* reimplem the imap loop *)
 
