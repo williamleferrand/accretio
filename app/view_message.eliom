@@ -83,16 +83,13 @@ let format_interlocutor = function
     | CatchAll -> [ pcdata "CatchAll" ]
 
 let format view =
-  div ~a:[ a_class [ "message" ]] [
+  div ~a:[ a_class [ "message" ] ; a_user_data "reference" view.reference ] [
     Ys_timeago.format ~a:[ a_class [ "message-created-on" ]] view.created_on ;
-    div ~a:[ a_class [ "message-reference" ]] [
-      pcdata view.reference
-    ] ;
     div ~a:[ a_class [ "message-origin" ]] (pcdata "From: " :: (format_interlocutor view.origin)) ;
     div ~a:[ a_class [ "message-destination" ]] (pcdata "To: " :: (format_interlocutor view.destination)) ;
     div ~a:[ a_class [ "message-subject" ]] [ pcdata "Subject: " ;  pcdata view.subject ] ;
     div ~a:[ a_class [ "message-content" ]] [
-      pcdata view.content ;
+      pcdata view.content (* todo: put raw data there, but for some reason Unsafe.data has encoding issues *)
     ]
   ]
 

@@ -474,7 +474,7 @@ let attach_outbox society outbox =
         ~a:[ a_onclick reply ]
         [ pcdata "Reply" ]
     in
-    div ~a:[ a_class [ "message-outbox" ]] [
+    div ~a:[ a_class [ "message-box" ]] [
       View_message.format message ;
       textarea_reply ;
       reply ;
@@ -497,12 +497,11 @@ let dom bundle =
           div ~a:[ a_class [ "tagger" ]]
             (List.map
                (fun option ->
-                  div [
                     button
                       ~button_type:`Button
                       ~a:[ a_onclick (fun _ -> detach_rpc %dispatch_message_manually (message.View_message.uid, option) (fun _ -> ())) ]
                       [ pcdata option ]
-                  ])
+                  )
                options)
         with Not_found -> pcdata ""
       in
@@ -531,7 +530,7 @@ let dom bundle =
           ~a:[ a_onclick reply ]
           [ pcdata "Reply" ]
       in
-      div ~a:[ a_class [ "message-inbox" ]] [
+      div ~a:[ a_class [ "message-box" ]] [
         View_message.format message ;
         action ;
         tagger ;
@@ -577,6 +576,7 @@ let dom bundle =
   (* displaying the mailbox more or less in RT *)
 
   let inbox = div ~a:[ a_class [ "inbox" ]] [] in
+
   let outbox = div ~a:[ a_class [ "outbox" ]] [] in
 
   attach_inbox view.uid inbox ;
@@ -945,12 +945,23 @@ let dom bundle =
     div ~a:[ a_class [ "society-leader-upper" ; "clearfix" ]] [
       div ~a:[ a_class [ "logs"; "left" ]] [  stack ; logs ] ;
       graph ;
-      div ~a:[ a_class [ "mailboxes" ; "left" ]] [
-        inbox ;
-        outbox
-      ] ;
     ] ;
     div ~a:[ a_class [ "society-leader-lower" ]] [
+
+      div ~a:[ a_class [ "mailboxes" ]] [
+        h2 [ pcdata "Mailboxes" ] ;
+        div ~a:[ a_class [ "clearfix" ]] [
+          div ~a:[ a_class [ "inbox-outer" ; "left" ]] [
+            h3 [ pcdata "Inbox" ] ;
+            inbox ;
+          ] ;
+          div ~a:[ a_class [ "outbox-outer" ; "left" ]] [
+            h3 [ pcdata "Outbox" ] ;
+            outbox
+          ] ;
+        ] ;
+      ] ;
+
       div ~a:[ a_class [ "triggers" ]] [
         h2 [ pcdata "Triggers" ] ;
         div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
