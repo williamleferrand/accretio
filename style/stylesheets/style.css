@@ -1168,43 +1168,24 @@ h2 {
 }
 /* line 37, ../sass/_society_leader.scss */
 .society-leader .society-leader-upper .playbook-automata {
-  width: 50%;
+  width: 75%;
 }
 /* line 39, ../sass/_society_leader.scss */
 .society-leader .society-leader-upper .playbook-automata svg {
   width: 100%;
   height: 100%;
 }
-/* line 44, ../sass/_society_leader.scss */
-.society-leader .society-leader-upper .mailboxes {
-  overflow-y: scroll;
-  width: 25%;
-  max-height: 250px;
-}
-/* line 48, ../sass/_society_leader.scss */
-.society-leader .society-leader-upper .mailboxes .inbox, .society-leader .society-leader-upper .mailboxes .outbox {
-  padding: 0 0 0 10px;
-}
-/* line 51, ../sass/_society_leader.scss */
-.society-leader .society-leader-upper .mailboxes .inbox {
-  background-color: black;
-  color: white;
-}
-/* line 55, ../sass/_society_leader.scss */
-.society-leader .society-leader-upper .mailboxes .outbox {
-  background-color: pink;
-}
-/* line 62, ../sass/_society_leader.scss */
+/* line 47, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower > div {
   padding: 10px;
   margin-bottom: 10px;
 }
-/* line 65, ../sass/_society_leader.scss */
+/* line 50, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower > div h2 {
   padding: 10px 0;
   font-size: 24px;
 }
-/* line 69, ../sass/_society_leader.scss */
+/* line 54, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower > div input[type="number"], .society-leader .society-leader-lower > div input[type="text"] {
   padding: 10px;
   font-size: 14px;
@@ -1217,55 +1198,94 @@ h2 {
   margin-right: 10px;
   display: inline;
 }
-/* line 84, ../sass/_society_leader.scss */
+/* line 68, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes {
+  background-color: green;
+}
+/* line 70, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox-outer, .society-leader .society-leader-lower .mailboxes .outbox-outer {
+  width: 50%;
+}
+/* line 72, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox-outer h3, .society-leader .society-leader-lower .mailboxes .outbox-outer h3 {
+  text-align: center;
+  font-size: 18px;
+  line-height: 36px;
+}
+/* line 78, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox, .society-leader .society-leader-lower .mailboxes .outbox {
+  overflow-y: scroll;
+  max-height: 250px;
+  padding: 10px;
+}
+/* line 82, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox .message-box, .society-leader .society-leader-lower .mailboxes .outbox .message-box {
+  border-bottom: 1px solid white;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+/* line 89, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox {
+  background-color: black;
+  color: white;
+}
+/* line 93, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox .tagger button {
+  margin-right: 10px;
+}
+/* line 100, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .outbox {
+  background-color: pink;
+}
+/* line 106, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .triggers {
   background-color: orange;
 }
-/* line 86, ../sass/_society_leader.scss */
+/* line 108, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .triggers .trigger {
   width: 550px;
   padding-bottom: 10px;
   padding-right: 10px;
   float: left;
 }
-/* line 94, ../sass/_society_leader.scss */
+/* line 116, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members {
   background-color: #CECECE;
 }
-/* line 97, ../sass/_society_leader.scss */
+/* line 119, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members .add-member {
   float: left;
 }
-/* line 101, ../sass/_society_leader.scss */
+/* line 123, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members .member {
   float: left;
   margin-left: 20px;
 }
-/* line 104, ../sass/_society_leader.scss */
+/* line 126, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members .member .member-email {
   margin: 0 5px;
 }
-/* line 107, ../sass/_society_leader.scss */
+/* line 129, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members .member button {
   margin-right: 10px;
 }
-/* line 115, ../sass/_society_leader.scss */
+/* line 137, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger {
   background-color: yellow;
 }
-/* line 117, ../sass/_society_leader.scss */
+/* line 139, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger button {
   margin-left: 10px;
 }
-/* line 120, ../sass/_society_leader.scss */
+/* line 142, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger .messenger-controls {
   margin-top: 10px;
 }
-/* line 125, ../sass/_society_leader.scss */
+/* line 147, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .data {
   background-color: #f9d5f9;
 }
-/* line 127, ../sass/_society_leader.scss */
+/* line 149, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .data .data-item {
   margin-left: 20px;
   padding: 3px 0;

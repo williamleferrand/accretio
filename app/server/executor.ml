@@ -862,3 +862,6 @@ let rec start_cron () =
     Lwt_log.ign_info_f "next diff in %d %d %d %d" y m d s ;
     lwt _ = Lwt_unix.sleep (float_of_int s) in
     start_cron ()
+
+let _ =
+  ignore_result (Eliom_reference.set last_minute_checked None)

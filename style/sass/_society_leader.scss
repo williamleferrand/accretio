@@ -35,26 +35,11 @@
 
         }
         .playbook-automata {
-           width: 50% ;
+           width: 75% ;
            svg {
                width: 100% ;
                height: 100% ;
            }
-        }
-        .mailboxes {
-            overflow-y: scroll ;
-            width: 25% ;
-            max-height: 250px;
-            .inbox, .outbox {
-                padding: 0 0 0 10px;
-            }
-            .inbox {
-                background-color: black ;
-                color: white ;
-            }
-            .outbox {
-                background-color: pink ;
-            }
         }
     }
 
@@ -80,6 +65,43 @@
                 }
         }
 
+        .mailboxes {
+            background-color: green ;
+            .inbox-outer, .outbox-outer {
+                width: 50% ;
+                h3 {
+                    text-align: center;
+                    font-size: 18px;
+                    line-height: 36px;
+                }
+            }
+        .inbox, .outbox {
+                overflow-y: scroll ;
+                max-height: 250px;
+                padding: 10px ;
+                .message-box {
+                    border-bottom: 1px solid white;
+                    margin-bottom: 10px;
+                    padding-bottom: 10px ;
+
+                }
+        }
+        .inbox {
+            background-color: black ;
+            color: white ;
+            .tagger {
+                button {
+                    margin-right: 10px;
+                }
+            }
+
+
+        }
+        .outbox {
+            background-color: pink ;
+        }
+
+        }
 
         .triggers {
             background-color: orange ;
