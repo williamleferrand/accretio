@@ -300,7 +300,6 @@ let mark_sender_as_volunteer context message =
     lwt _ = context.tag_member ~member ~tags: [ tag_volunteer run_id ; tag_joining run_id ] in
     return (`Message message)
 
-
 let check_participation context () =
   match_lwt context.get ~key:key_run_id with
     None -> return `None
@@ -946,24 +945,33 @@ let reset_anchors_current_run context () =
 
 let extract_tagline context message =
   lwt content = context.get_message_content ~message in
-  match_lwt context.get ~key:key_previous_run_id with
-    None ->
-    return (`FindVolunteer content)
-  | Some previous_run_id ->
-    let previous_run_id = Int64.of_string previous_run_id in
-    match_lwt context.get_message_data ~message ~key:key_run_id with
-      None -> return (`FindVolunteer content)
-    | Some run_id ->
-      let run_id = Int64.of_string run_id in
+  match_lwt context.get_message_data ~message ~key:key_run_id with
+    None -> return (`FindVolunteer content)
+  | Some run_id ->
+    let run_id = Int64.of_string run_id in
+    lwt _ =
+      context.set_timer
+        ~label:(tag_volunteer_timer run_id)
+        ~duration:(Calendar.Period.lmake ~hour:24 ())
+        (`FindVolunteer content)
+    in
+    match_lwt context.get ~key:key_previous_run_id with
+      None ->
+      let _ =
+        context.reply_to
+          ~message
+          ~data:[ key_run_id, Int64.to_string run_id ; key_tagline, content ]
+          ~content:[
+            pcdata "Do you have a specific member in mind to ask for a suggestion? If you don't send me a suggestion within 24 hours, I'll make a random choice"
+          ]
+          ()
+      in
+      return `None
+    | Some previous_run_id ->
+      let previous_run_id = Int64.of_string previous_run_id in
       match_lwt context.search_members ~query:(tag_has_participated_run previous_run_id) () with
         [] -> return (`FindVolunteer content)
       | _ as members ->
-        lwt _ =
-          context.set_timer
-            ~label:(tag_volunteer_timer run_id)
-            ~duration:(Calendar.Period.lmake ~hour:24 ())
-            (`FindVolunteer content)
-        in
         lwt members =
           Lwt_list.map_s
             (fun member ->
@@ -1005,7 +1013,9 @@ let extract_candidate context message =
     lwt members = extract_members_from_message context message in
     match members with
       [] -> return (`FindVolunteer tagline)
-    | member :: _ -> return (`FindVolunteerWithHint (tagline, member))
+    | member :: _ ->
+      lwt _ = context.add_member ~member in
+      return (`FindVolunteerWithHint (tagline, member))
 
 
 
