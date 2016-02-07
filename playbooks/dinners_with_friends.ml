@@ -946,17 +946,27 @@ let reset_anchors_current_run context () =
 let extract_tagline context message =
   lwt content = context.get_message_content ~message in
   match_lwt context.get_message_data ~message ~key:key_run_id with
-    None -> return (`FindVolunteer content)
+    None ->
+    context.log_info "couldn't extract run_id from message metadata" ;
+    return (`FindVolunteer content)
   | Some run_id ->
     let run_id = Int64.of_string run_id in
+
+    lwt potential_candidates =
+      match_lwt context.get ~key:key_previous_run_id with
+        None -> return []
+      | Some previous_run_id ->
+      let previous_run_id = Int64.of_string previous_run_id in
+      context.search_members ~query:(tag_has_participated_run previous_run_id) ()
+    in
     lwt _ =
       context.set_timer
         ~label:(tag_volunteer_timer run_id)
         ~duration:(Calendar.Period.lmake ~hour:24 ())
         (`FindVolunteer content)
     in
-    match_lwt context.get ~key:key_previous_run_id with
-      None ->
+    match potential_candidates with
+      [] ->
       let _ =
         context.reply_to
           ~message
@@ -967,12 +977,8 @@ let extract_tagline context message =
           ()
       in
       return `None
-    | Some previous_run_id ->
-      let previous_run_id = Int64.of_string previous_run_id in
-      match_lwt context.search_members ~query:(tag_has_participated_run previous_run_id) () with
-        [] -> return (`FindVolunteer content)
-      | _ as members ->
-        lwt members =
+    | _ as members ->
+       lwt members =
           Lwt_list.map_s
             (fun member ->
                lwt preferred_email, name = $member(member)->(preferred_email, name) in
@@ -1005,7 +1011,7 @@ let extract_candidate context message =
   | Some tagline ->
     lwt _ =
       match_lwt context.get_message_data ~message ~key:key_run_id with
-       None -> return_unit
+        None -> return_unit
       | Some run_id ->
         let run_id = Int64.of_string run_id in
         lwt _ = context.cancel_timers ~query:(tag_volunteer_timer run_id) in

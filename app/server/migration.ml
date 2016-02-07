@@ -211,7 +211,7 @@ let run () =
     lwt _ = reset_all_stacks () in
 
     lwt _ = reattach_payments () in
-    lwt _ = load_all_and_check_for_errors () in
+    (* lwt _ = load_all_and_check_for_errors () in *)
 
     (* lwt _ = reset_all_boxes () in *)
     (* reset_all_cohorts () ; *)
