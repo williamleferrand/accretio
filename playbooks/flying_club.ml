@@ -278,7 +278,7 @@ let schedule_event context () =
 
 let key_suggestion = sprintf "suggestion-%Ld"
 let tag_already_suggested = sprintf "suggested%Ld"
-let timer_remind_pilot = sprintf "remindpilot%Ld"
+let timer_remind_pilot = sprintf "remindpilot%Ld%d"
 
 let suggest_to_pilots context run_id =
   match_lwt context.get ~key:(key_suggestion run_id) with
@@ -312,7 +312,7 @@ let suggest_to_pilots context run_id =
              | Some message ->
                lwt _ =
                  context.set_timer
-                   ~label:(timer_remind_pilot run_id)
+                   ~label:(timer_remind_pilot run_id member)
                    ~duration:(Calendar.Period.lmake ~day:1 ())
                    (`RemindPilot (run_id, message))
                in
@@ -360,8 +360,8 @@ let mark_interested context message =
     in
     return `None
   | Some run_id ->
-    lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id) in
     lwt member = context.get_message_sender ~message in
+    lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id member) in
     lwt _ = context.tag_member ~member ~tags:[ tag_interested run_id ] in
     lwt _ = context.untag_member ~member ~tags:[ tag_not_interested run_id ] in
     lwt _ =
@@ -380,8 +380,8 @@ let mark_not_interested context message =
     in
     return `None
   | Some run_id ->
-    lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id) in
     lwt member = context.get_message_sender ~message in
+    lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id member) in
     lwt _ = context.tag_member ~member ~tags:[ tag_not_interested run_id ] in
     lwt _ = context.untag_member ~member ~tags:[ tag_interested run_id ] in
     lwt _ =
@@ -393,13 +393,13 @@ let mark_not_interested context message =
     return `None
 
 let remove_from_group context message =
+  lwt member = context.get_message_sender ~message in
   lwt _ =
     match_lwt run_id_from_message context message with
       None -> return_unit
     | Some run_id ->
-      lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id) in
+      lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id member) in
       return_unit in
-  lwt member = context.get_message_sender ~message in
   lwt _ = context.remove_member ~member in
   return `None
 
