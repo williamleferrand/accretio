@@ -18,6 +18,7 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 open Message_parsers
+open Toolbox
 
 let _ =
   CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.UTC_Plus (-8))
@@ -38,6 +39,7 @@ let key_additional_seats = sprintf "additional-seats-%d"
 
 let key_original_email = "original-email"
 let tag_already_asked_for_experience = "alreadyaskedforexperience"
+let tag_pilot = "pilot"
 
 (* the stages *****************************************************************)
 
@@ -233,6 +235,214 @@ let store_ratings context message =
     in
     return `None
 
+let retag_members context () =
+  (* this is a silly stage .. *)
+  lwt members = context.search_members ~query:"active" () in
+  lwt _ =
+    Lwt_list.iter_s
+      (fun member ->
+         match_lwt context.get ~key:(key_skills member) with
+           Some "pilot" ->
+           lwt _ = context.tag_member ~member ~tags:[ tag_pilot ] in
+           return_unit
+         | _ -> return_unit)
+      members in
+  return `None
+
+let schedule_event context () =
+  lwt pilots = context.search_members ~query:tag_pilot () in
+  lwt non_pilots = context.search_members ~query:(sprintf "active -%s" tag_pilot) () in
+  lwt pilots = ul_of_members context pilots in
+  lwt non_pilots = ul_of_members context non_pilots in
+  let run_id = new_run_id () in
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Scheduling a flying club event"
+      ~data:(data_run_id run_id)
+      ~content:[
+        pcdata "Greetings," ; br () ;
+        br () ;
+        pcdata "Here is the current members of the group, split in pilots and non pilots." ; br () ;
+        br () ;
+        pcdata "Pilots:" ; br () ;
+        pilots ;
+        br () ;
+        pcdata "Non-pilots:" ; br () ;
+        non_pilots ;
+        br () ;
+        pcdata "What would you like to suggest to pilots?" ; br () ;
+      ]
+      ()
+  in
+  return `None
+
+let key_suggestion = sprintf "suggestion-%Ld"
+let tag_already_suggested = sprintf "suggested%Ld"
+let timer_remind_pilot = sprintf "remindpilot%Ld"
+
+let suggest_to_pilots context run_id =
+  match_lwt context.get ~key:(key_suggestion run_id) with
+    None -> return `None
+  | Some suggestion ->
+    lwt pilots = context.search_members ~query:(sprintf "%s -%s" tag_pilot (tag_already_suggested run_id)) () in
+    lwt _ =
+      Lwt_list.iter_s
+        (fun member ->
+           match_lwt context.check_tag_member ~member ~tag:(tag_already_suggested run_id) with
+             true -> return_unit
+           | false ->
+             match_lwt
+               context.message_member
+                 ~member
+                 ~data:(data_run_id run_id)
+                 ~subject:"Next flying+dinner event"
+                 ~content:[
+                   pcdata "Greetings," ;
+                   br () ;
+                   pcdata suggestion ; br () ;
+                   br () ;
+                   pcdata "Would you be interested in joining? No commitment yet, I'm just trying to get a sense of who could come." ; br () ;
+                   br () ;
+                   pcdata "Let me know!" ;
+                   br () ;
+                 ]
+                 ()
+             with
+             | None -> return_unit
+             | Some message ->
+               lwt _ =
+                 context.set_timer
+                   ~label:(timer_remind_pilot run_id)
+                   ~duration:(Calendar.Period.lmake ~day:1 ())
+                   (`RemindPilot (run_id, message))
+               in
+               lwt _ = context.tag_member ~member ~tags:[ tag_already_suggested run_id ] in
+               return_unit)
+        pilots
+    in
+    lwt _ =
+      context.set_timer
+        ~duration:(Calendar.Period.lmake ~day:3 ())
+        (`SummarizePilotsInterest run_id)
+    in
+    return `None
+
+let remind_pilot context (run_id, message) =
+  lwt _ =
+    context.reply_to
+      ~message
+      ~data:(data_run_id run_id)
+      ~content:[ pcdata "Sorry for the reminder, but I'm wrapping the headcount - are you interested in joining? (No commitment yet, just trying to feel the waters)" ]
+      ()
+  in
+  return `None
+
+let suggest_to_pilots context message =
+  match_lwt run_id_from_message context message with
+    None -> return `None
+  | Some run_id ->
+    match_lwt context.get ~key:(key_suggestion run_id) with
+      Some _ ->
+      suggest_to_pilots context run_id
+    | None ->
+      lwt suggestion = context.get_message_content ~message in
+      lwt _ = context.set ~key:(key_suggestion run_id) ~value:suggestion in
+      suggest_to_pilots context run_id
+
+let tag_interested = sprintf "interested%Ld"
+let tag_not_interested = sprintf "notinterested%Ld"
+
+let mark_interested context message =
+  match_lwt run_id_from_message context message with
+  | None ->
+    lwt _ =
+      context.forward_to_supervisor ~message ~subject:"Who sent this?" ~content:[ pcdata "Can't find run_id" ] ()
+    in
+    return `None
+  | Some run_id ->
+    lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id) in
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_interested run_id ] in
+    lwt _ = context.untag_member ~member ~tags:[ tag_not_interested run_id ] in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Thanks, I'll keep you posted!" ]
+        ()
+    in
+    return `None
+
+let mark_not_interested context message =
+  match_lwt run_id_from_message context message with
+  | None ->
+    lwt _ =
+      context.forward_to_supervisor ~message ~subject:"Who sent this?" ~content:[ pcdata "Can't find run_id" ] ()
+    in
+    return `None
+  | Some run_id ->
+    lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id) in
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_not_interested run_id ] in
+    lwt _ = context.untag_member ~member ~tags:[ tag_interested run_id ] in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Ok, I'll keep you posted about future events" ]
+        ()
+    in
+    return `None
+
+let remove_from_group context message =
+  lwt _ =
+    match_lwt run_id_from_message context message with
+      None -> return_unit
+    | Some run_id ->
+      lwt _ = context.cancel_timers ~query:(timer_remind_pilot run_id) in
+      return_unit in
+  lwt member = context.get_message_sender ~message in
+  lwt _ = context.remove_member ~member in
+  return `None
+
+let summarize_pilots_interest context run_id =
+  lwt pilots = context.search_members ~query:(tag_interested run_id) () in
+  lwt suggestion =
+    match_lwt context.get ~key:(key_suggestion run_id) with
+      None -> return ""
+    | Some suggestion -> return suggestion
+  in
+  match pilots with
+    [] ->
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Summary of pilot's interest"
+        ~data:(data_run_id run_id)
+        ~content:[
+          pcdata "Greetings," ; br () ;
+          br () ;
+          pcdata "Unfortunately, nobody expressed interest for your suggestion "; i [ pcdata suggestion ] ; br () ;
+          br () ;
+        ]
+        ()
+    in
+    return `None
+  | _ as members ->
+
+    lwt members = ul_of_members context members in
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Summary of pilots' interest"
+        ~data:(data_run_id run_id)
+      ~content:[
+        pcdata "Greetings," ; br () ;
+        br () ;
+        pcdata "So far the following pilots expressed interest for your suggestion "; i [ pcdata suggestion ] ; pcdata ":" ; br () ;
+        br () ;
+        members
+      ]
+      ()
+    in
+    return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -252,5 +462,13 @@ PLAYBOOK
  ask_non_pilot_details ~> `NotExperiencedPassenger of email ~> passenger_not_experienced
  ask_non_pilot_details ~> `ExperiencedPassenger of email ~> passenger_experienced
 
+*retag_members
+
+*schedule_event<forward> ~> `Message of email ~> suggest_to_pilots ~> `Interested of email ~> mark_interested
+                                                 suggest_to_pilots ~> `NotInterested of email ~> mark_interested
+                                                 suggest_to_pilots ~> `RemoveFromGroup of email ~> remove_from_group
+
+        suggest_to_pilots ~> `SummarizePilotsInterest of int64 ~> summarize_pilots_interest
+        suggest_to_pilots ~> `RemindPilot of (int64 * int) ~> remind_pilot
 
 CRON collect_experience "0 0 * * * *"

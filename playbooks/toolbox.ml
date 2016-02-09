@@ -21,6 +21,9 @@ open Lwt
 open Api
 open Ys_uid
 
+open Eliom_content.Html5
+open Eliom_content.Html5.D
+
 (**
   * extracts emails from the body of a message and return the matching
   * members uids
@@ -61,3 +64,19 @@ let run_id_from_message context message =
 
 let data_run_id run_id =
   [ key_run_id, Int64.to_string run_id ]
+
+
+(**
+  * format a list of members
+  *
+  *)
+
+let ul_of_members context members =
+  lwt members =
+    Lwt_list.map_p
+      (fun member ->
+         lwt name, email = $member(member)->(name, preferred_email) in
+         return (li [ pcdata email ; pcdata " (" ; pcdata name ; pcdata ")" ]))
+      members
+  in
+  return (ul members)
