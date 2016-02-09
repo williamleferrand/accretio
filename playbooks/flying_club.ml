@@ -465,7 +465,7 @@ PLAYBOOK
 *retag_members
 
 *schedule_event<forward> ~> `Message of email ~> suggest_to_pilots ~> `Interested of email ~> mark_interested
-                                                 suggest_to_pilots ~> `NotInterested of email ~> mark_interested
+                                                 suggest_to_pilots ~> `NotInterested of email ~> mark_not_interested
                                                  suggest_to_pilots ~> `RemoveFromGroup of email ~> remove_from_group
 
         suggest_to_pilots ~> `SummarizePilotsInterest of int64 ~> summarize_pilots_interest
