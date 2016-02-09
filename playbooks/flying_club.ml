@@ -297,7 +297,7 @@ let suggest_to_pilots context run_id =
                  ~data:(data_run_id run_id)
                  ~subject:"Next flying+dinner event"
                  ~content:[
-                   pcdata "Greetings," ;
+                   pcdata "Greetings," ; br () ;
                    br () ;
                    pcdata suggestion ; br () ;
                    br () ;
