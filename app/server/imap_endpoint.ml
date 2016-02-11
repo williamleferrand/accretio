@@ -62,8 +62,11 @@ let run sock i o c v =
   in
   loop (Imap.run c v)
 
-let () =
-  Ssl.init ()
+(* let () =
+  Ssl_threads.init () ;
+  Ssl.init () *)
+
+let sslctx = Ocsigen_http_client.sslcontext
 
 let persistent_imap_offset : Uint32.t Eliom_reference.eref =
   Eliom_reference.eref
@@ -359,8 +362,7 @@ let wait_mail host port user pass mbox =
   let fd = Lwt_unix.socket Lwt_unix.PF_INET Lwt_unix.SOCK_STREAM 0 in
   lwt he = Lwt_unix.gethostbyname host in
   lwt _ = Lwt_unix.connect fd (Lwt_unix.ADDR_INET (he.Lwt_unix.h_addr_list.(0), port)) in
-  let ctx = Ssl.create_context Ssl.TLSv1 Ssl.Client_context in
-  lwt sock = Lwt_ssl.ssl_connect fd ctx in
+  lwt sock = Lwt_ssl.ssl_connect fd !sslctx in
 
   let c = Imap.connection () in
   let i = Bytes.create io_buffer_size in
