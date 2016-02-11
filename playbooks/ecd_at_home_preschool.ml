@@ -69,6 +69,7 @@ let activity_titles =
 
 (* some tags ******************************************************************)
 
+let key_activity = sprintf "activity-%Ld"
 let tag_preferred_organizer = "preferredorganizer"
 let timer_find_host = sprintf "findhost%Ld%d"
 
@@ -77,6 +78,7 @@ let timer_find_host = sprintf "findhost%Ld%d"
 let schedule_mandarin_circle context () =
   let run_id = new_run_id () in
   lwt members = context.search_members ~query:tag_mandarin_circle_time () in
+  lwt _ = context.set ~key:(key_activity run_id) ~value:tag_mandarin_circle_time in
   return (`FindHost (run_id, tag_mandarin_circle_time, List.length members))
 
 
@@ -148,6 +150,136 @@ let find_another_host context (run_id, activity, number_of_members, member, mess
       ()
   in
   return `None
+
+let key_host = sprintf "host-%Ld"
+let key_acl = "acl"
+
+let ask_supervisor_to_pitch context message =
+  match_lwt run_id_from_message context message with
+    None -> return `None
+  | Some run_id ->
+    match_lwt context.get ~key:(key_activity run_id) with
+      None -> return `None
+    | Some activity ->
+      lwt host = context.get_message_sender ~message in
+      lwt _ = context.set ~key:(key_host run_id) ~value:(Ys_uid.to_string host) in
+      lwt members = context.search_members ~query:activity () in
+      let members = List.filter (fun uid -> uid <> host) members in
+      match members with
+        [] ->
+        lwt _ =
+          context.reply_to
+            ~message
+            ~data:(data_run_id run_id)
+            ~content:[ pcdata "Thanks! Unfortunately it appears that nobody is available that day :/ - Let's do something else soon!" ]
+            ()
+        in
+        return `None
+      | _ as members ->
+        lwt _ =
+          context.reply_to
+            ~message
+            ~data:(data_run_id run_id)
+            ~content:[ pcdata "Thanks! Let me check who is coming, I'll send you a summary in 24 hours." ]
+            ()
+        in
+        lwt _ =
+          context.forward_to_supervisor
+            ~message
+            ~data:(data_supervisor (data_run_id run_id))
+            ~subject:("Please pitch " ^ activity)
+            ~content:[ pcdata "Can you pitch the activity? There are " ; pcdata (string_of_int (List.length members)) ; pcdata " potential participants, in addition to the host" ]
+            ()
+        in
+        return `None
+
+let announce_activity context message =
+  match_lwt is_from_supervisor context message with
+  | false -> return `None
+  | true ->
+    match_lwt run_id_from_message context message with
+      None -> return `None
+    | Some run_id ->
+      match_lwt context.get ~key:(key_activity run_id) with
+        None -> return `None
+      | Some activity ->
+        let title = StringMap.find activity activity_titles in
+        match_lwt context.get ~key:(key_host run_id) with
+          None -> return `None
+        | Some host ->
+          let host = Ys_uid.of_string host in
+          lwt pitch = context.get_message_content ~message in
+          lwt members = context.search_members ~query:activity () in
+          let members = List.filter (fun uid -> uid <> host) members in
+          lwt host = $member(host)->name in
+          lwt _ =
+            Lwt_list.iter_s
+              (fun member ->
+                 lwt name = $member(member)->name in
+                 lwt _ =
+                   context.message_member
+                     ~member
+                     ~data:(data_run_id run_id)
+                     ~subject:title
+                     ~content:[
+                       (if name == "" then pcdata "Greetings," else pcdata ("Hello " ^ name ^ ",")) ; br () ;
+                       br () ;
+                       pcdata pitch ; br () ;
+                       br () ;
+                       pcdata "This time, the event will be hosted by " ; pcdata host ; pcdata "." ; br () ;
+                       br () ;
+                     pcdata "Please let me know if you plan to join!" ; br ()
+                     ]
+                     ()
+                in
+                return_unit)
+             members
+          in
+         return `None
+
+let tag_joining = sprintf "joining%Ld"
+let tag_not_joining = sprintf "notjoining%Ld"
+
+let key_practical_infos = sprintf "practical-infos-%d"
+
+let mark_joining context message =
+  match_lwt run_id_from_message context message with
+    None -> return `None
+  | Some run_id ->
+    match_lwt context.get ~key:(key_host run_id) with
+      None -> return `None
+    | Some host ->
+      let host = Ys_uid.of_string host in
+      lwt host = $member(host)->name in
+      lwt member = context.get_message_sender ~message in
+      lwt _ = context.tag_member ~member ~tags:[ tag_joining run_id ] in
+      lwt _ = context.untag_member ~member ~tags:[ tag_not_joining run_id ] in
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[
+            pcdata "Great! " ; pcdata host ; pcdata " will get in touch with you very soon to fine tune the details."
+          ]
+          ()
+      in
+      return `None
+
+let mark_not_joining context message =
+  match_lwt run_id_from_message context message with
+    None -> return `None
+  | Some run_id ->
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_not_joining run_id ] in
+    lwt _ = context.untag_member ~member ~tags:[ tag_joining run_id ] in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[
+            pcdata "No problem, I'll keep you posted about future activities!"
+        ]
+        ()
+    in
+    return `None
 
 (* the stages *****************************************************************)
 
@@ -234,5 +366,8 @@ PLAYBOOK
 
  *suggest_activities<forward> ~> `Message of email ~> ask_supervisor_to_filter_activities<forward> ~> `Message of email ~> tag_member_with_activities
 
-  schedule_mandarin_circle ~> `FindHost of (int64 * string * int) ~> find_host ~> `Message of email ~> disable_timer
+ *schedule_mandarin_circle ~> `FindHost of (int64 * string * int) ~> find_host ~> `Message of email ~> disable_timer
                                                                      find_host ~> `FindAnotherHost of (int64 * string * int * int * int) ~> find_another_host
+                                                                     find_host ~> `HostHasAccepted of email ~> ask_supervisor_to_pitch<forward> ~> `Message of email ~> announce_activity
+      announce_activity ~> `Joining of email ~> mark_joining
+      announce_activity ~> `NotJoining of email ~> mark_not_joining
