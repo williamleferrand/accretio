@@ -59,6 +59,13 @@ let run_id_from_message context message =
   match_lwt context.get_message_data ~message ~key:key_run_id with
     None ->
     context.log_error "couldn't extract run-id from message %d" message ;
+    lwt _ =
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Couldn't extract run_id from message"
+        ~content:[ pcdata "You might want to step in" ]
+        ()
+    in
     return_none
   | Some run_id -> return (Some (Int64.of_string run_id))
 
@@ -80,3 +87,18 @@ let ul_of_members context members =
       members
   in
   return (ul members)
+
+
+(**
+  * make sure that the emails are legit
+  *
+  *)
+
+let key_acl = "toolbox-acl"
+let data_supervisor l =
+  (key_acl, "supervisor") :: l
+
+let is_from_supervisor context message =
+  match_lwt context.get_message_data ~message ~key:key_acl with
+    Some "supervisor" -> return_true
+  | _ -> return_false
