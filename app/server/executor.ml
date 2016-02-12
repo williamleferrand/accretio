@@ -385,7 +385,9 @@ let context_factory mode society =
     (* setting up cron jobs *)
 
     let set ~key ~value =
-      $society(society)<-data %% (fun data -> (key, value) :: List.remove_assoc key data)
+      lwt _ = $society(society)<-data %% (fun data -> (key, value) :: List.remove_assoc key data) in
+      lwt _ = $society(society)<-data_keys %% (fun keys -> (`Key key, (Random.int 1024 + Int64.to_int (Ys_time.now ()))) :: keys) in
+      return_unit
 
     let get ~key =
       lwt data = $society(society)->data in
@@ -393,12 +395,25 @@ let context_factory mode society =
         (try Some (List.assoc key data) with Not_found -> None)
 
     let delete ~key =
-      $society(society)<-data %% (fun data -> List.remove_assoc key data)
+      lwt _ = $society(society)<-data %% (fun data -> List.remove_assoc key data) in
+      lwt _ = $society(society)<-data_keys %% (fun keys -> List.filter (fun (`Key k, _) -> k <> key) keys) in
+      return_unit
+
+    let search ~query =
+      (* this is ugly *)
+      lwt edges = Object_society.Store.search_data_keys society query in
+      let edges = Ys_uid.of_list edges in
+      lwt keys = $society(society)->data_keys in
+      let keys = List.filter (fun (`Key key, uid) -> UidSet.mem uid edges) keys in
+      return (List.map (fun (`Key key, _) -> key) keys)
 
     (* message primitives *)
 
     let get_message_content ~message =
       $message(message)->content
+
+    let get_message_raw_content ~message =
+      $message(message)->raw
 
     let get_message_sender ~message =
       match_lwt $message(message)->origin with
@@ -595,8 +610,11 @@ let context_factory mode society =
       set ;
       get ;
       delete ;
+      search ;
 
       get_message_content ;
+      get_message_raw_content ;
+
       get_message_sender ;
       get_original_message ;
 

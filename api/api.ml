@@ -68,10 +68,12 @@ type 'output context =
     set : key:string -> value:string -> unit Lwt.t ;
     get : key:string -> string option Lwt.t ;
     delete : key:string -> unit Lwt.t ;
+    search : query:string -> string list Lwt.t ;
 
     (* messages primitives *)
 
     get_message_content : message:uid -> string Lwt.t ;
+    get_message_raw_content : message:uid -> string Lwt.t ;
     get_message_sender : message:uid -> uid Lwt.t ;
     get_original_message : message:uid -> uid Lwt.t ;
     get_message_data : message:uid -> key:string -> string option Lwt.t ;

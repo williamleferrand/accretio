@@ -74,7 +74,7 @@ let data_run_id run_id =
 
 
 (**
-  * format a list of members
+  * Format a list of members
   *
   *)
 
@@ -102,3 +102,13 @@ let is_from_supervisor context message =
   match_lwt context.get_message_data ~message ~key:key_acl with
     Some "supervisor" -> return_true
   | _ -> return_false
+
+(**
+  * Some helpers around the emails
+  *
+  *)
+
+let salutations member =
+  match_lwt $member(member)->name with
+    "" -> return (pcdata "Greetings")
+  | _ as name -> return (pcdata ("Dear " ^ name ^ ","))

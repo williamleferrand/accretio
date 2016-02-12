@@ -37,6 +37,10 @@ let timer_to_document =
   function
     `Label label -> Some label
 
+let data_key_to_document =
+  function
+    `Key label -> Some label
+
 type data = (string * string) list with bin_io, default_value([])
 
 type slip =
@@ -66,6 +70,7 @@ type t = {
   playbook : uid ;
 
   data : data ;
+  data_keys : [ `Key of string ] edges ;
 
   inbox : [ `Message of slip ] edges ;
   outbox : [ `Message of slip ] edges ;
@@ -76,7 +81,7 @@ type t = {
 
   history : history ;
 
-  timers : [ `Label of string ] edges ; (* these are fake edges *)
+  timers : [ `Label of string ] edges ;
   shortlink : string ;
 
   blacklist : [ `Unregistered | `Banned ] edges ;
@@ -85,7 +90,7 @@ type t = {
 } with vertex
   (
     {
-      aliases = [ `String shortlink ; `PlainText name ; `PlainText description ; `PlainTextEdge timers timer_to_document ; `PlainTextEdge members edge_to_document ] ;
+      aliases = [ `String shortlink ; `PlainText name ; `PlainText description ; `PlainTextEdge timers timer_to_document ; `PlainTextEdge members edge_to_document ; `PlainTextEdge data_keys data_key_to_document ] ;
       required = [ shortlink ; leader ; name ; description ; mode ; playbook ] ;
       uniques = [ shortlink ]
     }
