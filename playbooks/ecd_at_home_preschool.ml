@@ -356,6 +356,236 @@ let tag_member_with_activities context message =
     in
     return `None
 
+(* organize the weekly schedule ***********************************************)
+
+let key_anchor = "anchor"
+
+let next_week () =
+  let rec find_next_monday t =
+    match Calendar.day_of_week t with
+      Calendar.Mon -> t
+    | _ -> find_next_monday (Calendar.next t `Day)
+  in
+  let monday = find_next_monday (Calendar.now ()) in
+  let tuesday = Calendar.next monday `Day in
+  let wednesday = Calendar.next tuesday `Day in
+  let thursday = Calendar.next wednesday `Day in
+  let friday = Calendar.next thursday `Day in
+  let anchor = (Calendar.day_of_year monday) + (Calendar.day_of_year monday * 366) in
+  anchor, [
+    monday ;
+    tuesday ;
+    wednesday ;
+    thursday ;
+    friday ;
+  ]
+
+let assemble_weekly_schedule context () =
+  (* for now, ask the supervisor for a schedule *)
+  (* that should be done over the week before? *)
+
+  let anchor, week = next_week () in
+
+  let form =
+    List.fold_left
+      (fun acc day ->
+         let activities =
+           List.fold_left
+           (fun acc (tag, title) ->
+             li [ pcdata (sprintf "%s%d%d" tag anchor (Calendar.day_of_year day)) ] :: acc
+           )
+           []
+           activities
+         in
+         li [
+           pcdata (CalendarLib.Printer.Calendar.sprint " %A, %B %d" day) ;
+           ul activities ;
+         ] :: acc
+      )
+      []
+      week
+  in
+
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Please come up with a weekly schedule"
+      ~data:(data_supervisor [ key_anchor, string_of_int anchor ])
+      ~content:[
+        pcdata "Greetings," ; br () ;
+        br () ;
+        pcdata "Could you send the weekly schedule? (not sure how to organize that yet ..)" ;
+        ul (List.rev form)
+      ]
+      ()
+  in
+  return `None
+
+let parse_schedule context message =
+  match_lwt is_from_supervisor context message with
+  | false -> return `None
+  | true ->
+    lwt content = context.get_message_raw_content ~message in
+    (* todo rebuild the week from the anchor instead *)
+    let anchor, week = next_week () in
+
+    let keys =
+      List.fold_left
+        (fun acc day ->
+           List.fold_left
+             (fun acc (tag, title) ->
+                sprintf "%s%d%d" tag anchor (Calendar.day_of_year day) :: acc)
+               acc
+               activities)
+        []
+        week
+    in
+
+    let pairs =
+      List.fold_left
+        (fun acc key ->
+           let regexp = Str.regexp (key ^ " \(.*\)\n") in
+           try
+             let _ = Str.search_forward regexp content 0 in
+             let title = Str.matched_group 1 content in
+             (key, title) :: acc
+           with Not_found -> acc
+        )
+        []
+        keys
+    in
+    lwt _ =
+      Lwt_list.iter_s
+        (fun (key, value) -> context.set ~key ~value)
+        pairs
+    in
+    let _ =
+      context.reply_to
+        ~message
+        ~content:[
+          pcdata "Thanks, here is what I found" ;
+          ul (List.map (fun (key, title) -> li [ pcdata key ; pcdata " -> " ; pcdata title ]) pairs)
+        ]
+        ()
+    in
+
+    return `None
+
+
+let suggest_schedule_to_all_members context () =
+
+  lwt members = context.search_members ~query:"active" () in
+  let anchor, week = next_week () in
+
+  let activities_by_day activities =
+    Lwt_list.fold_left_s
+      (fun list day ->
+         lwt activities =
+           Lwt_list.fold_left_s
+             (fun k (tag, title) ->
+                lwt keys = context.search ~query:(sprintf "%s%d%d*" tag anchor (Calendar.day_of_year day)) in
+                return ((List.map (fun k -> (k, title)) keys) @ k)
+             )
+             []
+             activities
+         in
+
+         lwt activities =
+           Lwt_list.fold_left_s
+             (fun titles (key, title) ->
+                match_lwt context.get ~key with
+                  None -> return titles
+                | Some pitch -> return (li [ pcdata title ; pcdata ": " ; pcdata pitch ] :: titles))
+             []
+             activities
+         in
+         match activities with
+           [] -> return list
+         | _ as activities ->
+           return (
+             li [
+               pcdata (CalendarLib.Printer.Calendar.sprint "%A, %B %d" day) ;
+               ul activities ] :: list
+           ))
+      []
+      (List.rev week)
+  in
+
+  lwt _ =
+    Lwt_list.iter_s
+      (fun member ->
+
+         (* for each member, we grab the activities they registered from *)
+         lwt (preferred, others) =
+           Lwt_list.partition_s (fun (tag, title) -> context.check_tag_member ~member ~tag) activities
+         in
+         lwt salutations = salutations member in
+         lwt preferred = activities_by_day preferred in
+         lwt others = activities_by_day others in
+         match preferred, others with
+         | [], [] -> return_unit
+         | [], others ->
+           lwt _ =
+             context.message_member
+               ~member
+               ~data:[ key_anchor, string_of_int anchor ]
+               ~subject:"Weekly suggestions of children activities"
+               ~content:[
+                 salutations ; br () ;
+                 br () ;
+                 pcdata "There is no scheduled event for your preferred activities this week; however here are some options that could be relevant:" ; br () ;
+                 ul others ;
+                 pcdata "Please let me know before the end of the weekend if you would like to attend any of these activities. I'll help working out the details!" ; br () ;
+               ]
+               ()
+           in
+           return_unit
+         | preferred, [] ->
+           lwt _ =
+             context.message_member
+               ~member
+               ~data:[ key_anchor, string_of_int anchor ]
+               ~subject:"Weekly suggestions of children activities"
+               ~content:[
+                 salutations ; br () ;
+                 br () ;
+                 pcdata "Here is a list of suggestions for the coming week. Would you like to attend some of these activities? Just reply inline and I'll figure the details." ; br () ;
+                 ul preferred ;
+                 pcdata "Please let me know before the end of the weekend," ; br () ;
+               ]
+               ()
+           in
+           return_unit
+         | preferred, others ->
+           lwt _ =
+             context.message_member
+               ~member
+               ~data:[ key_anchor, string_of_int anchor ]
+               ~subject:"Weekly suggestions of children activities"
+               ~content:[
+                 salutations ; br () ;
+                 br () ;
+                 pcdata "Here is a list of suggestions for the coming week based on your preferences:" ; br () ;
+                 ul preferred ;
+                 pcdata "Also, here are some additional activities that you might be interested in as well:" ; br () ;
+                 ul others ;
+                 pcdata "Would you like to attend some of these activities? Please let me know before the end of the weekend and I'll figure out the details!" ; br () ;
+               ]
+               ()
+           in
+           return_unit)
+      members
+  in
+
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Invitations are sent"
+      ~content:[
+        pcdata "The weekly schedule is out, let's see what comes back!"
+      ]
+      ()
+  in
+  return `None
+
 (* the flow *******************************************************************)
 
 PLAYBOOK
@@ -371,3 +601,6 @@ PLAYBOOK
                                                                      find_host ~> `HostHasAccepted of email ~> ask_supervisor_to_pitch<forward> ~> `Message of email ~> announce_activity
       announce_activity ~> `Joining of email ~> mark_joining
       announce_activity ~> `NotJoining of email ~> mark_not_joining
+
+  *assemble_weekly_schedule<forward> ~> `Message of email ~> parse_schedule
+  *suggest_schedule_to_all_members
