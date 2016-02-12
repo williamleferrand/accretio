@@ -468,7 +468,7 @@ let parse_schedule context message =
         ()
     in
 
-    return `None
+    return `SuggestScheduleToAllMembers
 
 
 let suggest_schedule_to_all_members context () =
@@ -602,5 +602,4 @@ PLAYBOOK
       announce_activity ~> `Joining of email ~> mark_joining
       announce_activity ~> `NotJoining of email ~> mark_not_joining
 
-  *assemble_weekly_schedule<forward> ~> `Message of email ~> parse_schedule
-  *suggest_schedule_to_all_members
+  *assemble_weekly_schedule<forward> ~> `Message of email ~> parse_schedule ~> `SuggestScheduleToAllMembers ~> suggest_schedule_to_all_members
