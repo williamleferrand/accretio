@@ -386,7 +386,7 @@ let context_factory mode society =
 
     let set ~key ~value =
       lwt _ = $society(society)<-data %% (fun data -> (key, value) :: List.remove_assoc key data) in
-      lwt _ = $society(society)<-data_keys %% (fun keys -> (`Key key, (Random.int 1024 + Int64.to_int (Ys_time.now ()))) :: keys) in
+      lwt _ = $society(society)<-data_keys %% (fun keys -> (`Key key, (Random.int 1024 + Int64.to_int (Ys_time.now ()))) :: (List.filter (fun (`Key k, _) -> k <> key) keys)) in
       return_unit
 
     let get ~key =
