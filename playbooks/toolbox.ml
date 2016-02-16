@@ -44,6 +44,27 @@ let extract_members_from_message context message =
   in
   return (UidSet.elements members)
 
+let extract_and_create_all_members_from_message context message =
+  lwt content = context.get_message_raw_content ~message in
+  let members = Ys_email.get_all_emails content in
+  lwt members =
+    Lwt_list.fold_left_s
+      (fun acc email ->
+         match_lwt Object_member.Store.find_by_email email with
+         | None ->
+           (match_lwt Object_member.Store.create
+                        ~preferred_email:email
+                        ~emails:[ email ]
+                        () with
+             `Object_created obj ->
+             return (UidSet.add obj.Object_member.uid acc)
+           | `Object_already_exists (_, uid) ->
+             return (UidSet.add uid acc))
+         | Some uid -> return (UidSet.add uid acc))
+      UidSet.empty
+      members
+  in
+  return (UidSet.elements members)
 
 (**
   * adds a "run-id" tag to emails and get it / extracts it
@@ -110,5 +131,10 @@ let is_from_supervisor context message =
 
 let salutations member =
   match_lwt $member(member)->name with
-    "" -> return (pcdata "Greetings")
+    "" -> return (pcdata "Greetings,")
   | _ as name -> return (pcdata ("Dear " ^ name ^ ","))
+
+let salutations_fr member =
+  match_lwt $member(member)->name with
+    "" -> return (pcdata "Bonjour,")
+  | _ as name -> return (pcdata ("Cher " ^ name ^ ","))

@@ -32,7 +32,14 @@ let sphinx_pool =
     ~validate:(Lwt_preemptive.detach
                  (fun dbd ->
                     (* this might be an expensive call *)
-                    try Mysql.ping dbd; true with _ -> false))
+                    try
+                      Mysql.ping dbd;
+                      Printf.printf "Pinging sphinx, positive\n" ;
+                      flush stdout ;
+                      true with _ ->
+                      Printf.printf "Pinging sphinx, negative\n" ;
+                      flush stdout ;
+                      false))
     (Ys_config.get_int "sphinx-pool-size")
     (Lwt_preemptive.detach
        (fun () ->

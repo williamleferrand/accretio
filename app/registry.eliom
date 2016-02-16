@@ -125,4 +125,5 @@ let _ =
      lwt _ = register (module Field_trips) in
      lwt _ = register (module Coop_babysitting) in
      lwt _ = register (module Ecd_at_home_preschool) in
+     lwt _ = register (module Diy_velo_bambou) in
      return_unit)
