@@ -167,9 +167,6 @@ let ask_candidates_for_their_opinion context run_id =
 
 PLAYBOOK
 
-   #import core_join_request
-   #import core_invite
-
 *ask_leaders_for_interested_people ~> `ExtractAllEmails of email ~> extract_all_emails ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
  ask_leaders_for_interested_people ~> `MarkSenderAsInterested of email ~> mark_sender_as_interested ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
  ask_leaders_for_interested_people ~> `SendSummary of email ~> send_summary
