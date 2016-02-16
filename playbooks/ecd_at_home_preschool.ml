@@ -283,8 +283,9 @@ let mark_not_joining context message =
 
 (* the stages *****************************************************************)
 
+let tag_already_asked_preferences = "alreadyaskedpreferences"
 let suggest_activities context () =
-  lwt members = context.search_members "active" () in
+  lwt members = context.search_members ("active -"^tag_already_asked_preferences) () in
   let suggestions = ul (List.map (fun (_, suggestion) -> li [ pcdata suggestion ]) activities) in
   lwt _ =
     Lwt_list.iter_s
@@ -296,16 +297,15 @@ let suggest_activities context () =
              ~content:[
                pcdata "Greetings," ; br () ;
                br () ;
-               pcdata "I hope your week is off to a great start!" ; br () ;
-               br () ;
-               pcdata "Here are a few suggestions of activities that could be relevant for our children, could you tell me if you find anything appealing in the list? (No commitment at this point, I'm just testing the waters)"; br () ;
+               pcdata "Here are a few suggestions of activities that could be relevant for our children, could you tell me if you find anything appealing in the list?"; br () ;
                suggestions ;
-               pcdata "Also, do you want to suggest an activity?" ; br () ;
+               pcdata "Also, do you want to suggest a type of activity that isn't in the list?" ; br () ;
                br () ;
                pcdata "Looking forward to hearing from you!" ; br ()
              ]
              ()
          in
+         lwt _ = context.tag_member ~member ~tags:[ tag_already_asked_preferences ] in
          return_unit)
       members
   in
@@ -359,6 +359,7 @@ let tag_member_with_activities context message =
 (* organize the weekly schedule ***********************************************)
 
 let key_anchor = "anchor"
+let tag_already_asked_for_week = sprintf "alreadyaskedweek%d"
 
 let next_week () =
   let rec find_next_monday t =
@@ -425,6 +426,7 @@ let parse_schedule context message =
   | false -> return `None
   | true ->
     lwt content = context.get_message_raw_content ~message in
+    Lwt_log.ign_info_f "----content is\n%s" content ;
     (* todo rebuild the week from the anchor instead *)
     let anchor, week = next_week () in
 
@@ -473,8 +475,8 @@ let parse_schedule context message =
 
 let suggest_schedule_to_all_members context () =
 
-  lwt members = context.search_members ~query:"active" () in
   let anchor, week = next_week () in
+  lwt members = context.search_members ~query:("active -" ^ (tag_already_asked_for_week anchor)) () in
 
   let activities_by_day activities =
     Lwt_list.fold_left_s
@@ -538,6 +540,7 @@ let suggest_schedule_to_all_members context () =
                ]
                ()
            in
+           lwt _ = context.tag_member ~member ~tags:[ tag_already_asked_for_week anchor ] in
            return_unit
          | preferred, [] ->
            lwt _ =
@@ -554,6 +557,7 @@ let suggest_schedule_to_all_members context () =
                ]
                ()
            in
+           lwt _ = context.tag_member ~member ~tags:[ tag_already_asked_for_week anchor ] in
            return_unit
          | preferred, others ->
            lwt _ =
@@ -572,6 +576,7 @@ let suggest_schedule_to_all_members context () =
                ]
                ()
            in
+           lwt _ = context.tag_member ~member ~tags:[ tag_already_asked_for_week anchor ] in
            return_unit)
       members
   in
