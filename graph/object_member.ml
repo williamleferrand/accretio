@@ -56,6 +56,8 @@ type strings = string list with bin_io, default_value ([])
 type stripe = { stripe_customer: string; stripe_last4: string } with bin_io
 type stripe_option = stripe option with bin_io, default_value (None)
 
+type gender = Male | Female | Neutral with bin_io, default_value(Neutral)
+
 (* a simple type for surveys **************************************************)
 
 type t = {
@@ -65,6 +67,7 @@ type t = {
   created_on : timestamp ;
 
   name : string ;
+  gender : gender ;
   profile_picture : uid_option ;
   album : [ `ProfilePicture ] edges ;
 

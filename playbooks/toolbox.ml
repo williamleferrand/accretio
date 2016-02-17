@@ -131,10 +131,11 @@ let is_from_supervisor context message =
 
 let salutations member =
   match_lwt $member(member)->name with
-    "" -> return (pcdata "Greetings,")
+    ""
   | _ as name -> return (pcdata ("Dear " ^ name ^ ","))
 
 let salutations_fr member =
-  match_lwt $member(member)->name with
-    "" -> return (pcdata "Bonjour,")
-  | _ as name -> return (pcdata ("Cher " ^ name ^ ","))
+  match_lwt $member(member)->(name, gender) with
+    "", _ | _, Object_member.Neutral -> return (pcdata "Bonjour,")
+  | name, Object_member.Male -> return (pcdata ("Cher " ^ name ^ ","))
+  | name, Object_member.Female -> return (pcdata ("Chère " ^ name ^ ","))
