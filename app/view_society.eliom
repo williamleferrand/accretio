@@ -31,7 +31,7 @@ type t =
   {
     uid : uid ;
     shortlink : string ;
-    leader : View_member.t ;
+    supervisor : View_member.t ;
     name : string ;
     description : string ;
     mode : mode ;
@@ -43,19 +43,19 @@ type t =
 {server{
 
 let to_view uid =
-  lwt leader, name, description, mode, playbook, shortlink = $society(uid)->(leader, name, description, mode, playbook, shortlink) in
+  lwt supervisor, name, description, mode, playbook, shortlink = $society(uid)->(leader, name, description, mode, playbook, shortlink) in
   let mode =
     match mode with
     | Object_society.Sandbox -> Sandbox
     | Object_society.Public -> Public
     | Object_society.Private -> Private
   in
-  lwt leader = View_member.to_view leader in
+  lwt supervisor = View_member.to_view supervisor in
   lwt playbook = View_playbook.to_view playbook in
   return {
     uid ;
     shortlink ;
-    leader ;
+    supervisor ;
     name ;
     description ;
     mode ;

@@ -34,6 +34,7 @@ type 'output context =
     society : uid ;
     society_name : string ;
     society_description : string ;
+    society_supervisor : uid ;
 
     direct_link : string ;
 

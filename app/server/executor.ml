@@ -69,7 +69,7 @@ let check_missing_parameters society =
 
 let context_factory mode society =
 
-  lwt society_name, society_description, society_shortlink = $society(society)->(name, description, shortlink) in
+  lwt society_name, society_description, society_shortlink, society_supervisor = $society(society)->(name, description, shortlink, leader) in
   let direct_link = (Ys_config.get_string "url-prefix")^"/society/"^society_shortlink in
 
   let mode_specifics =
@@ -585,6 +585,7 @@ let context_factory mode society =
       society ;
       society_name ;
       society_description ;
+      society_supervisor ;
 
       direct_link ;
 

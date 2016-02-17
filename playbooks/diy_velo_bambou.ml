@@ -131,6 +131,7 @@ let ask_candidate context (run_id, member) =
       $message(message)->attachments
   in
   lwt salutations = salutations_fr member in
+  lwt supervisor = $member(context.society_supervisor)->name in
   match_lwt
     context.message_member
       ~member
@@ -148,7 +149,10 @@ let ask_candidate context (run_id, member) =
           li [ b [ pcdata "Combien?" ] ; pcdata " le cadre seul (à prix coûtant) devrait revenir à environ 90 euros" ] ;
           li [ b [ pcdata "Quand?" ] ; pcdata " à discuter selon les disponibilités des personnes intéréssées" ] ;
         ] ;
-        pcdata "Est ce que ça vous tenterait? Aucun engagement pour le moment, dites moi juste si vous voulez rester dans la boucle et j'essaierai d'organiser tout ça en fonction des réponses." ; br () ;
+        pcdata "Est ce que ça vous tenterait? Aucun engagement pour le moment, dites moi juste si vous pourriez être intéressé et j'essaierai d'organiser tout ça en fonction des réponses." ; br () ;
+        br () ;
+        pcdata supervisor ; br () ;
+
       ]
       () with
     None -> return `None

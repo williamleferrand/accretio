@@ -122,7 +122,7 @@ let dom view =
       h2 [ pcdata "Details" ] ;
       div ~a:[ a_class [ "leader" ]] [
         span ~a:[ a_class [ "icon-user" ]] [] ;
-        pcdata "The leader for this group is " ; View_member.format view.leader  ;
+        pcdata "The supervisor for this group is " ; View_member.format view.supervisor  ;
       ] ;
       div ~a:[ a_class [ "playbook" ]] [
         span ~a:[ a_class [ "icon-lamp" ]] [] ;
