@@ -123,22 +123,25 @@ let mark_sender_as_interested context message =
     lwt _ = context.tag_member ~member ~tags:[ tag_candidate run_id ] in
     return (`AskCandidatesForTheirOpinion run_id)
 
+let tag_interested = sprintf "interested%Ld"
+let tag_not_interested = sprintf "notinterested%Ld"
+
 let send_summary context message =
   match_lwt run_id_from_message context message with
     None -> return `None
   | Some run_id ->
     lwt candidates = context.search_members ~query:(tag_candidate run_id) () in
+    lwt interested = context.search_members ~query:(tag_interested run_id) () in
     lwt _ =
       context.reply_to
         ~message
         ~data:(data_run_id run_id)
         ~content:[
-          pcdata "Pour l'instant il y a " ; pcdata (string_of_int (List.length candidates)) ; pcdata " personnes intéressées."
+          pcdata "Pour l'instant il y a " ; pcdata (string_of_int (List.length interested)) ; pcdata " personnes intéressées sur " ; pcdata (string_of_int (List.length candidates)) ; pcdata " personnes contactées."
         ]
         ()
     in
     return `None
-
 
 let tag_already_asked = sprintf "alreadyasked%Ld"
 
@@ -147,13 +150,24 @@ let ask_candidates_for_their_opinion context run_id =
   lwt _ =
     Lwt_list.iter_s
       (fun member ->
+         lwt salutations = salutations_fr member in
          lwt _ =
            context.message_member
              ~member
-             ~subject:"Quel sujet mettre ici?"
+             ~subject:"Construire un vélo en bambou sur mesure"
              ~data:(data_run_id run_id)
              ~content:[
-               pcdata "Comment veux tu présenter le projet aux personnes? Le but est de savoir si ils sont très intéressés (= prêt à s'engager sur un paiment) / un peu intéressés (= veulent avoir plus d'infos) / pas intéressés (veulent quitter la liste de diffusion)"
+               salutations ; br () ;
+               br () ;
+               pcdata "Savez vous que l'on peut fabriquer un cadre de vélo à partir de bambou?" ; br () ;
+               br () ;
+               pcdata "Maintenant que j'ai construit le mien j'aimerais partager cette experience avec d'autres personnes en organisant une commande groupée des matériaux et un atelier de montage." ; br () ;
+               ul [
+                 li [ b [ pcdata "Où?" ] ; pcdata " ça se passerait à Paris, dans les locaux du Langevinium" ] ;
+                 li [ b [ pcdata "Combien?" ] ; pcdata " le cadre seul (à prix coûtant) devrait revenir à environ 90 euros" ] ;
+                 li [ b [ pcdata "Quand?" ] ; pcdata " à discuter selon les disponibilités des personnes intéréssées" ] ;
+               ] ;
+               pcdata "Est ce que ça vous tenterait? Aucun engagement pour le moment, dites moi juste si vous voulez rester dans la boucle et j'essaierai d'organiser tout ça en fonction des réponses." ; br () ;
              ]
              ()
          in
@@ -163,6 +177,36 @@ let ask_candidates_for_their_opinion context run_id =
   in
   return `None
 
+let mark_interested context message =
+  match_lwt run_id_from_message context message with
+    None -> return `None
+  | Some run_id ->
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_interested run_id ] in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Merci, j'attends d'avoir toutes les réponses et je vous recontacte!" ]
+        ()
+    in
+    return `None
+
+let mark_not_interested context message =
+  match_lwt run_id_from_message context message with
+    None ->
+    return `None
+  | Some run_id ->
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_not_interested run_id ] in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Ok, merci tout de même pour votre réponse!" ]
+        ()
+    in
+    return `None
+
+
 (* the flow *******************************************************************)
 
 PLAYBOOK
@@ -170,3 +214,6 @@ PLAYBOOK
 *ask_leaders_for_interested_people ~> `ExtractAllEmails of email ~> extract_all_emails ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
  ask_leaders_for_interested_people ~> `MarkSenderAsInterested of email ~> mark_sender_as_interested ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
  ask_leaders_for_interested_people ~> `SendSummary of email ~> send_summary
+
+ ask_candidates_for_their_opinion ~> `NotInterested of email ~> mark_not_interested
+ ask_candidates_for_their_opinion ~> `Interested of email ~> mark_interested
