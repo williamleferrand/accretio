@@ -45,7 +45,7 @@ let extract_members_from_message context message =
   return (UidSet.elements members)
 
 let extract_and_create_all_members_from_message context message =
-  lwt content = context.get_message_raw_content ~message in
+  lwt content = context.get_message_content ~message in
   let members = Ys_email.get_all_emails content in
   lwt members =
     Lwt_list.fold_left_s

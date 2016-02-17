@@ -32,32 +32,9 @@ let version = 0
 
 let tag_leader = "leader"
 
-let ask_leaders_for_interested_people context () =
+let start context () =
   lwt leaders = context.search_members ~query:tag_leader () in
   let run_id = new_run_id () in
-  lwt _ =
-    Lwt_list.iter_s
-      (fun member ->
-         lwt salutations = salutations_fr member in
-         lwt _ =
-           context.message_member
-             ~member
-             ~subject:"Nouvelle série de vélos en bambous"
-             ~data:(data_run_id run_id)
-             ~content:[
-               salutations ; br () ;
-               br () ;
-               pcdata "J'aimerais lancer la fabrication d'une nouvelle série de vélos en bambous. L'idée est de faire une commande groupée de matériaux puis d'organiser une série d'ateliers afin que les personnes intéressées puissent s'entraider pour le montage de leur vélo sur mesure." ; br () ;
-               br () ;
-               pcdata "Est-ce que vous connaîtriez des personnes intéressées? Vous pouvez m'envoyer leur adresses emails et je leur enverrai une présentation du projet, ou leur transmettre directement ce message!" ; br () ;
-               br () ;
-               pcdata "Merci d'avance," ; br () ;
-             ]
-             ()
-         in
-         return_unit)
-      leaders
-  in
   lwt _ =
     context.message_supervisor
       ~subject:"Nouvelle série de vélos en bambous"
@@ -65,7 +42,9 @@ let ask_leaders_for_interested_people context () =
       ~content:[
         pcdata "Bonjour," ; br () ;
         br () ;
-        pcdata "J'ai contacté " ; pcdata (string_of_int (List.length leaders)) ; pcdata " personnes pour leur demander si elles connaissent des personnes intéressées. Voyons voir!" ; br () ;
+        pcdata "A qui voulez vous proposer de construire un vélo en bambou?"; br () ;
+        br () ;
+        pcdata "Envoyez moi autant d'emails que vous voulez dans le corps de ce message et je prendrai contact avec chacune des personnes. Vous pouvez aussi m'envoyer une pièce jointe que je forwarderai à chaque personne." ; br () ;
         br () ;
       ]
       ()
@@ -73,6 +52,7 @@ let ask_leaders_for_interested_people context () =
   return `None
 
 let tag_candidate = sprintf "candidate%Ld"
+let key_original_email = sprintf "original-email-%Ld"
 
 let extract_all_emails context message =
   match_lwt run_id_from_message context message with
@@ -105,23 +85,11 @@ let extract_all_emails context message =
           ]
         ()
       in
+      lwt _ =
+        match_lwt $message(message)->attachments with
+          [] -> return_unit
+        | _ -> context.set ~key:(key_original_email run_id) ~value:(Ys_uid.to_string message) in
       return (`AskCandidatesForTheirOpinion run_id)
-
-let mark_sender_as_interested context message =
-  match_lwt run_id_from_message context message with
-    None ->
-    lwt _ =
-      context.forward_to_supervisor
-        ~message
-        ~subject:"Can't extract candidates"
-        ~content:[ pcdata "Couldn't find a run id" ]
-        ()
-    in
-    return `None
-  | Some run_id ->
-    lwt member = context.get_message_sender ~message in
-    lwt _ = context.tag_member ~member ~tags:[ tag_candidate run_id ] in
-    return (`AskCandidatesForTheirOpinion run_id)
 
 let tag_interested = sprintf "interested%Ld"
 let tag_not_interested = sprintf "notinterested%Ld"
@@ -147,6 +115,13 @@ let tag_already_asked = sprintf "alreadyasked%Ld"
 
 let ask_candidates_for_their_opinion context run_id =
   lwt candidates = context.search_members ~query:(sprintf "%s -%s" (tag_candidate run_id) (tag_already_asked run_id)) () in
+  lwt attachments =
+    match_lwt context.get ~key:(key_original_email run_id) with
+      None -> return []
+    | Some message ->
+      let message = Ys_uid.of_string message in
+      $message(message)->attachments
+  in
   lwt _ =
     Lwt_list.iter_s
       (fun member ->
@@ -156,6 +131,7 @@ let ask_candidates_for_their_opinion context run_id =
              ~member
              ~subject:"Construire un vélo en bambou sur mesure"
              ~data:(data_run_id run_id)
+             ~attachments
              ~content:[
                salutations ; br () ;
                br () ;
@@ -211,9 +187,8 @@ let mark_not_interested context message =
 
 PLAYBOOK
 
-*ask_leaders_for_interested_people ~> `ExtractAllEmails of email ~> extract_all_emails ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
- ask_leaders_for_interested_people ~> `MarkSenderAsInterested of email ~> mark_sender_as_interested ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
- ask_leaders_for_interested_people ~> `SendSummary of email ~> send_summary
+*start<forward> ~> `Message of email ~> extract_all_emails ~> `AskCandidatesForTheirOpinion of int64 ~> ask_candidates_for_their_opinion
+ start ~> `SendSummary of email ~> send_summary
 
  ask_candidates_for_their_opinion ~> `NotInterested of email ~> mark_not_interested
  ask_candidates_for_their_opinion ~> `Interested of email ~> mark_interested
