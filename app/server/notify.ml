@@ -277,10 +277,11 @@ let create_message message =
       let attachments =
         List.map
           (fun attachment ->
+
              let header =
                Netmime.basic_mime_header [
                  "Content-Type", attachment.Object_message.content_type ;
-                 "Content-Disposition",  "inline; filename=receipt" ;
+                 "Content-Disposition", "attachment" ;  (* (Printf.sprintf "inline; filename=" attachment.Object_message.filename) ; *)
                  "Content-Transfer-Encoding", "base64" ;
                ]
              in
