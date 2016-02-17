@@ -1290,6 +1290,10 @@ h2 {
   margin-left: 20px;
   padding: 3px 0;
 }
+/* line 156, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .supervisor input[type="text"] {
+  width: 100%;
+}
 
 /* line 3, ../sass/_society_public.scss */
 .society-public > div {

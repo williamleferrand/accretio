@@ -36,6 +36,7 @@ let retrieve uid =
       ACLConnected
       (function
         | session when session.member_uid = leader -> return_true
+        | session when session.member_is_admin -> return_true
         | _ -> return_false)
       (fun _ -> return_false)
   in

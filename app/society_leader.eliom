@@ -414,6 +414,20 @@ let update_description (society, description) =
 
 let update_description = server_function ~name:"society-leader-update-description" Json.t<int * string> update_description
 
+let update_supervisor (society, email) =
+  Lwt_log.ign_info_f "update supervisor request in society %d, new supervisor is %s" society email ;
+  protected_connected
+    (fun _ ->
+       match_lwt Object_member.Store.find_by_email email with
+         None -> return_none
+       | Some uid ->
+         lwt _ = $society(society)<-leader = uid in
+         lwt _ = $member(uid)<-societies +=! (`Society, uid) in
+         lwt view = View_member.to_view uid in
+         return (Some view))
+
+let update_supervisor = server_function ~name:"society-leader-update-supervisor" Json.t<int * string> update_supervisor
+
 }}
 
 {client{
@@ -938,6 +952,43 @@ let dom bundle =
       ]
     ]
   in
+
+  let supervisor =
+    let supervisor, update_supervisor_value = S.create view.supervisor in
+    let email = input ~input_type:`Text ~value:(view.supervisor.View_member.email) () in
+    let _ =
+      S.map
+        (fun supervisor -> Ys_dom.set_value email supervisor.View_member.email)
+        supervisor
+    in
+    let update_supervisor _ =
+      Authentication.if_connected ~mixpanel:("society-leader-update-supervisor", [ "uid", Ys_uid.to_string view.uid ])
+        (fun _ ->
+           rpc
+           %update_supervisor
+               (view.uid, Ys_dom.get_value email)
+               (fun supervisor ->
+                  update_supervisor_value supervisor ;
+                  Help.warning "supervisor updated"))
+    in
+    let update_supervisor =
+      button
+        ~button_type:`Button
+        ~a:[ a_onclick update_supervisor ]
+        [ pcdata "Update supervisor" ]
+    in
+    div ~a:[ a_class [ "supervisor" ]] [
+      h2 [ pcdata "Supervisor" ] ;
+      div ~a:[ a_class [ "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          email
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [ update_supervisor ] ;
+      ]
+    ]
+
+  in
+
   (* the main dom *)
 
   div ~a:[ a_class [ "society-leader" ]] [
@@ -971,6 +1022,7 @@ let dom bundle =
       parameters ;
       data_dom ;
       settings ;
+      supervisor ;
     ]
   ]
 
