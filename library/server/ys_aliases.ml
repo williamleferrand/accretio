@@ -29,17 +29,18 @@ let strip = Str.global_replace regex ""
 
 let sphinx_pool =
   Lwt_pool.create
-    (* ~validate:(Lwt_preemptive.detach
+    ~validate:(Lwt_preemptive.detach
                  (fun dbd ->
                     (* this might be an expensive call *)
                     try
                       Mysql.ping dbd;
                       Printf.printf "Pinging sphinx, positive\n" ;
                       flush stdout ;
-                      true with _ ->
-                      Printf.printf "Pinging sphinx, negative\n" ;
+                      true
+                    with exn ->
+                      Printf.printf "Pinging sphinx, negative (%s)\n" (Printexc.to_string exn) ;
                       flush stdout ;
-                      false)) *)
+                      false))
     (1)
     (Lwt_preemptive.detach
        (fun () ->
