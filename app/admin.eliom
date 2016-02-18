@@ -291,7 +291,7 @@ module Helpers =
     let edit_string_list value add remove =
       let value = RList.init value in
       let op label callback =
-        let input = input () in
+        let input = input ~a:[ a_input_type `Text ] () in
         div [
           input ;
           button
@@ -310,7 +310,7 @@ module Helpers =
       ]
 
     let edit_int value update =
-      let input = input ~a:[ a_value (string_of_int value) ] () in
+      let input = input ~a:[ a_input_type `Text ; a_value (string_of_int value) ] () in
       [
         input ;
         button
@@ -320,7 +320,7 @@ module Helpers =
       ]
 
     let edit_uid value update =
-      let input = input ~a:[ a_value (Ys_uid.to_string value) ] () in
+      let input = input ~a:[ a_input_type `Text ; a_value (Ys_uid.to_string value) ] () in
       [
         input ;
         button
@@ -330,7 +330,7 @@ module Helpers =
       ]
 
     let edit_uid_option value update =
-      let input = input ~a:[ a_value (match value with None -> "none" | Some uid -> Ys_uid.to_string uid) ] () in
+      let input = input ~a:[ a_input_type `Text ; a_value (match value with None -> "none" | Some uid -> Ys_uid.to_string uid) ] () in
       [
         input ;
         button
@@ -362,7 +362,7 @@ module Helpers =
       ]
 
     let edit_timestamp value update =
-      let input = input ~a:[ a_value (Ys_time.timestamp_to_isostring value) ] () in
+      let input = input ~a:[ a_input_type `Text ;  a_value (Ys_time.timestamp_to_isostring value) ] () in
       [
         input ;
           button
