@@ -29,7 +29,7 @@ let strip = Str.global_replace regex ""
 
 let sphinx_pool =
   Lwt_pool.create
-    ~validate:(Lwt_preemptive.detach
+    (* ~validate:(Lwt_preemptive.detach
                  (fun dbd ->
                     (* this might be an expensive call *)
                     try
@@ -39,12 +39,12 @@ let sphinx_pool =
                       true with _ ->
                       Printf.printf "Pinging sphinx, negative\n" ;
                       flush stdout ;
-                      false))
-    (Ys_config.get_int "sphinx-pool-size")
+                      false)) *)
+    (1)
     (Lwt_preemptive.detach
        (fun () ->
           let dbd = Mysql.quick_connect ~host:"127.0.0.1" ~port:9306 () in
-          Mysql.set_charset dbd "utf8" ;
+          (* Mysql.set_charset dbd "utf8" ; *)
           dbd))
 
 

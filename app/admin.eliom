@@ -79,6 +79,27 @@ let fetch_thread =
     "thread"
     (Object_thread.Store.Unsafe.get : (int -> Object_thread.t Lwt.t))
 
+let query_member query =
+  Lwt_log.ign_info_f "searching for member using query %s" query ;
+  let open Ys_uid in
+  lwt uids_name = try_lwt Object_member.Store.search_name query with _ -> return [] in
+  let uids = Ys_uid.of_list uids_name in
+  lwt uids =
+    match_lwt Object_member.Store.find_by_email query with
+      None -> return uids
+    | Some uid -> return (UidSet.add uid uids)
+  in
+  Lwt_log.ign_info_f "found %d members using query %s" (UidSet.cardinal uids) query ;
+  match UidSet.elements uids with
+    [] -> return_none
+  | uid :: _ -> return (Some uid)
+
+let query_member = server_function ~name:"query-admin-member" Json.t<string> query_member
+
+let query_thread query =
+  return_none
+
+let query_thread = server_function ~name:"query-admin-thread" Json.t<string> query_thread
 
 (* setters ********************************************************************)
 
@@ -165,7 +186,7 @@ let wrap_apply f =
 let apply_member_op = wrap_apply %apply_member_op
 let apply_thread_op = wrap_apply %apply_thread_op
 
-let dom_graph ~print ~parse fetcher builder goto uid_option : Html5_types.div_content_fun elt React.signal =
+let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_types.div_content_fun elt React.signal =
   S.map
     (function
       | Anonymous ->
@@ -188,6 +209,10 @@ let dom_graph ~print ~parse fetcher builder goto uid_option : Html5_types.div_co
                   None -> ""
                 | Some text -> print text)
             () in
+        let text_input = input
+          ~input_type:`Text
+          ()
+        in
         ignore (Lwt_js.yield () >>= fun _ -> Ys_dom.focus uid_input ; return_unit);
         Manip.Ev.onkeyup
           uid_input
@@ -200,11 +225,29 @@ let dom_graph ~print ~parse fetcher builder goto uid_option : Html5_types.div_co
                end
              else
                true) ;
+        Manip.Ev.onkeyup
+          text_input
+          (fun ev ->
+             if ev##keyCode = Keycode.return then
+               begin
+                 let query = Ys_dom.get_value text_input in
+                 if query <> "" then
+                   begin
+                     Lwt.ignore_result
+                       (lwt result = querier query in goto result ; return_unit) ;
+                     true
+                   end
+                 else
+                   true
+               end
+             else
+               true) ;
 
         match uid_option with
           None -> div ~a:[ a_class [ "admin" ]] [
             div ~a:[ a_class [ "box" ]] [
-              uid_input
+              div ~a:[ a_class [ "box-section" ]] [ uid_input ] ;
+              div ~a:[ a_class [ "box-section" ]] [ text_input ] ;
             ]
           ]
        | Some uid ->
@@ -214,7 +257,8 @@ let dom_graph ~print ~parse fetcher builder goto uid_option : Html5_types.div_co
              update_content content_option ; return_unit) ;
           div ~a:[ a_class [ "admin" ]] [
             div ~a:[ a_class [ "box" ]] [
-              uid_input
+              div ~a:[ a_class [ "box-section" ]] [ uid_input ] ;
+              div ~a:[ a_class [ "box-section" ]] [ text_input ] ;
             ] ;
             R.node
               (S.map
@@ -627,12 +671,15 @@ let builder_thread uid v =
 let dom_graph_member =
   dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
   %fetch_member
+  %query_member
       builder_member
+
       (fun uid_option -> Service.goto (Service.AdminGraphMember uid_option))
 
 let dom_graph_thread =
   dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
   %fetch_thread
+  %query_thread
       builder_thread
       (fun uid_option -> Service.goto (Service.AdminGraphThread uid_option))
 
