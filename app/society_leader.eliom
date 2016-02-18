@@ -492,7 +492,7 @@ let attach_outbox society outbox =
     in
     let reply =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick reply ]
         [ pcdata "Reply" ]
     in
@@ -520,7 +520,7 @@ let dom bundle =
             (List.map
                (fun option ->
                     button
-                      ~button_type:`Button
+
                       ~a:[ a_onclick (fun _ -> detach_rpc %dispatch_message_manually (message.View_message.uid, option) (fun _ -> ())) ]
                       [ pcdata option ]
                   )
@@ -548,7 +548,7 @@ let dom bundle =
       in
       let reply =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick reply ]
           [ pcdata "Reply" ]
       in
@@ -577,7 +577,7 @@ let dom bundle =
     in
     let mode_toggle m l =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick (fun _ -> update_mode m) ;
              R.a_class (S.map (function mode -> if mode = m then [ "active" ] else []) mode) ]
         [ pcdata l ]
@@ -616,7 +616,7 @@ let dom bundle =
     in
     let force =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick force ]
         [ pcdata "Force" ]
     in
@@ -626,7 +626,7 @@ let dom bundle =
     in
     let remove =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick remove ]
         [ pcdata "Cancel" ]
     in
@@ -644,7 +644,7 @@ let dom bundle =
     in
     let tick =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick tick ]
         [ pcdata "Tick" ]
     in
@@ -654,7 +654,7 @@ let dom bundle =
     in
     let reset =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick reset ]
         [ pcdata "Reset" ]
     in
@@ -679,60 +679,55 @@ let dom bundle =
         | `Unit ->
           let call =
             button
-              ~button_type:`Button
-              ~a:[ a_onclick (fun _ -> ignore_result (%trigger_unit (view.uid, stage))) ]
+              ~a:[ a_button_type `Button ; a_onclick (fun _ -> ignore_result (%trigger_unit (view.uid, stage))) ]
               [ pcdata stage ]
           in
           div ~a:[ a_class [ "trigger" ]] [ call ]
         | `Int ->
-          let input = input ~input_type:`Number () in
+          let input = input ~a:[ a_input_type `Number ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_int (view.uid, stage, int_of_string arg))
           in
           let call =
             button
-              ~button_type:`Button
-              ~a:[ a_onclick call ]
+              ~a:[ a_button_type `Button ;  a_onclick call ]
               [ pcdata stage ]
           in
           div ~a:[ a_class [ "trigger" ]] [ input ; call  ]
         | `Float ->
-          let input = input ~input_type:`Text ~a:[ a_placeholder "FLOAT" ] () in
+          let input = input  ~a:[ a_input_type `Text ; a_placeholder "FLOAT" ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_float (view.uid, stage, float_of_string arg))
           in
           let call =
             button
-              ~button_type:`Button
-              ~a:[ a_onclick call ]
+              ~a:[ a_button_type `Button ; a_onclick call ]
               [ pcdata stage ]
              in
              div ~a:[ a_class [ "trigger" ]] [ input ; call ]
         | `String ->
-          let input = input ~input_type:`Text ~a:[ a_placeholder "STRING" ] () in
+          let input = input  ~a:[ a_input_type `Text ; a_placeholder "STRING" ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_string (view.uid, stage, arg))
           in
           let call =
             button
-                 ~button_type:`Button
-                 ~a:[ a_onclick call ]
+              ~a:[ a_button_type `Button ; a_onclick call ]
                  [ pcdata stage ]
           in
           div ~a:[ a_class [ "trigger" ]] [ input ; call ]
         | _ ->
-          let input = input ~input_type:`Text ~a:[ a_placeholder "JSON" ] () in
+          let input = input  ~a:[ a_input_type `Text ; a_placeholder "JSON" ] () in
           let call _ =
             let arg = Ys_dom.get_value input in
             ignore_result (%trigger_raw (view.uid, stage, arg))
           in
           let call =
             button
-              ~button_type:`Button
-              ~a:[ a_onclick call ]
+              ~a:[ a_button_type `Button ;  a_onclick call ]
               [ pcdata stage ]
           in
           div ~a:[ a_class [ "trigger" ]] [ input ; call ])
@@ -747,7 +742,7 @@ let dom bundle =
 
     let format_member (member, tags) =
 
-      let tag_input = input ~a:[ a_placeholder "Comma separated tags" ; a_value (String.concat "," tags) ] ~input_type:`Text () in
+      let tag_input = input ~a:[ a_input_type `Text ; a_placeholder "Comma separated tags" ; a_value (String.concat "," tags) ]  () in
       let tag_update _ =
         let tags = Ys_dom.get_value tag_input in
         let tags = Regexp.split (Regexp.regexp ",") tags in
@@ -757,7 +752,7 @@ let dom bundle =
       in
       let tag_update =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick tag_update ]
           [ pcdata "Update tags" ]
       in
@@ -768,7 +763,7 @@ let dom bundle =
       in
       let remove =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick remove ]
           [ pcdata "Remove" ]
       in
@@ -783,8 +778,8 @@ let dom bundle =
     in
 
     let add_member =
-      let input_email = input ~a:[ a_placeholder "Email" ] ~input_type:`Text () in
-      let input_tags = input ~a:[ a_placeholder "Comma separated tags" ] ~input_type:`Text () in
+      let input_email = input ~a:[ a_input_type `Text ; a_placeholder "Email" ]  () in
+      let input_tags = input ~a:[ a_input_type `Text ; a_placeholder "Comma separated tags" ]  () in
       let create _ =
         match Ys_dom.get_value input_email with
           "" -> Help.warning "Please specify a valid email"
@@ -797,7 +792,7 @@ let dom bundle =
       in
       let create =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick create ]
           [ pcdata "Create" ]
       in
@@ -835,7 +830,7 @@ let dom bundle =
 
       let send =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick send ]
           [ pcdata "Send" ]
       in
@@ -853,8 +848,8 @@ let dom bundle =
 
   let data_dom =
     let add_data =
-      let input_key = input ~input_type:`Text ~a:[ a_placeholder "Key" ] () in
-      let input_value = input ~input_type:`Text ~a:[ a_placeholder "Value" ] () in
+      let input_key = input  ~a:[ a_input_type `Text ; a_placeholder "Key" ] () in
+      let input_value = input  ~a:[ a_input_type `Text ; a_placeholder "Value" ] () in
       let add _ =
         match Ys_dom.get_value input_key with
           "" -> Help.warning "Please specify a key"
@@ -868,7 +863,7 @@ let dom bundle =
       in
       let add =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick add ]
           [ pcdata "Add" ]
       in
@@ -885,7 +880,7 @@ let dom bundle =
       in
       let remove =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick remove ]
           [ pcdata "Remove" ]
       in
@@ -911,7 +906,7 @@ let dom bundle =
                   (S.map
                      (fun existing_data ->
                         let current_value = try List.assoc parameter.View_playbook.label existing_data with _ -> "" in
-                        let input_value = input ~input_type:`Text ~a:[ a_placeholder "Value" ; a_value current_value ] () in
+                        let input_value = input ~a:[ a_input_type `Text ; a_placeholder "Value" ; a_value current_value ] () in
                         let add _ =
                           Authentication.if_connected
                             (fun _ ->
@@ -922,8 +917,7 @@ let dom bundle =
                         in
                         let add =
                           button
-                            ~button_type:`Button
-                            ~a:[ a_onclick add ]
+                            ~a:[ a_button_type `Button ; a_onclick add ]
                             [ pcdata "Add" ]
                         in
                         div ~a:[ a_class [ "parameter" ]] [
@@ -948,8 +942,7 @@ let dom bundle =
     in
     let update_name =
       button
-        ~button_type:`Button
-        ~a:[ a_onclick update_name ]
+        ~a:[ a_button_type `Button ; a_onclick update_name ]
         [ pcdata "Update name" ]
     in
     div ~a:[ a_class [ "name" ]] [
@@ -970,8 +963,7 @@ let dom bundle =
     in
     let update_description =
       button
-        ~button_type:`Button
-        ~a:[ a_onclick update_description ]
+        ~a:[ a_button_type `Button ; a_onclick update_description ]
         [ pcdata "Update description" ]
     in
     div ~a:[ a_class [ "description" ]] [
@@ -985,7 +977,7 @@ let dom bundle =
 
   let supervisor =
     let supervisor, update_supervisor_value = S.create view.supervisor in
-    let email = input ~input_type:`Text ~value:(view.supervisor.View_member.email) () in
+    let email = input ~a:[ a_input_type `Text ; a_value (view.supervisor.View_member.email) ] () in
     let _ =
       S.map
         (fun supervisor -> Ys_dom.set_value email supervisor.View_member.email)
@@ -1003,8 +995,7 @@ let dom bundle =
     in
     let update_supervisor =
       button
-        ~button_type:`Button
-        ~a:[ a_onclick update_supervisor ]
+        ~a:[ a_button_type `Button ; a_onclick update_supervisor ]
         [ pcdata "Update supervisor" ]
     in
     div ~a:[ a_class [ "supervisor" ]] [

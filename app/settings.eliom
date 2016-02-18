@@ -101,15 +101,13 @@ let builder settings =
       let a = [ a_name "all_or_batched";
                 a_onclick (fun _ -> update_batched false) ] in
       input
-        ~input_type:`Radio
-        ~a:(if not settings.Object_member.email_notify_batch_emails then a_checked `Checked :: a else a) () in
+        ~a: ((a_input_type `Radio) :: (if not settings.Object_member.email_notify_batch_emails then a_checked `Checked :: a else a)) () in
 
     let returning_toggle =
       let a = [ a_name "all_or_batched";
                 a_onclick (fun _ -> update_batched true) ] in
       input
-        ~input_type:`Radio
-        ~a:(if settings.Object_member.email_notify_batch_emails then a_checked `Checked :: a else a) () in
+        ~a:((a_input_type `Radio) :: (if settings.Object_member.email_notify_batch_emails then a_checked `Checked :: a else a)) () in
 
     div ~a:[ a_class [ "box" ]] [
       h2 [ pcdata "Email notifications" ] ;
@@ -125,8 +123,8 @@ let builder settings =
 
   let update_password =
 
-    let old_password = input ~a:[ a_placeholder "Old password" ] ~input_type:`Password () in
-    let new_password = input ~a:[ a_placeholder "New password" ] ~input_type:`Password () in
+    let old_password = input ~a:[ a_placeholder "Old password" ; a_input_type `Password ] () in
+    let new_password = input ~a:[ a_placeholder "New password" ; a_input_type `Password ] () in
 
     let update _ =
       match Ys_dom.get_value old_password, Ys_dom.get_value new_password with
@@ -149,7 +147,7 @@ let builder settings =
     let update_button =
       button
           ~a:[ a_onclick update  ]
-          ~button_type:`Button
+
           [ pcdata "Update" ]
     in
 

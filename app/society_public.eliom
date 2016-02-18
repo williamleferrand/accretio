@@ -79,7 +79,7 @@ open View_society
 let dom view =
 
   let join =
-    let email_input = input ~input_type:`Text ~a:[ a_placeholder "Email" ] () in
+    let email_input = input  ~a:[ a_input_type `Text ; a_placeholder "Email" ] () in
     let optional_message =
       Raw.textarea ~a:[ a_placeholder "Optional message for the group leader" ] (pcdata "")
     in
@@ -102,8 +102,8 @@ let dom view =
 
     let join =
       button
-        ~button_type:`Button
-        ~a:[ a_onclick join ]
+
+        ~a:[ a_button_type `Button ; a_onclick join ]
         [ pcdata "Request to join" ]
     in
 

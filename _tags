@@ -19,10 +19,10 @@
 
 <app/server/*.ml{,i}> and not <app/server/object_*> and not <app/server/ys_*> : pkg_js_of_ocaml.syntax
 
-<app/server/ys_*.ml{,i}> and not <app/server/ys_stripe*> and not <app/server/ys_twilio*> : syntax_camlp4o, pkg_bin_prot.syntax
-<app/server/object_*.ml{,i}>: syntax_camlp4o, pkg_bin_prot.syntax
+<app/server/ys_*.ml{,i}> and not <app/server/ys_stripe*> and not <app/server/ys_twilio*> : syntax_camlp4o, pkg_pa_bin_prot.syntax
+<app/server/object_*.ml{,i}>: syntax_camlp4o, pkg_pa_bin_prot.syntax
 
-<app/server/attribute_*.ml{,i}>: syntax_camlp4o, pkg_bin_prot.syntax
+<app/server/attribute_*.ml{,i}>: syntax_camlp4o, pkg_pa_bin_prot.syntax
 <app/server/imap_endpoint.ml{,i}>: pkg_imap
 
 # some specific additional libraries might be required

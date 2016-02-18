@@ -215,13 +215,13 @@ let builder = function
           | `Use stripe ->
             let use_current_stripe =
               button
-                ~button_type:`Button
+
                 ~a:[ a_onclick (fun _ -> perform (stripe.stripe_customer, stripe.stripe_last4)) ]
                 [ pcdata "Pay using card ending in " ; pcdata stripe.stripe_last4 ]
             in
             let use_another_card =
               button
-                ~button_type:`Button
+
                 ~a:[ a_onclick (fun _ -> update_payment_type (`CreatePaymentMethod (Some stripe))) ]
                 [ pcdata "Use another card" ]
             in
@@ -271,7 +271,7 @@ let builder = function
                 None -> pcdata ""
               | Some stripe ->
                 button
-                  ~button_type:`Button
+
                   ~a:[ a_onclick (fun _ -> perform (stripe.stripe_customer, stripe.stripe_last4)) ]
                   [ pcdata "Use card ending in " ; pcdata stripe.stripe_last4 ]
             in
@@ -284,7 +284,7 @@ let builder = function
                 cc_exp_month ; cc_exp_year ; cc_cvc
               ] ;
               div ~a:[ a_class [ "box-action" ]] [
-                button ~button_type:`Button ~a:[ a_onclick add_card ] [ pcdata "Process payment" ] ;
+                button  ~a:[ a_onclick add_card ] [ pcdata "Process payment" ] ;
                 use_current_stripe_option ;
               ] ;
             ])

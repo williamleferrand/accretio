@@ -204,14 +204,14 @@ let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_type
       | Connected session ->
 
         let uid_input = input
-            ~input_type:`Text
-            ~value:(match uid_option with
+            ~a:[ a_input_type `Text ;
+                 a_value (match uid_option with
                   None -> ""
-                | Some text -> print text)
+                | Some text -> print text) ]
             () in
         let text_input = input
-          ~input_type:`Text
-          ()
+            ~a:[ a_input_type `Text ]
+            ()
         in
         ignore (Lwt_js.yield () >>= fun _ -> Ys_dom.focus uid_input ; return_unit);
         Manip.Ev.onkeyup
@@ -279,19 +279,19 @@ module Helpers =
       ]
 
     let edit_string value update =
-      let input = input ~input_type:`Text ~value () in
+      let input = input ~a:[ a_input_type `Text ; a_value value ] () in
       [
         input ;
         button
-          ~a:[ a_onclick (fun _ -> ignore_result (update (Ys_dom.get_value input))) ]
-          ~button_type:`Button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> ignore_result (update (Ys_dom.get_value input))) ]
           [ pcdata "Update" ]
       ]
 
     let edit_string_list value add remove =
       let value = RList.init value in
       let op label callback =
-        let input = input ~input_type:`Text () in
+        let input = input () in
         div [
           input ;
           button
@@ -299,7 +299,7 @@ module Helpers =
                 let s = Ys_dom.get_value input in
                 if (s <> "") then
                   ignore_result (callback s)) ]
-            ~button_type:`Button
+
             [ pcdata label ]
         ]
       in
@@ -310,32 +310,32 @@ module Helpers =
       ]
 
     let edit_int value update =
-      let input = input ~input_type:`Text ~value:(string_of_int value) () in
+      let input = input ~a:[ a_value (string_of_int value) ] () in
       [
         input ;
         button
-          ~a:[ a_onclick (fun _ -> ignore_result (update (int_of_string (Ys_dom.get_value input)))) ]
-          ~button_type:`Button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> ignore_result (update (int_of_string (Ys_dom.get_value input)))) ]
           [ pcdata "Update" ]
       ]
 
     let edit_uid value update =
-      let input = input ~input_type:`Text ~value:(Ys_uid.to_string value) () in
+      let input = input ~a:[ a_value (Ys_uid.to_string value) ] () in
       [
         input ;
         button
-          ~a:[ a_onclick (fun _ -> ignore_result (update (int_of_string (Ys_dom.get_value input)))) ]
-          ~button_type:`Button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> ignore_result (update (int_of_string (Ys_dom.get_value input)))) ]
           [ pcdata "Update" ]
       ]
 
     let edit_uid_option value update =
-      let input = input ~input_type:`Text ~value:(match value with None -> "none" | Some uid -> Ys_uid.to_string uid) () in
+      let input = input ~a:[ a_value (match value with None -> "none" | Some uid -> Ys_uid.to_string uid) ] () in
       [
         input ;
         button
           ~a:[ a_onclick (fun _ -> ignore_result (update (try Some (int_of_string (Ys_dom.get_value input)) with _ -> None ))) ]
-          ~button_type:`Button
+
           [ pcdata "Update" ]
       ]
 
@@ -346,25 +346,23 @@ module Helpers =
         button
           ~a:[ a_onclick (fun _ ->
               ignore_result (update (Ys_dom.get_value_textarea textarea))) ]
-          ~button_type:`Button
+
           [ pcdata "Update" ]
       ]
 
     let edit_bool value update =
-      let checkbox = input ~input_type:`Checkbox ~a:(match value with false -> [] | true -> [ a_checked `Checked ]) () in
+      let checkbox = input ~a:(match value with false -> [ a_input_type `Checkbox ] | true -> [ a_input_type `Checkbox ; a_checked `Checked ]) () in
       [
         checkbox ;
         button
           ~a:[ a_onclick (fun _ ->
               ignore_result (update (Ys_dom.is_checked checkbox))) ]
-          ~button_type:`Button
+
           [ pcdata "Update" ]
       ]
 
     let edit_timestamp value update =
-      let input = input
-          ~input_type:`Text
-          ~value:(Ys_time.timestamp_to_isostring value) () in
+      let input = input ~a:[ a_value (Ys_time.timestamp_to_isostring value) ] () in
       [
         input ;
           button
@@ -374,15 +372,15 @@ module Helpers =
                       (update
                          (Ys_time.isostring_to_timestamp (Ys_dom.get_value input))))
              ]
-          ~button_type:`Button
+
           [ pcdata "Update" ]
       ]
 
     let edit_authentication uid =
       [
         button
-          ~a:[ a_onclick (fun _ -> ignore_result (apply_member_op (uid, MemberResetPassword))) ]
-          ~button_type:`Button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> ignore_result (apply_member_op (uid, MemberResetPassword))) ]
           [ pcdata "Reset Password (& send email)" ]
       ]
 
@@ -396,20 +394,21 @@ module Helpers =
                  div [
                    span [ pcdata "Default" ] ;
                    button
-                     ~a:[ a_onclick
+                     ~a:[ a_button_type `Button ;
+                          a_onclick
                             (fun _ -> ignore_result (apply_member_op (uid, MemberMakeAdmin)
                                                      >>= fun _ -> update_right Object_member.Admin ; return_unit)) ]
-                     ~button_type:`Button
+
                      [ pcdata "Make Admin" ]
                  ]
                | Object_member.Admin ->
                  div [
                    span [ pcdata "Admin" ] ;
                    button
-                     ~a:[ a_onclick
+                     ~a:[ a_button_type `Button ;
+                          a_onclick
                             (fun _ -> ignore_result (apply_member_op (uid, MemberMakeDefault)
                                                      >>= fun _ -> update_right Object_member.Default; return_unit)) ]
-                     ~button_type:`Button
                      [ pcdata "Make Default" ]
                  ]
              )
@@ -420,7 +419,7 @@ module Helpers =
       let current_state, update_state = S.create state in
 
       let control_box but =
-        let input_suspended = input ~input_type:`Text () in
+        let input_suspended = input  () in
 
         (if (but = `MemberMakeArchived) then pcdata "" else
             button
@@ -430,7 +429,7 @@ module Helpers =
                                        >>= fun _ -> update_state Object_member.Archived; return_unit)
                      )
                  ]
-              ~button_type:`Button
+
               [ pcdata "Archive" ])
 
         :: (if (but = `MemberMakeGhost) then pcdata "" else
@@ -441,7 +440,7 @@ module Helpers =
                                      >>= fun _ -> update_state Object_member.Ghost; return_unit)
                    )
                ]
-            ~button_type:`Button
+
             [ pcdata "Ghostify" ])
 
         :: (if (but = `MemberMakeActive) then pcdata "" else
@@ -452,7 +451,7 @@ module Helpers =
                                          >>= fun _ -> update_state Object_member.Active; return_unit)
                        )
                    ]
-                ~button_type:`Button
+
                 [ pcdata "Activate" ])
 
         :: (if (but = `MemberMakeSuspended) then [] else
@@ -467,7 +466,7 @@ module Helpers =
                                            return_unit)
                          )
                      ]
-                  ~button_type:`Button
+
                   [ pcdata "Suspend" ] ;
               ])
 
@@ -508,10 +507,11 @@ module Helpers =
        let format_edge (tag, uid) =
         let delete =
             button
-            ~a:[ a_onclick
+            ~a:[ a_button_type `Button ;
+                 a_onclick
                    (fun _ ->
                       RList.filter edges (function (_, uid') -> uid' <> uid)) ]
-            ~button_type:`Button
+
             [ pcdata "Unlink" ]
         in
         div ~a:[ a_class [ "left" ]] [
@@ -521,8 +521,8 @@ module Helpers =
         ]
       in
       let add_edges =
-        let input_tag = input ~a:[ a_placeholder "tag" ] ~input_type:`Text () in
-        let input_uid = input ~a:[ a_placeholder "uid" ] ~input_type:`Text () in
+        let input_tag = input ~a:[ a_input_type `Text ; a_placeholder "tag" ]  () in
+        let input_uid = input ~a:[ a_input_type `Text ; a_placeholder "uid" ]  () in
         let button =
           button
             ~a:[ a_onclick
@@ -536,7 +536,7 @@ module Helpers =
                         Ys_dom.set_value input_uid ""
                       with _ -> Help.warning "couldn't parse the tag or the uid")
                ]
-            ~button_type:`Button
+
             [ pcdata "Activate" ]
         in
         div ~a:[ a_class [ "edit-edges-add" ]] [
@@ -556,7 +556,7 @@ module Helpers =
                         ignore_result (synchronize (RList.to_list edges))
                       with _ -> Help.warning "couldn't parse the tag or the uid")
                ]
-            ~button_type:`Button
+
             [ pcdata "Synchronize" ]
         ]
       in
@@ -640,7 +640,7 @@ let builder_thread uid v =
   let edit_messages messages =
     let reset =
       button
-        ~button_type:`Button
+
         ~a:[ a_onclick (fun _ -> ignore_result (apply_thread_op (uid, ThreadMessagesReset))) ]
         [ pcdata "Reset" ]
     in

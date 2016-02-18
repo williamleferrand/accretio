@@ -55,14 +55,12 @@ let ask question_old callback =
       ~a:[ a_onclick (fun _ -> update_anchor None ;
                        Ys_mixpanel.track "popup-ask-yes" ~params:[ "question_old", question_old ] () ;
                        callback `Yes) ]
-      ~button_type:`Button
       [ pcdata "Yes" ]
   and button_no =
     button
       ~a:[ a_onclick (fun _ -> update_anchor None ;
                        Ys_mixpanel.track "popup-ask-no" ~params:[ "question_old", question_old ] () ;
                        callback `No ) ]
-      ~button_type:`Button
       [ pcdata "No" ] in
   show ~cls:[ "box" ] ~label:("question_old:"^question_old) [
     div ~a:[ a_class [ "content" ]] [ pcdata question_old ] ;

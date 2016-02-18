@@ -54,7 +54,7 @@ let dom () =
     Raw.textarea ~a:[ a_placeholder "How can we improve?" ] (pcdata "")
   in
 
-  let contact_info = input ~a:[ a_placeholder "How can we get in touch?" ] ~input_type:`Text () in
+  let contact_info = input ~a:[ a_placeholder "How can we get in touch?" ]  () in
 
   let send _ =
     match Ys_dom.get_value_textarea feedback, Ys_dom.get_value contact_info with
@@ -69,7 +69,7 @@ let dom () =
 
   let send =
     button
-      ~button_type:`Button
+      
       ~a:[ a_onclick send ]
       [ pcdata "Send" ]
   in
