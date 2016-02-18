@@ -101,7 +101,7 @@ let dom_request_recovery () =
     (function
       | `AskingForEmail ->
 
-        let email = input  ~a:[ a_autocomplete `On ; a_placeholder "What is your email?" ] ~input_type:`Text () in
+        let email = input  ~a:[ a_input_type `Text ; a_autocomplete `On ; a_placeholder "What is your email?" ]  () in
 
           let request_recovery _ =
             match Ys_dom.get_value email with
@@ -123,7 +123,7 @@ let dom_request_recovery () =
             div ~a:[ a_class [ "box-action" ]] [
               button
                 ~a:[ a_onclick request_recovery ]
-                ~button_type:`Button
+
                 [ pcdata "Recover" ]
             ]
           ]
@@ -156,8 +156,8 @@ let dom_recover token =
 
   Lwt.ignore_result (Authentication.log_off_no_redirect ()) ;
 
-  let password1 = input  ~a:[ a_autocomplete `On ] ~input_type:`Password () in
-  let password2 = input  ~a:[ a_autocomplete `On ] ~input_type:`Password () in
+  let password1 = input  ~a:[ a_autocomplete `On ; a_input_type `Password ] () in
+  let password2 = input  ~a:[ a_autocomplete `On ; a_input_type `Password ] () in
 
   Help.silent_on_keydown password1 ;
   Help.silent_on_keydown password2 ;
@@ -201,7 +201,7 @@ let dom_recover token =
           div ~a:[ a_class [ "box-action" ]] [
             button
               ~a:[ a_onclick recover ]
-              ~button_type:`Button
+
               [ pcdata "Recover" ]
           ] ;
         ]

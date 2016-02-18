@@ -70,7 +70,7 @@ module Highlighted =
                         false -> cls
                       | true -> "highlight" :: cls)
                     highlighted) ]
-          ~input_type () in
+          () in
 
       Manip.Ev.onkeydown
         dom

@@ -34,7 +34,7 @@ let isostring_to_timestamp isostring =
   Int64.of_float (Js.date##parse(Js.string isostring) /. 1000.)
 
 let date_picker () =
-  let datetime = input ~input_type:`Datetime_local () in
+  let datetime = input ~a:[ a_input_type `Datetime_local ] () in
 
   let get () =
     match Ys_dom.get_value datetime with
@@ -55,10 +55,9 @@ let date_picker () =
 
 let date_picker_react ?default () =
   let datetime = input
-      ~input_type:`Datetime_local
       ~a:(match default with
-            None -> []
-          | Some timestamp -> [ a_value (string_of_float (Int64.to_float timestamp *. 1000.)) ]) () in
+            None -> [ a_input_type `Datetime_local ]
+          | Some timestamp -> [ a_input_type `Datetime_local ; a_value (string_of_float (Int64.to_float timestamp *. 1000.)) ]) () in
 
   let timestamp, update_timestamp = S.create default in
 

@@ -139,12 +139,12 @@ let builder  = function
     let _ = Ys_viz.render graph view.automata in
 
     let create_society =
-      let name = input ~input_type:`Text ~a:[ a_placeholder "name of your group" ] () in
+      let name = input  ~a:[ a_input_type `Text ; a_placeholder "name of your group" ] () in
       let description = Raw.textarea ~a:[ a_placeholder "brief description" ] (pcdata "") in
       let parameters =
         List.map
           (fun parameter ->
-             let input = input ~input_type:`Text ~a:[ a_placeholder (String.lowercase parameter.label) ] () in
+             let input = input  ~a:[ a_input_type `Text ; a_placeholder (String.lowercase parameter.label) ] () in
              input, (parameter.key, input))
           playbook.parameters
       in
@@ -167,7 +167,7 @@ let builder  = function
       in
       let create =
         button
-          ~button_type:`Button
+
           ~a:[ a_onclick create ]
           [ pcdata "Create" ]
       in
@@ -200,12 +200,12 @@ let builder  = function
                in
                div ~a:[ a_class [ "playbook-controls" ]] [
                  button
-                   ~button_type:`Button
+
                    ~a:[ a_onclick (fun _ -> make_public ()) ;
                         R.a_class (S.map (function Public -> [ "active" ] | _ -> []) scope) ]
                    [ pcdata "Public" ] ;
                  button
-                   ~button_type:`Button
+
                    ~a:[ a_onclick (fun _ -> make_private ()) ;
                         R.a_class (S.map (function Private -> [ "active" ] | _ -> []) scope) ]
                    [ pcdata "Private" ] ;

@@ -57,7 +57,7 @@ let attach ?(square=true) ?(max_width=300) ?(max_height=300) img =
 
 let upload_box ?(square=true) ?(max_width=300) ?(max_height=300) ?(name="Select file") ?cl callback =
   let selected_file, update_selected_file = S.create None in
-  let input = input ~a:[ a_id "images" ; a_accept [ "image/*" ] ] ~input_type:`File () in
+  let input = input ~a:[ a_id "images" ; a_accept [ "image/*" ] ; a_input_type `File ] () in
   let label = Raw.label ~a:[ Raw.a_for "images" ; (match cl with None -> a_class [ "darkroom-label" ] | Some cl -> a_class [ cl ]) ] [ pcdata name ] in
   Manip.Ev.onchange
     input
@@ -93,8 +93,8 @@ let upload_box ?(square=true) ?(max_width=300) ?(max_height=300) ?(name="Select 
            div ~a:[ a_class [ "darkroom-upload-box" ]] [
              img ;
              div ~a:[ a_class [ "upload-controls" ]] [
-               button ~button_type:`Button ~a:[ a_onclick (fun _ -> update_selected_file None) ] [ pcdata "Select another file" ] ;
-               button ~button_type:`Button ~a:[ a_onclick upload ] [ pcdata "Upload" ]
+               button ~a:[ a_button_type `Button ; a_onclick (fun _ -> update_selected_file None) ] [ pcdata "Select another file" ] ;
+               button ~a:[ a_button_type `Button ; a_onclick upload ] [ pcdata "Upload" ]
              ]
            ])
        selected_file)

@@ -120,7 +120,7 @@ let format_message message =
     let close_button =
       button
         ~a:[ a_onclick (fun _ -> update_message Silent) ]
-        ~button_type:`Button
+        
         [ pcdata "Close" ]
     in
     div ~a:[ a_class [ "help"; "warning" ]]
@@ -132,7 +132,7 @@ let format_message message =
     let close_button =
       button
         ~a:[ a_onclick (fun _ -> update_message Silent) ]
-        ~button_type:`Button
+        
         [ pcdata "Close" ]
     in
     div ~a:[ a_class [ "help"; "error" ]]
@@ -144,13 +144,13 @@ let format_message message =
     let yes_button =
       button
         ~a:[ a_onclick (fun _ -> continuation true; update_message Silent) ]
-        ~button_type:`Button
+        
         [ pcdata "Yes" ]
     in
     let no_button =
       button
         ~a:[ a_onclick (fun _ -> continuation false; update_message Silent) ]
-        ~button_type:`Button
+        
         [ pcdata "No" ]
     in
     div ~a:[ a_class [ "help"; "ask" ]]

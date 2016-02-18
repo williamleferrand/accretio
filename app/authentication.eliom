@@ -238,7 +238,7 @@ let log_off_no_redirect () =
 let connection_box_landing ?(guest=false) ?(cls=[]) () =
 
   let new_or_returning, update_new_or_returning = S.create `Returning in
-  let email = input ~a:[ a_autocomplete `On ] ~input_type:`Text () in
+  let email = input ~a:[ a_autocomplete `On ]  () in
 
   ignore (Lwt_js.yield () >>= fun _ -> Ys_dom.focus email ; return_unit);
 
@@ -303,12 +303,12 @@ let connection_box_landing ?(guest=false) ?(cls=[]) () =
          [
            div ~a:[ a_class [ "authentication-field" ]] [
              Raw.label [ pcdata "Email" ] ;
-             string_input ~input_type:`Text ~name:email ()
+             string_input  ~name:email ()
            ] ;
            div ~a:[ a_class [ "authentication-field";
                               "authentication-field-name" ]] [
              Raw.label [ pcdata_i18n "Name" ] ;
-             string_input ~a:[ a_autocomplete `Off ] ~input_type:`Text ~name:name ()
+             string_input ~a:[ a_autocomplete `Off ]  ~name:name ()
            ] ;
            div ~a:[ a_class [ "authentication-field" ;
                               "authentication-field-password" ]] [
@@ -344,7 +344,7 @@ let connection_box_landing ?(guest=false) ?(cls=[]) () =
            string_input ~input_type:`Hidden ~name () ;
            div ~a:[ a_class [ "authentication-field" ]] [
              Raw.label [ pcdata "Email" ] ;
-             string_input ~input_type:`Text ~name:email ()
+             string_input  ~name:email ()
            ] ;
            div ~a:[ a_class [ "authentication-field" ;
                               "authentication-field-password" ]] [
@@ -388,21 +388,22 @@ let connection_box_landing ?(guest=false) ?(cls=[]) () =
 let connection_box ~callback ?(cls=[]) () =
 
   let new_or_returning, update_new_or_returning = S.create `Returning in
-  let email = input ~a:[ a_autocomplete `On ; a_placeholder "Email" ] ~input_type:`Text () in
+  let email = input ~a:[ a_input_type `Text ; a_autocomplete `On ; a_placeholder "Email" ]  () in
 
   ignore (Lwt_js.yield () >>= fun _ -> Ys_dom.focus email ; return_unit);
 
   let new_toggle = input
-      ~input_type:`Radio
       ~a:[ a_name "new_or_returning";
            a_onclick (fun _ -> update_new_or_returning `New) ;
+           a_input_type `Radio
          ] () in
 
   let returning_toggle = input
-      ~input_type:`Radio
+
       ~a:[ a_name "new_or_returning";
            a_onclick (fun _ -> update_new_or_returning `Returning) ;
-           a_checked `Checked
+           a_checked `Checked ;
+           a_input_type `Radio
          ] () in
 
   let _ =
@@ -465,14 +466,14 @@ let connection_box ~callback ?(cls=[]) () =
           Help.silent () ; callback session
     in
     button
-      ~button_type:`Button
+
       ~a:[ a_onclick (fun _ -> ignore_result (connect_with_facebook ())) ;
            a_class [ "fb-connect" ]] [ pcdata "Connect with Facebook" ]
   in
 
   let new_user =
-    let name = input ~a:[ a_autocomplete `On ; a_placeholder "Name" ] ~input_type:`Text () in
-    let password = input ~a:[ a_autocomplete `On ; a_placeholder "Password" ] ~input_type:`Password () in
+    let name = input ~a:[ a_autocomplete `On ; a_placeholder "Name" ]  () in
+    let password = input ~a:[ a_autocomplete `On ; a_placeholder "Password" ; a_input_type `Password ] () in
 
     let join _ =
       let name = Ys_dom.get_value name in
@@ -500,14 +501,14 @@ let connection_box ~callback ?(cls=[]) () =
     let join_button =
       button
         ~a:[ a_onclick join ]
-        ~button_type:`Button
+
         [ pcdata_i18n "Join" ]
     in
 
     let cancel =
       button
         ~a:[ a_onclick (fun _ -> Popup.close ()) ]
-        ~button_type:`Button
+
           [ pcdata_i18n "Cancel" ]
     in
 
@@ -523,7 +524,7 @@ let connection_box ~callback ?(cls=[]) () =
     ] in
 
   let returning_user =
-    let password = input ~a:[ a_autocomplete `On ; a_placeholder "Password" ] ~input_type:`Password () in
+    let password = input ~a:[ a_autocomplete `On ; a_placeholder "Password" ; a_input_type `Password ] () in
 
     let log_in _ =
       ignore_result
@@ -545,14 +546,14 @@ let connection_box ~callback ?(cls=[]) () =
     let log_in_button =
         button
           ~a:[ a_onclick log_in ]
-          ~button_type:`Button
+
           [ pcdata_i18n "Log in" ]
     in
 
     let cancel =
       button
         ~a:[ a_onclick (fun _ -> Popup.close ()) ]
-        ~button_type:`Button
+
         [ pcdata_i18n "Cancel" ]
     in
 
@@ -621,7 +622,7 @@ let get_session () =
 let log_off_popup _ =
  let log_off =
     button
-      ~button_type:`Button
+
       ~a:[ a_onclick
              (fun _ ->
                 ignore_result (log_off () >>= fun _ -> Popup.close_and_yield ())) ]
@@ -630,7 +631,7 @@ let log_off_popup _ =
 
   let cancel =
     button
-      ~button_type:`Button
+
       ~a:[ a_onclick (fun _ -> Popup.close ()) ]
       [ pcdata "Cancel" ]
   in

@@ -62,7 +62,7 @@ let builder ?(query="") results =
   let search =
     let input =
       input
-        ~input_type:`Text
+        
         ~a:[ a_placeholder "Search on Accretio" ;
              a_value query ] () in
     Ys_dom.delay_focus input ;
