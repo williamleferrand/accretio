@@ -138,14 +138,14 @@ let factory circle close finalizer =
 
   let button_cancel =
     button
-      
+
       ~a:[ a_onclick close ]
       [ pcdata "Cancel" ]
   in
 
   let button_create =
     button
-      
+
       ~a:[ a_onclick create ]
       [ pcdata "Create" ]
   in
@@ -195,7 +195,7 @@ let format thread format_message =
 
                div ~a:[ a_class [ "right" ]] [
                  button
-                   
+
                    ~a:[ a_class [ "icon-pencil" ] ; a_onclick (fun _ -> update_state `Text) ]
                    []
                ] ;
@@ -205,7 +205,7 @@ let format thread format_message =
              ]
 
            | `Text ->
-             let message_input = input  ~a:[ a_placeholder "Say something" ] () in
+             let message_input = input  ~a:[ a_input_type `Text ; a_placeholder "Say something" ] () in
 
              let send _ =
                match Ys_dom.get_value message_input with
@@ -234,7 +234,7 @@ let format thread format_message =
 
                (* div ~a:[ a_class [ "right" ]] [
                  button
-                   
+
                    ~a:[ a_class [ "icon-camera" ] ; a_onclick (fun _ -> update_state `Image) ]
                    []
                ] ; *)
