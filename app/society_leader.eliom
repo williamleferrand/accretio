@@ -414,6 +414,14 @@ let update_description (society, description) =
 
 let update_description = server_function ~name:"society-leader-update-description" Json.t<int * string> update_description
 
+let update_name (society, name) =
+  protected_connected
+    (fun _ ->
+       lwt _ = $society(society)<-name %% (fun _ -> name) in
+       return (Some ()))
+
+let update_name = server_function ~name:"society-leader-update-name" Json.t<int * string> update_name
+
 let update_supervisor (society, email) =
   Lwt_log.ign_info_f "update supervisor request in society %d, new supervisor is %s" society email ;
   protected_connected
@@ -931,7 +939,29 @@ let dom bundle =
 
   in
 
-  let settings =
+  let name =
+    let name = Raw.textarea (pcdata view.name) in
+    let update_name _ =
+      Authentication.if_connected ~mixpanel:("society-leader-update-name", [ "uid", Ys_uid.to_string view.uid ])
+        (fun _ ->
+           rpc %update_name (view.uid, Ys_dom.get_value_textarea name) (fun _ -> Help.warning "name saved"))
+    in
+    let update_name =
+      button
+        ~button_type:`Button
+        ~a:[ a_onclick update_name ]
+        [ pcdata "Update name" ]
+    in
+    div ~a:[ a_class [ "name" ]] [
+      h2 [ pcdata "Name" ] ;
+      div ~a:[ a_class [ "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [ name ] ;
+        div ~a:[ a_class [ "box-action" ]] [ update_name ] ;
+      ]
+    ]
+  in
+
+  let description =
     let description = Raw.textarea (pcdata view.description) in
     let update_description _ =
       Authentication.if_connected ~mixpanel:("society-leader-update-description", [ "uid", Ys_uid.to_string view.uid ])
@@ -944,8 +974,8 @@ let dom bundle =
         ~a:[ a_onclick update_description ]
         [ pcdata "Update description" ]
     in
-    div ~a:[ a_class [ "settings" ]] [
-      h2 [ pcdata "Settings" ] ;
+    div ~a:[ a_class [ "description" ]] [
+      h2 [ pcdata "Description" ] ;
       div ~a:[ a_class [ "box" ]] [
         div ~a:[ a_class [ "box-section" ]] [ description ] ;
         div ~a:[ a_class [ "box-action" ]] [ update_description ] ;
@@ -1019,9 +1049,10 @@ let dom bundle =
       ] ;
       members ;
       messenger ;
-      parameters ;
       data_dom ;
-      settings ;
+      parameters ;
+      name ;
+      description ;
       supervisor ;
     ]
   ]
