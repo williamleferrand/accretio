@@ -419,7 +419,7 @@ module Helpers =
       let current_state, update_state = S.create state in
 
       let control_box but =
-        let input_suspended = input  () in
+        let input_suspended = input ~a:[ a_input_type `Text ] () in
 
         (if (but = `MemberMakeArchived) then pcdata "" else
             button

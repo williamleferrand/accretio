@@ -387,8 +387,8 @@ let dispatch_message_manually (message, destination) =
   protected_connected
     (fun _ ->
        match_lwt $message(message)->destination with
-        | Object_message.Member _ -> return (Some false)
-        | Object_message.CatchAll -> return (Some false)
+        | Object_message.Member _ -> return_none
+        | Object_message.CatchAll -> return_none
         | Object_message.Stage stage ->
           lwt society = $message(message)->society in
           lwt playbook = $society(society)->playbook in
@@ -396,11 +396,12 @@ let dispatch_message_manually (message, destination) =
           match Playbook.dispatch_message_manually message stage destination with
             None ->
             Lwt_log.ign_info_f "couldn't create a call for message %d, from stage %s to destination %s" message stage destination ;
-            return (Some false)
+            return_none
           | Some call ->
             lwt _ = $message(message)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
             lwt _ = Executor.push_and_execute society call in
-            return (Some true))
+            let action = View_message.RoutedToStage call.Ys_executor.stage in
+            return (Some action))
 
 let dispatch_message_manually = server_function ~name:"society-leader-dispatch-message" Json.t<int * string> dispatch_message_manually
 
@@ -509,6 +510,7 @@ let dom bundle =
 
   let attach_inbox society inbox =
     let format message =
+      let action, update_action = S.create message.View_message.action in
       let tagger =
         match message.View_message.destination with
           View_message.Member _
@@ -519,24 +521,27 @@ let dom bundle =
           div ~a:[ a_class [ "tagger" ]]
             (List.map
                (fun option ->
-                    button
-
-                      ~a:[ a_onclick (fun _ -> detach_rpc %dispatch_message_manually (message.View_message.uid, option) (fun _ -> ())) ]
-                      [ pcdata option ]
-                  )
+                  button
+                    ~a:[ a_button_type `Button ;
+                         a_onclick (fun _ -> detach_rpc %dispatch_message_manually (message.View_message.uid, option) update_action) ]
+                    [ pcdata option ])
                options)
         with Not_found -> pcdata ""
       in
       let action =
-        div ~a:[ a_class [ "message-action" ]]
-          (match message.View_message.action with
-          | View_message.Pending -> [
-              pcdata "pending action"
-            ]
-          | View_message.RoutedToStage stage -> [
-              pcdata "routed to stage " ;
-              pcdata stage
-            ])
+        R.node
+          (S.map
+             (function
+               | View_message.Pending ->
+                 div ~a:[ a_class [ "message-action" ]] [
+                   pcdata "pending action"
+                 ]
+               | View_message.RoutedToStage stage ->
+                 div ~a:[ a_class [ "message-action" ]] [
+                   pcdata "routed to stage " ;
+                   pcdata stage
+                 ])
+             action)
       in
       let textarea_reply = Raw.textarea (pcdata "") in
       let reply _ =
@@ -548,8 +553,7 @@ let dom bundle =
       in
       let reply =
         button
-
-          ~a:[ a_onclick reply ]
+          ~a:[ a_button_type `Button ; a_onclick reply ]
           [ pcdata "Reply" ]
       in
       div ~a:[ a_class [ "message-box" ]] [
