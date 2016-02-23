@@ -186,13 +186,130 @@ let ask_teacher context (date, location) =
     in
     return `None
 
+
+let key_global_date = sprintf "date-%Ld"
+let key_global_location = sprintf "location-%Ld"
+
 let teacher_is_available context message =
   lwt member = context.get_message_sender ~message in
-  return `None
+  match_lwt context.get_message_data ~message ~key:key_date with
+    None ->
+    lwt _ =
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Couldn't find date"
+        ~content:[ pcdata "Couldn't find date" ]
+        ()
+    in
+    return `None
+  | Some date ->
+    match_lwt context.get_message_data ~message ~key:key_location with
+      None ->
+      lwt _ =
+        context.forward_to_supervisor
+          ~message
+          ~subject:"Couldn't find location"
+          ~content:[ pcdata "Couldn't find location" ]
+          ()
+      in
+      return `None
+    | Some location ->
+      let run_id = new_run_id () in
+      lwt _ = context.set ~key:(key_global_date run_id) ~value:date in
+      lwt _ = context.set ~key:(key_global_location run_id) ~value:location in
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[ pcdata "Wonderful! Let me poke around and see who would be interested in joining us. I'll send you an update in the coming days." ]
+          ()
+      in
+      return (`FindInterestedPeople run_id)
 
 let teacher_is_not_available context message =
   lwt member = context.get_message_sender ~message in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[ pcdata "No worries, thanks!" ]
+      ()
+  in
   return `None
+
+(* finding interested parties *)
+
+let tag_cold1 = "coldemailalreadysent1"
+
+let send_cold_email context (run_id, member) =
+  match_lwt context.get ~key:(key_global_date run_id) with
+    None -> return `None
+  | Some date ->
+    match_lwt context.get ~key:(key_global_location run_id) with
+      None -> return `None
+    | Some location ->
+      let calendar_date = CalendarLib.Printer.Calendar.from_fstring iso_date date in
+      let pretty_date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), at %I:%M %p" calendar_date in
+
+      lwt _ =
+        context.message_member
+          ~member
+          ~data:(data_run_id run_id)
+          ~subject:"Mandarin Circle Time"
+          ~content:[
+            pcdata "Greetings," ; br () ;
+            br () ;
+            pcdata "We are a group of Russian Hill/Nob Hill families interested in introducing Mandarin to our little ones." ; br () ;
+            br () ;
+            pcdata "We meet regularily at playgrounds and at other public spaces to have a 45-minutes Mandarin Circle Time for our preschoolers (2 to 5 years old)." ; br () ;
+            br () ;
+            pcdata "Our next circle time will take place at "; pcdata location ; pcdata ", on " ; pcdata pretty_date ; pcdata "." ; br () ;
+            br () ;
+            pcdata "Would you be interested in joining us, or would you know families interested in participating?" ; br () ;
+            br () ;
+            pcdata "盼复" ; br () ;
+          ]
+        ()
+      in
+      lwt _ = context.tag_member ~member ~tags:[ tag_cold1 ] in
+      return `None
+
+let find_interested_people context run_id =
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Who should I contact?"
+      ~data:(data_run_id run_id)
+      ~content:[
+        pcdata "Who should I contact?"
+      ]
+      ()
+  in
+  return `None
+
+let extract_candidates context message =
+  match_lwt run_id_from_message context message with
+    None -> return `None
+  | Some run_id ->
+    lwt members = extract_and_create_all_members_from_message context message in
+    lwt _ =
+      Lwt_list.iter_p
+        (fun member ->
+           match_lwt context.check_tag_member ~member ~tag:"tag_cold1" with
+             true -> return_unit
+           | false ->
+             context.set_timer
+               ~duration:(Calendar.Period.lmake ~second:1 ())
+               (`SendColdEmail (run_id, member)))
+        members
+    in
+    lwt _ =
+      context.reply_to
+        ~data:(data_run_id run_id)
+        ~message
+        ~content:[ pcdata "Thanks, I'm getting in touch with ";
+                   pcdata (string_of_int (List.length members)) ;
+                   pcdata " candidates" ]
+        ()
+    in
+    return `None
 
 (* the flow *******************************************************************)
 
@@ -204,9 +321,11 @@ schedule_circle_time<forward> ~> `Message of email ~> extract_time<forward> ~> `
  ask_location<forward> ~> `Message of email ~> extract_location<forward> ~> `Message of email ~> extract_location
  extract_location ~> `AskTeacher of (string * string) ~> ask_teacher ~> `FindTeacher ~> find_teacher
 
- ask_teacher ~> `TeacherIsAvailable of email ~> teacher_is_available
+ ask_teacher ~> `TeacherIsAvailable of email ~> teacher_is_available ~> `FindInterestedPeople of int64 ~> find_interested_people
  ask_teacher ~> `TeacherIsNotAvailable of email ~> teacher_is_not_available
 
  schedule_circle_time ~> `FindTeacher ~> find_teacher<forward> ~> `Message of email ~> extract_teacher ~> `ScheduleCircleTime ~> schedule_circle_time
 
  extract_teacher<forward> ~> `Message of email ~> extract_teacher
+
+ find_interested_people<forward> ~> `Message of email ~> extract_candidates ~> `SendColdEmail of (int64 * int) ~> send_cold_email
