@@ -253,17 +253,17 @@ let send_cold_email context (run_id, member) =
         context.message_member
           ~member
           ~data:(data_run_id run_id)
-          ~subject:"Mandarin Circle Time"
+          ~subject:("Mandarin circle time at " ^ location)
           ~content:[
             pcdata "Greetings," ; br () ;
             br () ;
-            pcdata "We are a group of Russian Hill/Nob Hill families interested in introducing Mandarin to our little ones." ; br () ;
+            pcdata "We are a group of North Beach/Russian Hill/Nob Hill (and beyond!) families interested in introducing Mandarin to our little ones." ; br () ;
             br () ;
-            pcdata "We meet regularily at playgrounds and at other public spaces to have a 45-minutes Mandarin Circle Time for our preschoolers (2 to 5 years old)." ; br () ;
+            pcdata "We meet regularily at playgrounds and at other public spaces to have a 45-minutes Mandarin circle time for our preschoolers (2 to 5 years old), singing songs and reading stories." ; br () ;
             br () ;
             pcdata "Our next circle time will take place at "; pcdata location ; pcdata ", on " ; pcdata pretty_date ; pcdata "." ; br () ;
             br () ;
-            pcdata "Would you be interested in joining us, or would you know families interested in participating?" ; br () ;
+            pcdata "Would you be interested in joining us, or maybe would you know families interested in participating?" ; br () ;
             br () ;
             pcdata "盼复" ; br () ;
           ]
