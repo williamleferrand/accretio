@@ -289,6 +289,7 @@ let reply_message (society, message, content) =
                         ~origin
                         ~society
                         ~content
+                        ~subject:("Re: " ^ subject)
                         ~destination:Object_message.CatchAll
                         ~references:[ original_reference ]
                         ~reference:(Object_message.create_reference content)
@@ -309,6 +310,7 @@ let reply_message (society, message, content) =
                         ~origin
                         ~society
                         ~content
+                        ~subject:("Re: " ^ subject)
                         ~destination:(Object_message.Stage stage)
                         ~references:[ original_reference ]
                         ~reference:(Object_message.create_reference content)
