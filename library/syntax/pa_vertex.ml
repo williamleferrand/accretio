@@ -466,10 +466,12 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
 
       value $lid:"lock_"^field$ = Lwt_mutex.create () ;
 
-      value $lid:"patch_lwt_"^field$ uid patch =
          $match assoc field alias_mapper with
            | `None ->
-                <:expr< Lwt_mutex.with_lock
+
+                <:str_item<
+      value $lid:"patch_lwt_"^field$ uid patch =
+ Lwt_mutex.with_lock
                           $lid:"lock_"^field$
                            (fun () ->
                                 Lwt.bind
@@ -481,7 +483,7 @@ let rec generate_patch_functions _loc required alias_mapper uniques builders = f
                                                Lwt.bind
                                                  (Unsafe.$lid:"set_"^field$ uid v_new)
                                                  (fun () -> Lwt.return v_new )))) >>
-           | _ -> <:expr< () >> $ ;
+           | _ -> <:str_item< >> $ ;
 
       value $lid:"patch_"^field$ uid patch =
         Lwt_mutex.with_lock
