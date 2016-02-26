@@ -235,6 +235,7 @@ COMPONENT
 
 find_volunteer_with_tagline_and_hint ~> `No of email ~> candidate_declined
 find_volunteer_with_tagline_and_hint ~> `Yes of email ~> return_volunteer
+find_volunteer_with_tagline_and_hint ~> `YesButDelay of email ~> ask_supervisor_for_delay
 find_volunteer_with_tagline_and_hint ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied
 
                                                                                        candidate_declined ~> `AlertSupervisor ~> alert_supervisor
