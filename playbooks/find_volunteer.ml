@@ -16,7 +16,7 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 open Message_parsers
-
+open Toolbox
 
 let key_run_id = "find-volunteer-run-id"
 let key_tagline = "find-volunteer-tagline"
@@ -147,6 +147,89 @@ let candidate_with_message context message =
    in
    return (`Message message)
 
+let key_message = "message"
+
+let ask_supervisor_for_delay context message =
+  lwt member = context.get_message_sender ~message in
+  lwt _ =
+    match_lwt context.get_message_data ~message ~key:key_run_id with
+      None -> return_unit
+    | Some run_id ->
+      let run_id = Int64.of_string run_id in
+      lwt _ = context.cancel_timers ~query:(tag_timer run_id member) in
+      lwt _ =
+        context.forward_to_supervisor
+          ~message
+          ~subject:"Volunteer would like a delay"
+          ~data:[ key_run_id, Int64.to_string run_id ; key_message, string_of_int message ]
+          ~content:[
+            pcdata "How many days should I wait for?" ; br () ;
+          ]
+          ()
+      in
+      return_unit
+  in
+  return `None
+
+let set_reminder context message =
+  lwt content = context.get_message_content ~message in
+  let days = ref None in
+  Scanf.sscanf content "%d" (fun f -> days := Some f) ;
+  match !days with
+    None ->
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Couldn't extract number of days" ; br () ]
+        ()
+    in
+    return `None
+  | Some days ->
+    match_lwt context.get_message_data ~message ~key:key_run_id with
+      None -> return `None
+    | Some run_id ->
+      let run_id = Int64.of_string run_id in
+      match_lwt context.get_message_data ~message ~key:key_message with
+        None -> return `None
+      | Some message ->
+        let message = int_of_string message in
+        lwt member = context.get_message_sender ~message in
+        lwt _ =
+          context.reply_to
+            ~message
+            ~data:[ key_run_id, Int64.to_string run_id ]
+            ~content:[ pcdata "No problem, I'll get back in touch in "; pcdata (string_of_int days) ; pcdata " days." ; br () ]
+            ()
+        in
+        lwt _ =
+          context.set_timer
+            ~label:(tag_timer run_id member)
+            ~duration:(Calendar.Period.lmake ~day:days ())
+            (`Remind (member, message, run_id))
+        in
+        return `None
+
+let remind_volunteer_after_delay context (member, message, run_id) =
+  lwt _ = context.cancel_timers ~query:(tag_timer run_id member) in
+  lwt salutations = salutations member in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~data:[ key_run_id, Int64.to_string run_id ]
+      ~content:[
+        salutations ; br () ;
+        br () ;
+        pcdata "The dinner is getting closer, can you still suggest a place?" ; br () ;
+      ]
+      ()
+  in
+  lwt _ =
+    context.set_timer
+      ~label:(tag_timer run_id member)
+      ~duration:(Calendar.Period.lmake ~hour:24 ())
+      (`CandidateDidntReplied (member, run_id))
+  in
+  return `None
 
 COMPONENT
 
@@ -162,3 +245,8 @@ find_volunteer_with_tagline ~> `FindCandidate ~> look_for_candidate ~> `No of em
                                                  look_for_candidate ~> `Yes of email ~> return_volunteer
                                                                                         return_volunteer ~> `AlertSupervisor ~> alert_supervisor
                                                  look_for_candidate ~> `Message of email ~> candidate_with_message
+                                                 look_for_candidate ~> `YesButDelay of email ~> ask_supervisor_for_delay<forward> ~> `Message of email ~> set_reminder ~> `Remind of int * int * int64 ~> remind_volunteer_after_delay
+
+     remind_volunteer_after_delay ~> `CandidateDidntReplied of int * int64 ~> candidate_didnt_replied
+     remind_volunteer_after_delay ~> `No of email ~> candidate_declined
+     remind_volunteer_after_delay ~> `Yes of email ~> return_volunteer
