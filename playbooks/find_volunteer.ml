@@ -274,7 +274,7 @@ COMPONENT
 find_volunteer_with_tagline_and_hint ~> `No of email ~> candidate_declined
 find_volunteer_with_tagline_and_hint ~> `Yes of email ~> return_volunteer
 find_volunteer_with_tagline_and_hint ~> `YesButDelay of email ~> ask_supervisor_for_delay
-find_volunteer_with_tagline_and_hint ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied ~> `RemoveMember of email ~> remove_member
+find_volunteer_with_tagline_and_hint ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied ~> `RemoveMember of email ~> remove_candidate
 
                                                                                        candidate_declined ~> `AlertSupervisor ~> alert_supervisor
 find_volunteer_with_tagline ~> `FindCandidate ~> look_for_candidate ~> `No of email ~> candidate_declined ~> `FindCandidate ~> look_for_candidate
