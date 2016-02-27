@@ -61,18 +61,18 @@ let run () =
           Notify.send_welcome_message obj.Object_member.uid)
   in
 
-(*  let rec use_sphinx () =
+  let rec use_sphinx () =
     Lwt_log.ign_info_f "patching name" ;
 
     lwt _ =
       try_lwt
-        Logs.list_all_from_society 1 0L
+        Logs.list_all_from_society 21 0L
       with _ -> return []
     in
     lwt _ = Lwt_unix.sleep 1.0 in
     use_sphinx ()
   in
-  lwt _ = use_sphinx () in *)
+  lwt _ = use_sphinx () in
 
   (* setting the timzeone *)
   CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ;
