@@ -328,7 +328,7 @@ let process_email =
     with
     | exn ->
       Lwt_log.ign_error_f ~exn "something happened: %s when parsing offset %d" (Printexc.to_string exn) (Uint32.to_int offset) ;
-      return_none
+      Lwt.fail exn
 
   in
 
@@ -420,6 +420,7 @@ let wait_mail host port user pass mbox =
       | `Untagged _ -> run sock i o c `Await >>= login
       | `Ok ->
         lwt imap_offset = Eliom_reference.get persistent_imap_offset in
+        Lwt_log.ign_info_f "resuming reading from %s" (Uint32.to_string imap_offset) ;
         run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
     in
     run sock i o c (`Cmd (Imap.login user pass)) >>= login

@@ -63,7 +63,6 @@ let run () =
 
   let rec use_sphinx () =
     Lwt_log.ign_info_f "patching name" ;
-
     lwt _ =
       try_lwt
         Logs.list_all_from_society 21 0L
