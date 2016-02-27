@@ -110,7 +110,45 @@ let look_for_candidate context () =
 let candidate_didnt_replied context (member, run_id) =
   context.log_info "candidate %d didn't replied in run %Ld" member run_id ;
   lwt _ = context.tag_member ~member ~tags:[ tag_refused run_id ] in
+  (* here we need to notify the candidate that it isn't his turn anymore *)
+  lwt salutations = salutations member in
+  lwt tagline =
+    match_lwt context.get ~key:key_tagline with
+      None -> return ""
+    | Some tagline -> return tagline
+  in
+  lwt _ =
+    context.message_member
+      ~member
+      ~subject:"Next time?"
+      ~data:[ key_run_id, Int64.to_string run_id ]
+      ~content:[
+        salutations ; br () ;
+        br () ;
+        pcdata "I didn't heard back from you regarding my message below but no worries I will ask someone else!" ; br () ;
+        br () ;
+        pcdata "I you want to leave the group, let me know. Otherwise, you will keep receiving updates." ; br () ;
+        br () ;
+        pcdata "--- " ; br () ;
+        br () ;
+        span [ pcdata tagline ] ; br () ;
+      ]
+      ()
+  in
   return `FindCandidate
+
+let remove_candidate context message =
+  lwt member = context.get_message_sender ~message in
+  lwt _ = context.remove_member ~member in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[
+        pcdata "I'm sorry to see you go!" ; br () ;
+      ]
+      ()
+  in
+  return `None
 
 let candidate_declined context message =
   match_lwt context.get_message_data ~message ~key:key_run_id with
@@ -236,7 +274,7 @@ COMPONENT
 find_volunteer_with_tagline_and_hint ~> `No of email ~> candidate_declined
 find_volunteer_with_tagline_and_hint ~> `Yes of email ~> return_volunteer
 find_volunteer_with_tagline_and_hint ~> `YesButDelay of email ~> ask_supervisor_for_delay
-find_volunteer_with_tagline_and_hint ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied
+find_volunteer_with_tagline_and_hint ~> `CandidateDidntReplied of (int * int64) ~> candidate_didnt_replied ~> `RemoveMember of email ~> remove_member
 
                                                                                        candidate_declined ~> `AlertSupervisor ~> alert_supervisor
 find_volunteer_with_tagline ~> `FindCandidate ~> look_for_candidate ~> `No of email ~> candidate_declined ~> `FindCandidate ~> look_for_candidate
