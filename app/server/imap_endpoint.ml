@@ -89,10 +89,13 @@ let rec never_stop f =
 
 let process_email =
   let find_accretio_target addresses =
-    List.find
-      (fun address ->
-         (address.ad_host = "accret.io") && Str.string_match reply_accretio_regexp address.ad_mailbox 0)
-      addresses
+    try
+      Some
+        (List.find
+           (fun address ->
+              (address.ad_host = "accret.io") && Str.string_match reply_accretio_regexp address.ad_mailbox 0)
+           addresses)
+    with Not_found -> None
   in
 
   let map_senders_to_accretio_users attributes =
@@ -161,7 +164,7 @@ let process_email =
                Some _ as acc -> acc
              | None ->
                match response with
-               | `Envelope env -> Some (find_accretio_target (env.env_to @ env.env_cc @ env.env_bcc))
+               | `Envelope env -> find_accretio_target (env.env_to @ env.env_cc @ env.env_bcc)
                | _ -> acc)
           None
           attributes
