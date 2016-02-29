@@ -127,4 +127,5 @@ let _ =
      lwt _ = register (module Ecd_at_home_preschool) in
      lwt _ = register (module Diy_velo_bambou) in
      lwt _ = register (module Mandarin_circle_time) in
+     (* lwt _ = register (module Bay_tours) in *)
      return_unit)

@@ -44,20 +44,20 @@ let run sock i o c v =
   let rec loop = function
     | `Await_src ->
       lwt rc = Lwt_ssl.read sock i 0 (Bytes.length i) in
-      Lwt_log.ign_debug_f ">>> %d\n%s>>>\n%!" rc (String.sub i 0 rc) ;
+      Lwt_log.ign_info_f ">>> %d\n%s>>>\n%!" rc (String.sub i 0 rc) ;
       Imap.src c i 0 rc;
       loop (Imap.run c `Await)
     | `Await_dst ->
       let rc = Bytes.length o - Imap.dst_rem c in
       lwt _ = write_fully o 0 rc in
-      Lwt_log.ign_debug_f "<<< %d\n%s<<<\n%!" rc (String.sub o 0 rc) ;
+      Lwt_log.ign_info_f "<<< %d\n%s<<<\n%!" rc (String.sub o 0 rc) ;
       Imap.dst c o 0 (Bytes.length o);
       loop (Imap.run c `Await)
     | `Untagged _ as r -> return r
     | `Ok _ -> return `Ok
     | `Error e ->
       let s  = Format.asprintf "@[IMAP Error: %a@]@." Imap.pp_error e in
-      Lwt_log.ign_error_f "%s" s ;
+      Lwt_log.ign_info_f "%s" s ;
       Lwt.fail ImapError
   in
   loop (Imap.run c v)
@@ -72,7 +72,7 @@ let persistent_imap_offset : Uint32.t Eliom_reference.eref =
   Eliom_reference.eref
     ~scope:`Global
     ~persistent:"__mu_imap_offset"
-    Uint32.zero
+    Uint32.one
 
 let reply_accretio_regexp =
   Str.regexp (Printf.sprintf "%s\+\\([A-Za-z0-9]+\\)_\\([A-Za-z0-9\_]*\\)" (Ys_config.get_string Ys_config.imap_prefix))
@@ -89,10 +89,13 @@ let rec never_stop f =
 
 let process_email =
   let find_accretio_target addresses =
-    List.find
-      (fun address ->
-         (address.ad_host = "accret.io") && Str.string_match reply_accretio_regexp address.ad_mailbox 0)
-      addresses
+    try
+      Some
+        (List.find
+           (fun address ->
+              (address.ad_host = "accret.io") && Str.string_match reply_accretio_regexp address.ad_mailbox 0)
+           addresses)
+    with Not_found -> None
   in
 
   let map_senders_to_accretio_users attributes =
@@ -161,7 +164,7 @@ let process_email =
                Some _ as acc -> acc
              | None ->
                match response with
-               | `Envelope env -> Some (find_accretio_target (env.env_to @ env.env_cc @ env.env_bcc))
+               | `Envelope env -> find_accretio_target (env.env_to @ env.env_cc @ env.env_bcc)
                | _ -> acc)
           None
           attributes
@@ -328,7 +331,7 @@ let process_email =
     with
     | exn ->
       Lwt_log.ign_error_f ~exn "something happened: %s when parsing offset %d" (Printexc.to_string exn) (Uint32.to_int offset) ;
-      return_none
+      Lwt.fail exn
 
   in
 
@@ -369,61 +372,69 @@ let wait_mail host port user pass mbox =
   let o = Bytes.create io_buffer_size in
   Imap.dst c o 0 (Bytes.length o);
 
-  match_lwt run sock i o c `Await with
-  | `Ok ->
-    (* let rec logout = function
-       | `Untagged _ -> run sock i o c `Await >>= logout
-       | `Ok -> return_unit *)
-    let rec idle stop uidn = function
-      | `Untagged (`Exists _) -> Lazy.force stop; run sock i o c `Await >>= idle stop uidn
-      | `Untagged _ -> run sock i o c `Await >>= idle stop uidn
-      | `Ok ->
-        run sock i o c (`Cmd (Imap.search ~uid:true (`Uid [uidn, None])))
-        >>= search uidn Uint32.zero
-    and search uidn n = function
-      | `Untagged (`Search (n :: _, _)) -> run sock i o c `Await >>= search uidn n
-      | `Untagged _ -> run sock i o c `Await >>= search uidn n
-      | `Ok ->
-        if n = Uint32.zero then
-          let cmd, stop = Imap.idle () in
-          run sock i o c (`Cmd cmd) >>= idle stop uidn
-        else
-          let cmd = Imap.fetch ~uid:true ~changed:Uint64.one [n, Some n] [ `Envelope ; `Rfc822 ] in
-          run sock i o c (`Cmd cmd) >>= fetch uidn n []
-    and fetch uidn n accum = function
-      | `Untagged (`Fetch (_, attrs)) ->
-        let accum =
-          try
-            match List.fold_left (fun acc -> function (`Uid uid) -> Some uid | _ -> acc) None attrs with
-              None -> accum
-            | Some uid -> (uid, attrs) :: accum
-          with _ -> accum
-        in
-        run sock i o c `Await >>= fetch uidn n accum
-      | `Untagged _ -> run sock i o c `Await >>= fetch uidn n accum
-      | `Ok ->
-        Lwt_log.ign_info_f "done with the callback fetch, got %d elements to inspect\n" (List.length accum); flush stdout ;
-        lwt imap_offset = process_emails accum in
-        lwt _ = Eliom_reference.set persistent_imap_offset imap_offset in
-        run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
-(*
-          let name = match name with None -> "<unnamed>" | Some name -> name in
-          Format.printf "New mail from %s, better go and check it out!\n%!" name;
-          run sock i o c (`Cmd Imap.logout) >>= logout *)
-    and select uidn = function
-      | `Untagged (`Ok (`Uid_next uidn, _)) -> run sock i o c `Await >>= select uidn
-      | `Untagged _ -> run sock i o c `Await >>= select uidn
-      | `Ok ->
+  (* there is a strong styling issue here *)
+
+  lwt imap_offset = Eliom_reference.get persistent_imap_offset in
+  (* let imap_offset = Uint32.of_int 1 in *)
+
+  let run_await () = run sock i o c `Await in
+  let run_cmd cmd  = run sock i o c (`Cmd cmd) in
+
+  let rec wait_ok = function
+    | `Ok ->
+      Lwt_log.ign_info_f "we're ok" ;
+      return_unit
+    | _ -> run_await () >>= wait_ok
+  in
+
+  let rec iterate_over_emails offset () =
+    Lwt_log.ign_info_f "iterating over emails, starting at offset %s" (Uint32.to_string offset) ;
+    let cmd = Imap.fetch ~uid:true ~changed:Uint64.one [ offset, None ] [ `Envelope ; `Rfc822 ] in
+    run_cmd cmd >>= extract_messages offset []
+  and extract_messages offset accum = function
+    | `Untagged (`Fetch (_, attrs)) ->
+      let accum =
+        try
+          match List.fold_left (fun acc -> function (`Uid uid) when uid >= offset -> Some uid | _ -> acc) None attrs with
+            None -> accum
+          | Some uid -> (uid, attrs) :: accum
+        with _ -> accum
+      in
+      run_await () >>= extract_messages offset accum
+    | `Untagged _ ->
+      run_await () >>= extract_messages offset accum
+    | `Ok ->
+      match accum with
+        [] ->
+        Lwt_log.ign_info_f "no messages found, waiting" ;
         let cmd, stop = Imap.idle () in
-        run sock i o c (`Cmd cmd) >>= idle stop uidn
-    and login = function
-      | `Untagged _ -> run sock i o c `Await >>= login
-      | `Ok ->
-        lwt imap_offset = Eliom_reference.get persistent_imap_offset in
-        run sock i o c (`Cmd (Imap.examine mbox)) >>= select imap_offset
-    in
-    run sock i o c (`Cmd (Imap.login user pass)) >>= login
-  | `Untagged _ -> assert false
+        run_cmd cmd >>= idle stop offset
+      | _ as accum ->
+      Lwt_log.ign_info_f "done with the callback fetch, got %d messages to inspect\n" (List.length accum) ;
+      lwt offset = process_emails accum in
+      Lwt_log.ign_info_f "done investingating emails, max offset is %s" (Uint32.to_string offset) ;
+      let offset = Uint32.succ offset in
+      lwt _ = Eliom_reference.set persistent_imap_offset offset in
+      iterate_over_emails offset ()
+  and idle stop offset = function
+    | `Untagged (`Exists _) ->
+      Lazy.force stop ;
+      run_await () >>= idle stop offset
+    | `Untagged _ ->
+      run_await () >>= idle stop offset
+    | `Ok -> iterate_over_emails offset ()
+  in
+
+  Lwt_log.ign_info_f "connecting" ;
+
+  run_await ()
+  >>= wait_ok
+  >>= (fun _ -> run_cmd (Imap.login user pass))
+  >>= wait_ok
+  >>= (fun _ -> run_cmd (Imap.examine mbox))
+  >>= wait_ok
+  >>= iterate_over_emails imap_offset
+
 
 let _ =
   Lwt_log.ign_info_f "starting imap loop" ;
