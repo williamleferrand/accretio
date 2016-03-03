@@ -534,7 +534,7 @@ let confirm_to_all_participants context message =
                      ~content:[
                        pcdata "Greetings," ; br () ;
                        br () ;
-                       pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
+                       pcdata volunteer_name ; pcdata " just confirmed that we're all set for our next dinner." ; br () ;
                        br () ;
                        pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
                      ]
@@ -547,7 +547,7 @@ let confirm_to_all_participants context message =
                      ~content:[
                        pcdata "Greetings," ; br () ;
                        br () ;
-                       pcdata volunteer_name ; pcdata " just confirmed that we're all set for our bi-weekly dinner." ; br () ;
+                       pcdata volunteer_name ; pcdata " just confirmed that we're all set for our next dinner." ; br () ;
                        br () ;
                        pcdata "The restaurant is "; Raw.a ~a:[ a_href (uri_of_string (fun () -> suggestion)) ] [ pcdata suggestion ] ; pcdata ", see you there on " ; pcdata date ; pcdata "!" ; br () ;
                      ]
