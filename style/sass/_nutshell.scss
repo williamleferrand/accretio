@@ -30,6 +30,7 @@ html {
 body {
     font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
     font-size: 14px;
+    line-height: 18px;
     background-color: white ; // $background-color;
     color: $grey ;
     margin: 0px ;
@@ -130,6 +131,7 @@ input[type="text"], input[type="password"], textarea {
 
 h1 {
     font-size: 32px;
+    line-height: 32px;
     font-family: 'Molengo', sans-serif;
     text-align: center ;
     padding: 24px 0 ;
@@ -140,5 +142,6 @@ h2 {
     padding: 16px 0px;
     border-bottom: 1px solid #3d3d3d;
     font-size: 18px;
+    line-height: 18px;
     font-family: 'Molengo', sans-serif;
 }

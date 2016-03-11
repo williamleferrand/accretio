@@ -25,7 +25,10 @@ open Sessions
 open Ys_uid
 open Vault
 
-type result = Profile of View_member.t
+type result =
+    Profile of View_member.t
+  | Playbook of View_playbook.t
+  | Society of View_society.t
 
 }}
 
@@ -37,11 +40,32 @@ let search query : result list Lwt.t =
   else
     begin
       lwt profiles = Object_member.Store.search_name query in
-      lwt profiles =
+      lwt results =
         Lwt_list.map_p
           (fun uid -> lwt view = View_member.to_view uid in return (Profile view))
           profiles
       in
+      lwt playbooks1 = Object_playbook.Store.search_tags query in
+      lwt playbooks2 = Object_playbook.Store.search_description query in
+      let playbooks = Ys_uid.merge playbooks1 playbooks2 in
+      lwt results =
+        Lwt_list.fold_left_s
+          (fun acc uid ->
+             lwt view = View_playbook.to_view uid in return (Playbook view :: acc))
+          results
+          playbooks
+      in
+      lwt societies1 = Object_society.Store.search_description query in
+      lwt societies2 = Object_society.Store.search_name query in
+      let societies = Ys_uid.merge societies1 societies2 in
+      lwt results =
+        Lwt_list.fold_left_s
+          (fun acc uid ->
+             lwt view = View_society.to_view uid in return (Society view :: acc))
+          results
+          societies
+      in
+      return results
     end
 
 let search = server_function ~name:"search-search" Json.t<string> search
@@ -61,50 +85,38 @@ let builder ?(query="") results =
 
   let search =
     let input =
-      input
-        
-        ~a:[ a_placeholder "Search on Accretio" ;
-             a_value query ] () in
+      input ~a:[ a_input_type `Text ;
+                 a_placeholder "Enter keywords, people or locations" ;
+                 a_value query ] () in
+
     Ys_dom.delay_focus input ;
+
     Manip.Ev.onkeyup
       input
       (fun _ ->
          let query = Ys_dom.get_value input in
          Ys_mixpanel.track "search" ~params:[ "query", query ] () ;
          ignore_result (%search query >>= fun r -> RList.update results r ; Service.goto (Service.Search (Some query)) ; return_unit) ;
-         true
-      ) ;
-
+         true) ;
     input ;
+
   in
 
   let format = function
     | Profile view ->
-
-      let profile_picture =
-          match view.View_member.profile_picture with
-              None ->
-              div ~a:[ a_class [ "leader-picture" ]] [
-                span ~a:[ a_class [ "icon-user" ]] []
-              ]
-
-            | Some image ->
-              div ~a:[ a_class [ "leader-picture" ]] [
-                match image.View_image.content with
-                | Object_image.File url -> img ~alt:"" ~src:(uri_of_string (fun () -> url)) ()
-                | Object_image.URIData data -> img ~alt:"" ~src:(uri_of_string (fun () -> data)) ()
-              ]
-      in
-
-
-      div ~a:[ a_class [ "result-profile" ; "clearfix" ] ;
-               a_onclick (fun _ -> Service.goto (Service.Profile view.View_member.uid)) ] [
-        div ~a:[ a_class [ "member-profile" ]] [ profile_picture ] ;
+      div ~a:[ a_class [ "result-profile" ; "clearfix" ]] [
         div ~a:[ a_class [ "member-name" ]] [
           pcdata view.View_member.name ;
         ]
       ]
-
+    | Playbook view ->
+      div ~a:[ a_class [ "result-playbook" ; "clearfix" ]] [
+          View_playbook.format view
+      ]
+    | Society view ->
+      div ~a:[ a_class [ "result-society" ; "clearfix" ]] [
+        View_society.format view
+      ]
   in
 
   div ~a:[ a_class [ "search" ]] [
@@ -112,13 +124,15 @@ let builder ?(query="") results =
     RList.map_in_div ~a:[ a_class [ "results" ]] format results ;
   ]
 
-let dom query () =
+
+let dom query =
   Template.apply
-  (fun () ->
-    match query with
-      None -> return []
-    | Some query -> %search query)
-  (builder ?query)
+    (fun () ->
+       match query with
+         None -> return []
+       | Some query -> %search query)
+    (builder ?query)
   ()
+
 
 }}

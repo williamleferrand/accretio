@@ -22,6 +22,7 @@ let name = "Monthly BBQ"
 let description = "This playbook organizes a monthly BBQ."
 
 let version = 0
+let tags = ""
 
 let iso_date = "%FT%H:%M:%S"
 

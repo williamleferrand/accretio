@@ -26,6 +26,7 @@ let name = "At home preschool"
 let description = "This playbook implements an at home preschool"
 
 let version = 0
+let tags = ""
 
 (* principle of operation
 

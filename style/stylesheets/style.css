@@ -247,6 +247,7 @@ html {
 body {
   font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
   font-size: 14px;
+  line-height: 18px;
   background-color: white;
   color: #3d3d3d;
   margin: 0px;
@@ -255,14 +256,14 @@ body {
   padding-bottom: 36px;
 }
 
-/* line 41, ../sass/_nutshell.scss */
+/* line 42, ../sass/_nutshell.scss */
 a, a:visited, a:hover {
   text-decoration: none;
   color: #3d3d3d;
   cursor: pointer;
 }
 
-/* line 47, ../sass/_nutshell.scss */
+/* line 48, ../sass/_nutshell.scss */
 button, input[type="submit"] {
   cursor: pointer;
   font-family: 'Pontano Sans', 'lucida grande', tahoma, verdana, arial, sans-serif;
@@ -277,29 +278,29 @@ button, input[type="submit"] {
   /* text-transform: uppercase; */
 }
 
-/* line 61, ../sass/_nutshell.scss */
+/* line 62, ../sass/_nutshell.scss */
 button:focus {
   outline: none;
 }
 
-/* line 65, ../sass/_nutshell.scss */
+/* line 66, ../sass/_nutshell.scss */
 .clearfix:after {
   content: "";
   display: table;
   clear: both;
 }
 
-/* line 71, ../sass/_nutshell.scss */
+/* line 72, ../sass/_nutshell.scss */
 .left {
   float: left;
 }
 
-/* line 75, ../sass/_nutshell.scss */
+/* line 76, ../sass/_nutshell.scss */
 .right {
   float: right;
 }
 
-/* line 79, ../sass/_nutshell.scss */
+/* line 80, ../sass/_nutshell.scss */
 input[type="text"], input[type="password"], textarea {
   padding: 10px;
   font-size: 14px;
@@ -312,42 +313,44 @@ input[type="text"], input[type="password"], textarea {
   display: block;
 }
 
-/* line 96, ../sass/_nutshell.scss */
+/* line 97, ../sass/_nutshell.scss */
 .hide {
   display: none;
 }
 
-/* line 100, ../sass/_nutshell.scss */
+/* line 101, ../sass/_nutshell.scss */
 .clickable {
   cursor: pointer;
 }
 
-/* line 120, ../sass/_nutshell.scss */
+/* line 121, ../sass/_nutshell.scss */
 .button-inverted {
   color: #3d3d3d;
   background-color: white;
 }
 
-/* line 126, ../sass/_nutshell.scss */
+/* line 127, ../sass/_nutshell.scss */
 .nutshell-inner {
   margin: auto;
   padding: 0 10px;
 }
 
-/* line 131, ../sass/_nutshell.scss */
+/* line 132, ../sass/_nutshell.scss */
 h1 {
   font-size: 32px;
+  line-height: 32px;
   font-family: 'Molengo', sans-serif;
   text-align: center;
   padding: 24px 0;
 }
 
-/* line 138, ../sass/_nutshell.scss */
+/* line 140, ../sass/_nutshell.scss */
 h2 {
   margin: 0 0 20px 0;
   padding: 16px 0px;
   border-bottom: 1px solid #3d3d3d;
   font-size: 18px;
+  line-height: 18px;
   font-family: 'Molengo', sans-serif;
 }
 

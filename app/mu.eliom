@@ -146,6 +146,11 @@ let _ =
     ~get_params:(string "token")
     ~extract_service:(fun _ token -> return (Service.Recover token))
     () ;
+  register_page
+    ~path:[ "search" ]
+    ~get_params:(opt (string "query"))
+    ~extract_service:(fun _ query -> return (Service.Search query))
+    () ;
   register_page_no_param
     ~path:[ "request_recovery" ]
     ~extract_service:(fun _ -> return Service.RequestRecovery)

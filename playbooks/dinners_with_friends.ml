@@ -32,6 +32,7 @@ let name = "Dinners with friends"
 let description = "This playbook organizes dinners for groups of friends. It randomly asks members for suggestions, collects opinions from the group and make reservations."
 
 let version = 0
+let tags = ""
 
 (* local parameters *)
 

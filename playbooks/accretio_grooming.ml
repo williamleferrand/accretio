@@ -25,6 +25,7 @@ let name = "Accretio grooming"
 let description = "Iterates over the database and ask for missing names"
 
 let version = 0
+let tags = ""
 
 (* some helpers ***************************************************************)
 

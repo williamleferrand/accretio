@@ -27,7 +27,7 @@ let name = "Mandarin Circle Time"
 let description = "This playbook schedules a recurring mandarin circle time for preschoolers"
 
 let version = 0
-
+let tags = ""
 
 (* tags ***********************************************************************)
 

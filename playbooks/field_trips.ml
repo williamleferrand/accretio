@@ -28,6 +28,7 @@ let name = "Field trips"
 let description = "This playbook organizes field trips for preschoolers"
 
 let version = 0
+let tags = ""
 
 (* some utilities *************************************************************)
 

@@ -50,16 +50,16 @@ let create_with_button ?(a=[]) ?(class_open=[]) ?(label_open="Open") ?(label_clo
        (function
          | `Closed ->
            button
-             ~button_type:`Button
-             ~a:[ a_onclick (fun _ -> update_state `Open) ; a_class class_open ]
+             ~a:[ a_button_type `Button ;
+                  a_onclick (fun _ -> update_state `Open) ; a_class class_open ]
              [ pcdata label_open ]
          | `Open ->
            div ~a
              [
                (if label_close = "" then pcdata "" else
                   button
-                    ~button_type:`Button
-                    ~a:[ a_onclick (fun _ -> update_state `Closed) ]
+                    ~a:[ a_button_type `Button ;
+                         a_onclick (fun _ -> update_state `Closed) ]
                     [ pcdata label_close ]) ;
                factory (fun _ -> update_state `Closed) (fun elt -> update_state `Closed ; finalizer elt)
              ])
@@ -73,12 +73,12 @@ let flipper () =
        (function
          | true ->
            button
-             ~button_type:`Button
-             ~a:[ a_onclick (fun _ -> update_state false) ]
+             ~a:[ a_button_type `Button ;
+                  a_onclick (fun _ -> update_state false) ]
              [ pcdata "Deselect" ]
          | false ->
            button
-             ~button_type:`Button
-             ~a:[ a_onclick (fun _ -> update_state true) ]
+             ~a:[ a_button_type `Button ;
+                  a_onclick (fun _ -> update_state true) ]
              [ pcdata "Select" ])
        state)

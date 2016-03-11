@@ -28,6 +28,7 @@ let name = "Flying club"
 let description = "This playbook connects pilots and non pilots to schedule sightseeing trips"
 
 let version = 0
+let tags = ""
 
 (* some tags *****************************************************************)
 

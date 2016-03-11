@@ -27,7 +27,7 @@ let name = "Coop babysitting"
 let description = "This playbook helps parents taking turns at babysitting"
 
 let version = 0
-
+let tags = ""
 
 (* the playbook ***************************************************************)
 

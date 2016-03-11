@@ -53,18 +53,24 @@ let find_or_create_playbook playbook =
   let module Playbook = (val playbook : Api.PLAYBOOK) in
   (* let digest = Digest.to_hex (Digest.string Playbook.automata) in *)
   let hash = sprintf "%d-%s" Playbook.version Playbook.name (* digest *) in
-  match_lwt Object_playbook.Store.find_by_hash hash with
-  | Some uid ->
-    ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
-    return uid
-  | None ->
-    lwt owner = find_or_create_author Playbook.author in
-    let parameters =
-      List.map
+  let parameters =
+    List.map
         (fun (label, key) ->
            Object_playbook.({ label ; key }))
         Playbook.parameters
-    in
+  in
+  match_lwt Object_playbook.Store.find_by_hash hash with
+  | Some uid ->
+    ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
+    (* let's update a few fields *)
+    lwt _ = $playbook(uid)<-parameters %% (fun _ -> parameters) in
+    lwt _ = $playbook(uid)<-name %% (fun _ -> Playbook.name) in
+    lwt _ = $playbook(uid)<-description %% (fun _ -> Playbook.description) in
+    lwt _ = $playbook(uid)<-tags %% (fun _ -> Playbook.tags) in
+    return uid
+  | None ->
+    lwt owner = find_or_create_author Playbook.author in
+
     match_lwt Object_thread.Store.create
                 ~owner
                 ~subject:Playbook.name
@@ -75,6 +81,7 @@ let find_or_create_playbook playbook =
                   ~name:Playbook.name
                   ~description:Playbook.description
                   ~scope:Ys_scope.Private
+                  ~tags:Playbook.tags
                   ~parameters
                   ~hash
                   ~thread:thread.Object_thread.uid
@@ -120,7 +127,6 @@ let _ =
      lwt _ = register (module Accretio_grooming) in
      lwt _ = register (module Accretio_sanity) in
      lwt _ = register (module Monthly_bbq) in
-     lwt _ = register (module Flying_club) in
      lwt _ = register (module Flying_club) in
      lwt _ = register (module Field_trips) in
      lwt _ = register (module Coop_babysitting) in

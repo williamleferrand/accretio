@@ -27,6 +27,7 @@ let name = "Vélo en bambou"
 let description = "Ce playbook permet à un groupe de personne de construire leur propre vélo en bambou"
 
 let version = 0
+let tags = ""
 
 (* the stages *****************************************************************)
 

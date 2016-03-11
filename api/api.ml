@@ -111,6 +111,8 @@ sig
   val name : string
   val description : string
 
+  val tags : string
+
   val version : int
 
   (* the stepping *)

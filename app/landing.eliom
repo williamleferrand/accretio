@@ -58,25 +58,58 @@ let builder (demo, playbooks) =
       ()
   in
 
+  let toggle, content =
+    Ys_toggle.create
+      (fun _ _ _ ->
+         div ~a:[ a_class [ "learn-more" ]] [
+
+         h2 [ pcdata "How it works?" ] ;
+
+         span [
+           pcdata "Accretio is an open-source collection of recipes, called playbooks, that describe how a group can self-organize to achieve certain goals in a transparent and fair way." ; br () ;
+           br () ;
+           pcdata "Once a group decides to team up on recurring task, such as babysitting each others' children or taking turns at preparing meals, the platform schedules shifts and make sure that everyone periodically contributes to the group." ; br () ;
+           br () ;
+           pcdata "You can browse the list of existing playbooks and groups below. If you have an activity in mind that hasn't been implemented yet, " ;  Raw.a ~a:[ a_href "mailto:hi@accret.io" ] [ pcdata "drop us a line!" ] ; pcdata ". Alternatively, you can check out how accretio is implemented via our " ;  Raw.a ~a:[ a_target "_blank" ; a_href "https://github.com/accretio" ] [ pcdata "Github repository." ]
+         ]
+         ])
+      (fun _ -> ())
+  in
+  let learn_more =
+    button
+      ~a:[ a_button_type `Button ;
+           a_onclick (fun _ -> Ys_mixpanel.track "toggle-learn-more" () ; toggle ())
+         ]
+      [ pcdata "Learn more" ]
+  in
+
   div ~a:[ a_class [ "landing" ]] [
     h1 [
-      (* pcdata "Open-source playbooks for social activities" *)
-      pcdata "Automate what makes you thrive"
+      pcdata "Take turns at doing what you need"
     ] ;
 
     div ~a:[ a_class [ "landing-pitch" ; "clearfix" ]] [
       div ~a:[ a_class [ "pitch" ]] [
-        div [ pcdata "Playbooks are graphical recipes that describe the outline of an event" ] ;
-
-        div [ pcdata "Use them to organize complex activities via email with minimal manual supervision" ] ;
+        div [ pcdata "Pick up an activity" ] ;
+        div [ pcdata "Join an existing group or start your own" ] ;
+        div [ pcdata "Let accretio transparently organize the shifts" ] ;
+        learn_more ;
       ] ;
       graph_demo ;
     ] ;
 
-   div ~a:[ a_class [ "landing-popular" ]] [
-      h2 [ pcdata "Popular playbooks" ] ;
+    content ;
+
+    div ~a:[ a_class [ "landing-popular" ]] [
+      h2 [ pcdata "Search" ] ;
+      Search.builder []
+    ] ;
+
+    div ~a:[ a_class [ "landing-popular" ]] [
+      h2 [ pcdata "Popular activities" ] ;
       div ~a:[ a_class [ "library" ]] [ grid ] ;
     ]
+
   ]
 
 

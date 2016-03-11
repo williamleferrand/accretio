@@ -15,6 +15,7 @@ let name = "Swimmers circle"
 let description = "Gather at aquatic park weekly for a friendly swim in the bay"
 
 let version = 0
+let tags = ""
 
 let current_week () =
    let now = Calendar.now () in
