@@ -1,0 +1,32 @@
+.view-playbook {
+    border-radius: 5px;
+    padding: 18px;
+    background-color: $grey ;
+    color: white ;
+    cursor: pointer ;
+    .name  {
+        font-size: 18px ;
+        border-bottom: 1px solid white ;
+        padding: 0 0 15px 0 ;
+        margin: 0 0 15px 0 ;
+    }
+    .description {
+        font-size: 14px ;
+        line-height: 16px ;
+    }
+    .properties {
+        border-top: 1px solid white ;
+        padding: 15px 0 0 0 ;
+        margin: 15px 0 0 0 ;
+        li {
+            h3 {
+               font-size: 16px;
+               margin-bottom: 5px;
+            }
+            margin-bottom: 10px;
+        }
+        li:last-child {
+            margin-bottom: 0!important;
+        }
+    }
+}

@@ -1076,3 +1076,8 @@ PLAYBOOK
 
 
 CRON remind_all "14 8 * * 2 *"
+
+
+PROPERTIES
+  - "Duties", "Participants will take turns at picking up a restaurant"
+  - "Frequency", "To be determined by the group"

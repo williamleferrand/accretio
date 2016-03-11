@@ -59,11 +59,18 @@ let find_or_create_playbook playbook =
            Object_playbook.({ label ; key }))
         Playbook.parameters
   in
+ let properties =
+    List.map
+        (fun (property_name, property_value) ->
+           Object_playbook.({ property_name ; property_value }))
+        Playbook.properties
+  in
   match_lwt Object_playbook.Store.find_by_hash hash with
   | Some uid ->
     ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
     (* let's update a few fields *)
     lwt _ = $playbook(uid)<-parameters %% (fun _ -> parameters) in
+    lwt _ = $playbook(uid)<-properties %% (fun _ -> properties) in
     lwt _ = $playbook(uid)<-name %% (fun _ -> Playbook.name) in
     lwt _ = $playbook(uid)<-description %% (fun _ -> Playbook.description) in
     lwt _ = $playbook(uid)<-tags %% (fun _ -> Playbook.tags) in
@@ -83,6 +90,7 @@ let find_or_create_playbook playbook =
                   ~scope:Ys_scope.Private
                   ~tags:Playbook.tags
                   ~parameters
+                  ~properties
                   ~hash
                   ~thread:thread.Object_thread.uid
                 () with

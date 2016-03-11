@@ -33,6 +33,12 @@ type parameter =
     key : string ;
   }
 
+type property =
+  {
+    property_name : string ;
+    property_value : string ;
+  }
+
 type t =
   {
     uid : uid ;
@@ -42,6 +48,7 @@ type t =
     hash : string ;
     scope : scope ;
     parameters : parameter list ;
+    properties : property list ;
   }
 
 }}
@@ -50,7 +57,7 @@ type t =
 
 
 let to_view uid =
-  lwt owner, name, description, hash, scope, parameters = $playbook(uid)->(owner, name, description, hash, scope, parameters) in
+  lwt owner, name, description, hash, scope, parameters, properties = $playbook(uid)->(owner, name, description, hash, scope, parameters, properties) in
   lwt owner = View_member.to_view owner in
   let scope =
     match scope with
@@ -62,6 +69,12 @@ let to_view uid =
       (fun parameter -> { label = parameter.Object_playbook.label ; key = parameter.Object_playbook.key })
       parameters
   in
+  let properties =
+    List.map
+      (fun property -> { property_name = property.Object_playbook.property_name ;
+                         property_value = property.Object_playbook.property_value })
+      properties
+  in
   return {
     uid ;
     owner ;
@@ -70,6 +83,7 @@ let to_view uid =
     hash ;
     scope ;
     parameters ;
+    properties ;
   }
 
 }}
@@ -82,10 +96,17 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 let format view =
-  div ~a:[ a_class [ "playbook" ] ;
+  div ~a:[ a_class [ "playbook" ; "view-playbook" ] ;
            a_onclick (fun _ -> Service.goto (Service.Playbook view.uid)) ] [
     div ~a:[ a_class [ "name" ]] [ pcdata view.name ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;
+    (match view.properties with
+       [] -> pcdata ""
+     | _ as properties ->
+       div ~a:[ a_class [ "properties" ]] [
+         ul (List.map (fun property -> li [ h3 [ pcdata property.property_name ] ;
+                                            pcdata property.property_value ]) properties)
+    ])
   ]
 
 }}

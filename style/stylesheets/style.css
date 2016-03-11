@@ -1449,33 +1449,16 @@ h2 {
   padding-top: 16px;
 }
 /* line 5, ../sass/_library.scss */
-.library .playbooks .playbook {
+.library .playbooks .view-playbook {
   margin: 0 0 10px 0;
-  border-radius: 5px;
-  padding: 18px;
-  background-color: #3d3d3d;
-  color: white;
-  cursor: pointer;
-}
-/* line 12, ../sass/_library.scss */
-.library .playbooks .playbook .name {
-  font-size: 18px;
-  border-bottom: 1px solid white;
-  padding: 0 0 15px 0;
-  margin: 0 0 15px 0;
-}
-/* line 18, ../sass/_library.scss */
-.library .playbooks .playbook .description {
-  font-size: 14px;
-  line-height: 16px;
 }
 @media screen and (min-width: 800px) {
-  /* line 25, ../sass/_library.scss */
-  .library .playbooks .playbook {
+  /* line 10, ../sass/_library.scss */
+  .library .playbooks .view-playbook {
     width: 400px;
     margin: 0 10px 10px 0;
   }
-  /* line 29, ../sass/_library.scss */
+  /* line 14, ../sass/_library.scss */
   .library .playbooks .library-column {
     float: left;
   }
@@ -1510,4 +1493,44 @@ h2 {
 /* line 28, ../sass/_lambda_thread.scss */
 .lambda-thread .add-message .right {
   margin-top: 3px;
+}
+
+/* line 1, ../sass/_view_playbook.scss */
+.view-playbook {
+  border-radius: 5px;
+  padding: 18px;
+  background-color: #3d3d3d;
+  color: white;
+  cursor: pointer;
+}
+/* line 7, ../sass/_view_playbook.scss */
+.view-playbook .name {
+  font-size: 18px;
+  border-bottom: 1px solid white;
+  padding: 0 0 15px 0;
+  margin: 0 0 15px 0;
+}
+/* line 13, ../sass/_view_playbook.scss */
+.view-playbook .description {
+  font-size: 14px;
+  line-height: 16px;
+}
+/* line 17, ../sass/_view_playbook.scss */
+.view-playbook .properties {
+  border-top: 1px solid white;
+  padding: 15px 0 0 0;
+  margin: 15px 0 0 0;
+}
+/* line 21, ../sass/_view_playbook.scss */
+.view-playbook .properties li {
+  margin-bottom: 10px;
+}
+/* line 22, ../sass/_view_playbook.scss */
+.view-playbook .properties li h3 {
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+/* line 28, ../sass/_view_playbook.scss */
+.view-playbook .properties li:last-child {
+  margin-bottom: 0 !important;
 }

@@ -134,5 +134,6 @@ sig
   val email_actions : (string * string list) list
 
   val parameters : (string * string) list
+  val properties : (string * string) list
 
 end

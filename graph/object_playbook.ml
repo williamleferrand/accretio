@@ -33,6 +33,14 @@ type parameter =
 
 type parameters = parameter list with bin_io, default_value([])
 
+type property =
+  {
+    property_name : string ;
+    property_value : string ;
+  } with bin_io
+
+type properties = property list with bin_io, default_value([])
+
 type t = {
 
   uid : uid ;
@@ -52,6 +60,8 @@ type t = {
 
   thread : uid ;
   tags : string ;
+
+  properties : properties ;
 
 } with vertex
   (
