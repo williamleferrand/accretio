@@ -78,7 +78,7 @@ let format view =
     | Public -> "public"
     | Sandbox -> "sandbox"
   in
-  div ~a:[ a_class [ "society" ; mode ] ;
+  div ~a:[ a_class [ "view-society" ; mode ] ;
            a_onclick (fun _ -> Service.goto (Service.Society (view.shortlink, view.uid))) ] [
     div ~a:[ a_class [ "name" ]] [ pcdata view.name ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;

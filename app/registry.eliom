@@ -35,6 +35,7 @@ let get uid =
   with Not_found ->
     Lwt_log.ign_info_f "playbook %d is missing" uid ;
     raise Not_found
+
 let mem uid =
   Hashtbl.mem playbooks uid
 

@@ -61,11 +61,12 @@ let retrieve uid =
       let module P = (val playbook : Api.PLAYBOOK) in
       P.automata
     in
+    lwt societies = Lwt_list.map_p (fun (`Society, uid) -> View_society.to_view uid) societies in
     return
       (Some {
           playbook ;
           thread ;
-          societies = [] ;
+          societies ;
           automata ;
         })
 
@@ -134,9 +135,6 @@ let builder  = function
     ]
   | Some view ->
     let playbook = view.playbook in
-    (* todo : maybe we should pull the automata from the server & not carry the modules on the client side *)
-    let graph = div ~a:[ a_class [ "playbook-automata" ]] [] in
-    let _ = Ys_viz.render graph view.automata in
 
     let create_society =
       let name = input  ~a:[ a_input_type `Text ; a_placeholder "name of your group" ] () in
@@ -172,7 +170,7 @@ let builder  = function
           [ pcdata "Create" ]
       in
       div ~a:[ a_class [ "create-society"  ]] [
-        h2 [ pcdata "Start a new group driven by this playbook" ] ;
+        h2 [ pcdata "Start your own group" ] ;
         div ~a:[ a_class [ "create-society-form" ; "box" ]] [
           name ;
           description ;
@@ -215,10 +213,21 @@ let builder  = function
     in
     let thread =
       div ~a:[ a_class [ "thread" ]] [
-        h2 [ pcdata "Discuss" ] ;
+        h2 [ pcdata "Discuss this playbook" ] ;
         Lambda_thread.format view.thread
       ]
     in
+
+    let existing_societies =
+      match view.societies with
+        [] -> pcdata ""
+      | _ as societies ->
+        div ~a:[ a_class [ "existing-societies" ]] [
+          h2 [ pcdata "Request to join an existing group" ] ;
+          div (List.map View_society.format societies)
+        ]
+    in
+
     div ~a:[ a_class [ "playbook" ]] [
       playbook_controls ;
       div ~a:[ a_class [ "playbook-name" ]] [
@@ -228,10 +237,10 @@ let builder  = function
         pcdata playbook.View_playbook.description ;
       ] ;
 
-      graph ;
-      thread ;
+      existing_societies ;
       create_society ;
 
+      thread ;
     ]
 
 let dom = Template.apply %retrieve builder

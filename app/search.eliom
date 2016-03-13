@@ -79,7 +79,7 @@ open Ys_react
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
-let builder ?(query="") results =
+let builder ?(query="") ?(focus=false) results =
 
   let results = RList.init results in
 
@@ -89,7 +89,7 @@ let builder ?(query="") results =
                  a_placeholder "Enter keywords, people or locations" ;
                  a_value query ] () in
 
-    Ys_dom.delay_focus input ;
+    if focus then Ys_dom.delay_focus input ;
 
     Manip.Ev.onkeyup
       input
@@ -131,7 +131,7 @@ let dom query =
        match query with
          None -> return []
        | Some query -> %search query)
-    (builder ?query)
+    (builder ~focus:true ?query)
   ()
 
 
