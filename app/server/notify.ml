@@ -590,3 +590,23 @@ let send_message message =
          })
     locators
 | _ -> return_unit
+
+
+let new_interest_for_playbook playbook email =
+  lwt owner = $playbook(playbook)->owner in
+  lwt name, preferred_email = $member(owner)->(name, preferred_email) in
+  let locator = { uid = owner ; name ; email = preferred_email } in
+  enqueue_message
+    {
+      uid = None ;
+      locator ;
+      references = None ;
+      in_reply_to = None ;
+      reply_to = None ;
+      attachments = [] ;
+      subject = (email ^ " is interested in your playbook '" ^ name ^ "'") ;
+      content =
+        [
+          pcdata "Someone is interested in your playbook :)"
+        ]
+    }
