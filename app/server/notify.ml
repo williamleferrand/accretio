@@ -596,6 +596,7 @@ let new_interest_for_playbook playbook email =
   lwt owner = $playbook(playbook)->owner in
   lwt name, preferred_email = $member(owner)->(name, preferred_email) in
   let locator = { uid = owner ; name ; email = preferred_email } in
+  lwt name = $playbook(playbook)->name in
   enqueue_message
     {
       uid = None ;
