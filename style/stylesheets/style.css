@@ -1535,6 +1535,23 @@ h2 {
 .view-playbook .properties li:last-child {
   margin-bottom: 0 !important;
 }
+/* line 34, ../sass/_view_playbook.scss */
+.view-playbook .actions .interested {
+  text-align: center;
+}
+/* line 36, ../sass/_view_playbook.scss */
+.view-playbook .actions .interested button {
+  background-color: white;
+  color: #3d3d3d;
+}
+/* line 41, ../sass/_view_playbook.scss */
+.view-playbook .actions > div {
+  margin-top: 20px;
+}
+/* line 44, ../sass/_view_playbook.scss */
+.view-playbook .actions .done {
+  text-align: center;
+}
 
 /* line 1, ../sass/_view_society.scss */
 .view-society {

@@ -116,7 +116,7 @@ let builder (demo, playbooks) =
            ] ;
            div [
              h3 [ pcdata "How are the shifts organized?" ] ;
-             pcdata "Accretio ensures that tasks are fairly split among the participants by rotating shifts."
+             pcdata "Accretio ensures that tasks are fairly split among the participants by rotating shifts. You can audit the playbooks yourself or analyse the activity's logs to verify it."
            ] ;
            div [
              h3 [ pcdata "What are the duties for each activities?" ] ;
@@ -143,12 +143,12 @@ let builder (demo, playbooks) =
 
   div ~a:[ a_class [ "landing" ]] [
     h1 [
-      pcdata "Take turns at helping your community"
+      pcdata "Team up and take turns"
     ] ;
 
     div ~a:[ a_class [ "landing-pitch" ; "clearfix" ]] [
       div ~a:[ a_class [ "pitch" ]] [
-        div [ pcdata "Pick up an activity that matters to you" ] ;
+        div [ pcdata "Pick up an activity" ] ;
         div [ pcdata "Join an existing group or start your own" ] ;
         div [ pcdata "Let accretio automatically organize the shifts" ] ;
         learn_more ;

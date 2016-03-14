@@ -41,6 +41,13 @@ type property =
 
 type properties = property list with bin_io, default_value([])
 
+type invite = {
+  host : uid ;
+  guests : uid list
+} with bin_io
+
+type invites = invite list with bin_io, default_value([])
+
 type t = {
 
   uid : uid ;
@@ -62,6 +69,8 @@ type t = {
   tags : string ;
 
   properties : properties ;
+  followers : [ `Follower ] edges ;
+  invites : invites ;
 
 } with vertex
   (

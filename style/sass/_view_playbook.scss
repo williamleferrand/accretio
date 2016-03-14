@@ -30,4 +30,19 @@
             margin-bottom: 0!important;
         }
     }
+    .actions {
+        .interested {
+            text-align:center;
+            button {
+                background-color: white ;
+                color: $grey ;
+            }
+        }
+        > div {
+            margin-top: 20px ;
+        }
+        .done {
+            text-align: center ;
+        }
+    }
 }

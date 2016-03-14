@@ -1078,4 +1078,4 @@ CRON remind_all "14 8 * * 2 *"
 
 
 PROPERTIES
-  - "Duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."
+  - "Your duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."
