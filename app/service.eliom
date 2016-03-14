@@ -50,6 +50,7 @@ type service =
   | Create
   | Society of string * int
   | Payment of string * int
+  | Search of string option
   | Library deriving(Json)
 
 let admin objekt =
@@ -78,9 +79,17 @@ let path_of_service = function
   | Create -> [ "create" ]
   | Society (shortlink, _) -> [ "society" ; shortlink ]
   | Payment (shortlink, _) -> [ "payment" ; shortlink ]
+  | Search None -> [ "search" ]
+  | Search (Some query) -> [ "search" ; query ]
   | Landing -> [ "" ]
 
-let service, update_service = S.create Uninitialized
+let drop_search s1 s2 =
+  match s1, s2 with
+  | Search _, Search _ -> true
+  | Landing, Search _ -> true
+  | _, _ -> false
+
+let service, update_service = S.create ~eq:drop_search Uninitialized
 
 let update_service service =
   (* Popup.close () ; *)

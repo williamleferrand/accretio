@@ -14,6 +14,7 @@ let name = "Breadmaking circle"
 let description = "Baking bread for the neighbors"
 
 let version = 0
+let tags = ""
 
 let current_week () =
    let now = Calendar.now () in

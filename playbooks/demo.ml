@@ -6,6 +6,7 @@ let name = "Demo"
 let description = "Demo playbook for the landing page"
 
 let version = 0
+let tags = ""
 
 (* the individual stages ****************************************************)
 

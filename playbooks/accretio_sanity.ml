@@ -25,6 +25,7 @@ let name = "Accretio sanity"
 let description = "Accretio sanity checks"
 
 let version = 0
+let tags = ""
 
 (* the checks *****************************************************************)
 

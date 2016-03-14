@@ -33,6 +33,7 @@ let graph = Gram.Entry.mk "graph"
 let cron = Gram.Entry.mk "cron"
 let import = Gram.Entry.mk "import"
 let parameters = Gram.Entry.mk "parameters"
+let properties = Gram.Entry.mk "properties"
 
 let export = ref false
 
@@ -161,10 +162,16 @@ let compile_crons _loc crons =
   <:str_item< value crontabs = $crons$ >>
 
 
-let compile_parameters _loc = function
-    None -> <:str_item< value parameters = [] >>
-  | Some parameters -> <:str_item< value parameters = $List.fold_left (fun acc (label, key) -> <:expr< [ ($str:label$, $str:key$) :: $acc$ ] >>) <:expr< [] >> parameters$ >>
+let compile_parameters _loc parameters =
+  <:str_item< value parameters = $List.fold_left (fun acc (label, key) -> <:expr< [ ($str:label$, $str:key$) :: $acc$ ] >>) <:expr< [] >> parameters$ >>
 
+
+let compile_properties _loc properties =
+  <:str_item< value properties = $List.fold_left (fun acc (label, key) -> <:expr< [ ($str:label$, $str:key$) :: $acc$ ] >>) <:expr< [] >> (List.rev properties)$ >>
+
+
+                                                                              let has_parameters = ref false
+let has_properties = ref false
 
 EXTEND Gram
 
@@ -236,10 +243,26 @@ EXTEND Gram
       ]
     ] ;
 
+  properties:
+    [
+      [
+        "PROPERTIES" ; properties = LIST0 [ "-" ; name = STRING ; "," ; v = STRING -> (name, v) ] ->
+        properties
+      ]
+    ] ;
+
   str_item:
     [
       [
-        parameters = OPT parameters ; "COMPONENT" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ->
+        parameters = parameters ->
+          has_parameters := true ;
+          compile_parameters _loc parameters
+
+      | properties = properties ->
+          has_properties := true ;
+          compile_properties _loc properties
+
+      | "COMPONENT" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ->
         Pa_type_conv.set_conv_path_if_not_set _loc ;
          if !export then
           begin
@@ -257,7 +280,7 @@ EXTEND Gram
             <:str_item< >>
             imports
 
-        | parameters = OPT parameters ; "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
+        |  "PLAYBOOK" ; imports = LIST0 [ playbook = import -> playbook ] ; chains = graph ; crons = LIST0 [ c = cron -> c ] ->
         Pa_type_conv.set_conv_path_if_not_set _loc ;
 
         (* it would be great if we could figure out if we are called by ocamldep or sth else .. *)
@@ -284,14 +307,24 @@ EXTEND Gram
                  value email_actions = $email_actions$ ;
               >>
             in
-
-            let parameters = compile_parameters _loc parameters in
             let crons = compile_crons _loc crons in
 
             dump_automata _loc automata ;
             print_automata _loc automata ;
-
+            let properties =
+              if not !has_properties then
+                <:str_item< value properties = []  >>
+              else
+                <:str_item<>>
+            in
+            let parameters =
+              if not !has_parameters then
+                <:str_item< value parameters = []  >>
+              else
+                <:str_item<>>
+            in
             <:str_item<
+              $properties$ ;
               $parameters$ ;
               $outbound_types$ ;
               $inbound_serializers$ ;

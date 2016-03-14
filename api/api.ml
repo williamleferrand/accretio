@@ -111,6 +111,8 @@ sig
   val name : string
   val description : string
 
+  val tags : string
+
   val version : int
 
   (* the stepping *)
@@ -132,5 +134,6 @@ sig
   val email_actions : (string * string list) list
 
   val parameters : (string * string) list
+  val properties : (string * string) list
 
 end

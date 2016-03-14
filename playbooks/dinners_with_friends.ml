@@ -29,9 +29,9 @@ let _ =
 
 let author = "william@accret.io"
 let name = "Dinners with friends"
-let description = "This playbook organizes dinners for groups of friends. It randomly asks members for suggestions, collects opinions from the group and make reservations."
-
+let description = "This playbook organizes dinners for groups of friends. It asks participants for suggestions, collects opinions and make sure that people agree on a date."
 let version = 0
+let tags = ""
 
 (* local parameters *)
 
@@ -1075,3 +1075,7 @@ PLAYBOOK
 
 
 CRON remind_all "14 8 * * 2 *"
+
+
+PROPERTIES
+  - "Your duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."

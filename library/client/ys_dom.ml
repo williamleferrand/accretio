@@ -122,7 +122,12 @@ let register_on_return dom callback =
        true)
 
 let delay_focus dom =
-  ignore_result (Lwt_js.yield () >>= fun _ -> focus dom ; return_unit)
+  ignore_result
+    (Lwt_js.yield ()
+     >>= fun _ ->
+     focus dom ;
+     (Html5.To_dom.of_input dom)##value <- (Html5.To_dom.of_input dom)##value ;
+     return_unit)
 
 let delay_focus_textarea dom =
   ignore_result (Lwt_js.yield () >>= fun _ -> focus_textarea dom ; return_unit)

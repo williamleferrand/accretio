@@ -33,6 +33,21 @@ type parameter =
 
 type parameters = parameter list with bin_io, default_value([])
 
+type property =
+  {
+    property_name : string ;
+    property_value : string ;
+  } with bin_io
+
+type properties = property list with bin_io, default_value([])
+
+type invite = {
+  host : uid ;
+  guests : uid list
+} with bin_io
+
+type invites = invite list with bin_io, default_value([])
+
 type t = {
 
   uid : uid ;
@@ -51,11 +66,16 @@ type t = {
   parameters : parameters ;
 
   thread : uid ;
+  tags : string ;
+
+  properties : properties ;
+  followers : [ `Follower ] edges ;
+  invites : invites ;
 
 } with vertex
   (
     {
-      aliases = [ `PlainText description ; `PlainText name ; `String hash ] ;
+      aliases = [ `PlainText description ; `PlainText name ; `String hash ; `PlainText tags ] ;
       required = [ owner ; name ; description ; hash ; scope ; thread ] ;
       uniques = [ hash ] ;
       builders = [ (scope, (fun _ -> return Ys_scope.Private)) ] ;

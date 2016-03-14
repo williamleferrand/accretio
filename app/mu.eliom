@@ -146,6 +146,11 @@ let _ =
     ~get_params:(string "token")
     ~extract_service:(fun _ token -> return (Service.Recover token))
     () ;
+  register_page
+    ~path:[ "search" ]
+    ~get_params:(opt (string "query"))
+    ~extract_service:(fun _ query -> return (Service.Search query))
+    () ;
   register_page_no_param
     ~path:[ "request_recovery" ]
     ~extract_service:(fun _ -> return Service.RequestRecovery)
@@ -196,5 +201,18 @@ let _ =
         | None -> return Service.Landing
         | Some uid -> return (Service.Payment (shortlink, uid)))
     () ;
+
+ignore
+  (Eliom_registration.Streamlist.register_service
+     ~path:[ "graph" ]
+     ~get_params:(suffix_prod (int "uid") (opt any))
+     ~content_type:"image/png"
+     (fun (uid, options) _ ->
+        let playbook = Registry.get uid in
+        let module Playbook = (val playbook : Api.PLAYBOOK) in
+        lwt result = Lwt_process.pmap ("dot", [| "dot" ; "-Tpng" |]) Playbook.automata in
+        let result = Ocsigen_stream.of_string result in
+       return ([ fun _ -> return result ], "")
+    )) ;
 
 Lwt_log.ign_info "Mu has started"

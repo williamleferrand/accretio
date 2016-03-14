@@ -15,6 +15,7 @@ let name = "Children circle"
 let description = "Weekly children activities"
 
 let version = 0
+let tags = ""
 
 (* some utilities *************************************************************)
 
