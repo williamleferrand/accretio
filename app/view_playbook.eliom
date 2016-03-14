@@ -102,6 +102,7 @@ let keep_me_posted (uid, email) =
   Lwt_log.ign_info_f "keep me posted received for playbook %d, email is %s" uid email ;
   lwt follower = get_or_create email in
   lwt _ = $playbook(uid)<-followers +=! (`Follower, follower) in
+  lwt _ = Notify.new_interest_for_playbook uid email in
   return (Some ())
 
 let keep_me_posted = server_function ~name:"view-playbook-keep-me-posted" Json.t<int * string> keep_me_posted
