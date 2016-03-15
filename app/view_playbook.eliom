@@ -177,7 +177,7 @@ let format view =
                  button
                    ~a:[ a_button_type `Button ;
                         a_onclick keep_me_posted ]
-                   [ pcdata "Keep me posted" ]
+                   [ pcdata "Send me more information" ]
                in
                div ~a:[ a_class [ "box" ]] [
                  div ~a:[ a_class [ "box-section" ]] [ email ] ;

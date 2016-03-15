@@ -47,5 +47,5 @@ let create ~a ~a_col ?head ~column_width ~content () =
                cols.(p) <- elt :: cols.(p) ;
                incr c)
             content ;
-          div ~a (List.map (fun col -> div ~a:a_col (List.rev col)) (Array.to_list cols)))
+          div ~a:(a_style (Printf.sprintf "width: %dpx" ((number_of_columns * column_width))) :: a) (List.map (fun col -> div ~a:a_col (List.rev col)) (Array.to_list cols)))
        content number_of_columns)

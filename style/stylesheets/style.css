@@ -1446,22 +1446,32 @@ h2 {
 
 /* line 3, ../sass/_library.scss */
 .library .playbooks {
+  margin: auto;
   padding-top: 16px;
 }
-/* line 5, ../sass/_library.scss */
-.library .playbooks .view-playbook {
+/* line 6, ../sass/_library.scss */
+.library .playbooks .view-playbook, .library .playbooks .make-suggestion {
   margin: 0 0 10px 0;
 }
 @media screen and (min-width: 800px) {
-  /* line 10, ../sass/_library.scss */
-  .library .playbooks .view-playbook {
+  /* line 11, ../sass/_library.scss */
+  .library .playbooks .view-playbook, .library .playbooks .make-suggestion {
     width: 400px;
     margin: 0 10px 10px 0;
   }
-  /* line 14, ../sass/_library.scss */
+  /* line 15, ../sass/_library.scss */
   .library .playbooks .library-column {
     float: left;
   }
+}
+
+/* line 25, ../sass/_library.scss */
+.make-suggestion .closed {
+  text-align: center;
+  padding: 30px 0;
+  background-color: white;
+  color: #3d3d3d;
+  border: 1px #3d3d3d solid;
 }
 
 /* line 6, ../sass/_lambda_thread.scss */

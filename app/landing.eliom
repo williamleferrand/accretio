@@ -60,7 +60,7 @@ let builder (demo, playbooks) =
       ~a:[ a_class [ "playbooks" ; "clearfix" ]]
       ~a_col:[ a_class [ "library-column" ]]
       ~column_width:410
-      ~content:(S.const (List.map View_playbook.format playbooks))
+      ~content:(S.const (Library.make_suggestion () :: List.map View_playbook.format playbooks))
       ()
   in
 
@@ -170,8 +170,6 @@ let builder (demo, playbooks) =
 
   ]
 
-
 let dom = Template.apply %fetch_public_playbooks builder
-
 
 }}
