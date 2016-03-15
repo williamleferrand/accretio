@@ -1,13 +1,14 @@
 .library {
 
     .playbooks {
+        margin: auto ;
         padding-top: 16px;
-        .view-playbook {
+        .view-playbook, .make-suggestion {
             margin: 0 0 10px 0 ;
         }
 
         @media screen and (min-width: 800px) {
-            .view-playbook {
+            .view-playbook, .make-suggestion {
                 width: 400px ;
                 margin: 0 10px 10px 0 ;
             }
@@ -16,4 +17,17 @@
             }
         }
     }
+}
+
+
+.make-suggestion {
+
+    .closed {
+        text-align: center ;
+        padding: 30px 0 ;
+        background-color: white ;
+        color: $grey ;
+        border: 1px $grey solid ;
+    }
+
 }

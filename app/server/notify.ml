@@ -611,3 +611,30 @@ let new_interest_for_playbook playbook email =
           pcdata "Someone is interested in your playbook :)"
         ]
     }
+
+let make_suggestion email suggestion =
+  Lwt_log.ign_info_f "making new suggestion, sender is %s, suggestion is %s" email suggestion ;
+  let locator =
+    {
+      uid = 1 ;
+      name = "feedback admin" ;
+      email = Ys_config.get_string Ys_config.email_feedback
+    } in
+  enqueue_message
+    {
+      uid = None ;
+      locator ;
+      references = None ;
+      in_reply_to = None ;
+      reply_to = None ;
+      attachments = [] ;
+      subject = "New suggestion" ;
+      content =
+        [
+          pcdata "New suggestion from " ; pcdata email ; br () ;
+          br () ;
+          i [ pcdata suggestion ] ; br ();
+          br () ;
+          pcdata "Feel free to add it!"
+      ]
+    }
