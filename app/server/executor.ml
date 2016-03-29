@@ -766,6 +766,15 @@ let stack_and_trigger_unit society stage =
 
 let int_args i = Yojson_int.to_string i
 
+let stack_int society stage args =
+  push society
+    {
+      stage ;
+      args = int_args args ;
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
+    }
+
 let stack_and_trigger_int society stage args =
   push_and_execute society
     {

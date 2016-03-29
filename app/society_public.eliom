@@ -31,7 +31,7 @@ open View_society
 
 open Vault
 
-let request_to_join (society, email, content) =
+let request_to_join_ (society, email, content) =
   Lwt_log.ign_info_f "request to join society %d from email %s" society email ;
   (* we assume here that the playbook on the other side has the core_join_request component loaded.
      if it doesn't, the message will still reach the inbox but won't be dispatched *)
@@ -49,11 +49,13 @@ let request_to_join (society, email, content) =
       | `Object_already_exists (_, uid) -> return uid
       | `Object_created member -> return member.Object_member.uid
   in
+  lwt _ = $society(society)<-followers += (`Follower, sender) in
   match_lwt Object_message.Store.create
               ~society
               ~subject:"Request to join"
               ~transport:Object_message.NoTransport
               ~content
+              ~raw:content
               ~origin:(Object_message.Member sender)
               ~destination:(Object_message.Stage "process_join_request")
               ~reference:(Object_message.create_reference content)
@@ -61,10 +63,10 @@ let request_to_join (society, email, content) =
   | `Object_already_exists _ -> return_none
   | `Object_created message ->
     lwt _ = $member(sender)<-messages += (`Email, message.Object_message.uid) in
-    lwt _ = Executor.stack_and_trigger_int society "process_join_request" message.Object_message.uid in
+    lwt _ = Executor.stack_int society "process_join_request" message.Object_message.uid in
     return (Some ())
 
-let request_to_join = server_function ~name:"society-public-request-to-join" Json.t<int * string * string> request_to_join
+let request_to_join = server_function ~name:"society-public-request-to-join" Json.t<int * string * string> request_to_join_
 
 }}
 

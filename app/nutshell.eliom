@@ -102,10 +102,8 @@ let dispatch service : 'a option React.signal =
   | Settings -> Settings.dom ()
   | Search query -> Search.dom query
   | RequestRecovery -> wrap (Recover.dom_request_recovery ())
+  | Schoolbus -> Schoolbus.dom ()
   | _ -> S.const None
-(*
-  | Landing -> Landing.dom ()
-  | _ -> lost *)
 
 let container: Html5_types.div_content_fun elt React.signal =
   S.Option.value ~default:(`Init load) (S.bind service dispatch)

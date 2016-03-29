@@ -1,0 +1,51 @@
+.schoolbus {
+
+    .pitch {
+        margin: auto ;
+        width: 800px ;
+        ol {
+            width: 600px ;
+            text-align: center ;
+            padding: 15px 0 0 0 ;
+            li {
+                font-size: 20px;
+                line-height: 22px;
+                padding: 5px 0;
+            }
+        }
+
+        .bus {
+            img {
+                width: 200px;
+            }
+        }
+
+        @media screen and (max-width: 799px) {
+            width: auto ;
+            .bus {
+                float: none ;
+                margin: auto ;
+                text-align: center ;
+                img {
+                    width: 100% ;
+                    max-width: 300px;
+                }
+            }
+            ol {
+                float: none ;
+                width: auto ;
+            }
+
+        }
+    }
+
+    .form {
+        margin-top: 20px ;
+        h3 {
+            font-size: 24px ;
+            text-align: center ;
+            padding: 20px 0 ;
+        }
+    }
+
+}

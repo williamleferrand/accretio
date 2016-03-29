@@ -50,6 +50,26 @@ let register_page_no_param ~path ~extract_service () =
             }} ;
           Lwt.return (Nutshell.common mixpanel_id version url)))
 
+let register_page_no_param_with_title ~path ~extract_service () =
+  ignore
+    (App.register_service
+       ~path
+       ~get_params:(opt any)
+       ~content_type:"text/html"
+       (fun options pp ->
+          lwt _ = Shunt.apply options in
+          lwt session = Sessions.get () in
+          lwt service, title, description = extract_service session in
+          let pipe = Live.pipe in
+          let mixpanel_id = Ys_config.get_string "mixpanel-id" in
+          let fb_app_id = Ys_config.get_string Ys_config.fb_app_id in
+          let stripe_publishable_key = Ys_config.get_string Ys_config.stripe_publishable_key in
+          let url = (Ys_config.get_string "url-prefix")^"/"^(String.concat "/" path) in
+          ignore {unit{
+              Bootstrap.init %service %pipe %session %fb_app_id %stripe_publishable_key
+            }} ;
+          Lwt.return (Nutshell.common ?title ?description mixpanel_id version url)))
+
 let register_page ~path ~get_params ~extract_service () =
   ignore
     (App.register_service
@@ -158,6 +178,10 @@ let _ =
   register_page_no_param
     ~path:[ "feedback" ]
     ~extract_service:(fun _ -> return Service.Feedback)
+    () ;
+  register_page_no_param_with_title
+    ~path:[ "schoolbus" ]
+    ~extract_service:(fun _ -> return (Service.Schoolbus, Some "Preschool on Wheels", Some "We pick up families at their doorstep and drive them to exciting activities"))
     () ;
   register_page
     ~path:[ "playbook" ]

@@ -87,6 +87,8 @@ type t = {
   blacklist : [ `Unregistered | `Banned ] edges ;
   payments : [ `Payment ] edges ;
 
+  followers : [ `Follower ] edges ;
+
 } with vertex
   (
     {
