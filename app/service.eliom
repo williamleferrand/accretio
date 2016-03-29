@@ -51,6 +51,7 @@ type service =
   | Society of string * int
   | Payment of string * int
   | Search of string option
+  | Schoolbus
   | Library deriving(Json)
 
 let admin objekt =
@@ -81,6 +82,7 @@ let path_of_service = function
   | Payment (shortlink, _) -> [ "payment" ; shortlink ]
   | Search None -> [ "search" ]
   | Search (Some query) -> [ "search" ; query ]
+  | Schoolbus -> [ "schoolbus" ]
   | Landing -> [ "" ]
 
 let drop_search s1 s2 =

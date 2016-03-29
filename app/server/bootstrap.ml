@@ -61,6 +61,12 @@ let run () =
           Notify.send_welcome_message obj.Object_member.uid)
   in
 
+  (* setting the timzeone *)
+  CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ;
+
+  (* activating the crons *)
+  ignore_result (Executor.start_cron ()) ;
+
   let rec use_sphinx () =
     Lwt_log.ign_info_f "patching name" ;
     lwt _ =
@@ -73,8 +79,4 @@ let run () =
   in
   lwt _ = use_sphinx () in
 
-  (* setting the timzeone *)
-  CalendarLib.Time_Zone.change (CalendarLib.Time_Zone.Local) ;
-
-  (* activating the crons *)
-  Executor.start_cron ()
+  return_unit

@@ -1594,3 +1594,57 @@ h2 {
 .search input[type="text"] {
   border: 1px black solid;
 }
+
+/* line 3, ../sass/_schoolbus.scss */
+.schoolbus .pitch {
+  margin: auto;
+  width: 800px;
+}
+/* line 6, ../sass/_schoolbus.scss */
+.schoolbus .pitch ol {
+  width: 600px;
+  text-align: center;
+  padding: 15px 0 0 0;
+}
+/* line 10, ../sass/_schoolbus.scss */
+.schoolbus .pitch ol li {
+  font-size: 20px;
+  line-height: 22px;
+  padding: 5px 0;
+}
+/* line 18, ../sass/_schoolbus.scss */
+.schoolbus .pitch .bus img {
+  width: 200px;
+}
+@media screen and (max-width: 799px) {
+  /* line 3, ../sass/_schoolbus.scss */
+  .schoolbus .pitch {
+    width: auto;
+  }
+  /* line 25, ../sass/_schoolbus.scss */
+  .schoolbus .pitch .bus {
+    float: none;
+    margin: auto;
+    text-align: center;
+  }
+  /* line 29, ../sass/_schoolbus.scss */
+  .schoolbus .pitch .bus img {
+    width: 100%;
+    max-width: 300px;
+  }
+  /* line 34, ../sass/_schoolbus.scss */
+  .schoolbus .pitch ol {
+    float: none;
+    width: auto;
+  }
+}
+/* line 42, ../sass/_schoolbus.scss */
+.schoolbus .form {
+  margin-top: 20px;
+}
+/* line 44, ../sass/_schoolbus.scss */
+.schoolbus .form h3 {
+  font-size: 24px;
+  text-align: center;
+  padding: 20px 0;
+}
