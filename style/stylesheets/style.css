@@ -1640,11 +1640,26 @@ h2 {
 }
 /* line 42, ../sass/_schoolbus.scss */
 .schoolbus .form {
-  margin-top: 20px;
+  margin: 20px 0;
 }
 /* line 44, ../sass/_schoolbus.scss */
 .schoolbus .form h3 {
-  font-size: 24px;
+  font-size: 20px;
+  line-height: 22px;
   text-align: center;
-  padding: 20px 0;
+  padding: 10px 0;
+}
+/* line 50, ../sass/_schoolbus.scss */
+.schoolbus .form textarea {
+  height: 80px;
+}
+/* line 58, ../sass/_schoolbus.scss */
+.schoolbus .faq > div {
+  margin-bottom: 20px;
+}
+/* line 59, ../sass/_schoolbus.scss */
+.schoolbus .faq > div h3 {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 10px;
 }

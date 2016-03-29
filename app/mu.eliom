@@ -181,7 +181,7 @@ let _ =
     () ;
   register_page_no_param_with_title
     ~path:[ "schoolbus" ]
-    ~extract_service:(fun _ -> return (Service.Schoolbus, Some "Preschool on Wheels", Some "We pick up families at their doorstep and drive them to exciting activities"))
+    ~extract_service:(fun _ -> return (Service.Schoolbus, Some "Preschool on wheels", Some "We pick up families at their doorstep and drive them to exciting activities all through the town"))
     () ;
   register_page
     ~path:[ "playbook" ]
