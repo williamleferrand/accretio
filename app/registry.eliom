@@ -68,7 +68,7 @@ let find_or_create_playbook playbook =
   in
   match_lwt Object_playbook.Store.find_by_hash hash with
   | Some uid ->
-    ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
+    ign_info_f "registering existing playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash uid ;
     (* let's update a few fields *)
     lwt _ = $playbook(uid)<-parameters %% (fun _ -> parameters) in
     lwt _ = $playbook(uid)<-properties %% (fun _ -> properties) in
@@ -77,6 +77,7 @@ let find_or_create_playbook playbook =
     lwt _ = $playbook(uid)<-tags %% (fun _ -> Playbook.tags) in
     return uid
   | None ->
+
     lwt owner = find_or_create_author Playbook.author in
 
     match_lwt Object_thread.Store.create
@@ -96,7 +97,7 @@ let find_or_create_playbook playbook =
                   ~thread:thread.Object_thread.uid
                 () with
       | `Object_created playbook ->
-        ign_info_f "registering playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash playbook.Object_playbook.uid ;
+        ign_info_f "registering recreated playbook %s from author %s, hash is %s, uid is %d" Playbook.name Playbook.author hash playbook.Object_playbook.uid ;
         lwt _ = $thread(thread.Object_thread.uid)<-context +=! (`Playbook, playbook.Object_playbook.uid) in
         return playbook.Object_playbook.uid
       | `Object_already_exists (_, uid) ->

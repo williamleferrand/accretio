@@ -201,7 +201,7 @@ let move_to_ocsipersist () =
       "object_timer"
     ]
 
-let move_back_to_leveldb () =
+ let move_back_to_leveldb () =
   Lwt_log.ign_info "moving all the ocsipersist data back to leveldb" ;
   Lwt_list.iter_s
     (fun (db, name) ->
@@ -210,17 +210,17 @@ let move_back_to_leveldb () =
     [
       Object_image.Store.db, "object_image" ;
       Object_member.Store.db, "object_member" ;
-      Object_member.Store.db, "object_member_by_emails" ;
-      Object_member.Store.db, "object_member_by_recovery_token" ;
-      Object_member.Store.db, "object_member_by_shunts" ;
+      Object_member.Store.db_emails, "object_member_by_emails" ;
+      Object_member.Store.db_recovery_token, "object_member_by_recovery_token" ;
+      Object_member.Store.db_shunts, "object_member_by_shunts" ;
       Object_message.Store.db, "object_message" ;
-      Object_message.Store.db, "object_message_by_reference" ;
+      Object_message.Store.db_reference, "object_message_by_reference" ;
       Object_payment.Store.db, "object_payment" ;
-      Object_payment.Store.db, "object_payment_by_shortlink" ;
+      Object_payment.Store.db_shortlink, "object_payment_by_shortlink" ;
       Object_playbook.Store.db, "object_playbook" ;
-      Object_playbook.Store.db, "object_playbook_by_hash" ;
+      Object_playbook.Store.db_hash, "object_playbook_by_hash" ;
       Object_society.Store.db, "object_society" ;
-      Object_society.Store.db, "object_society_by_shortlink" ;
+      Object_society.Store.db_shortlink, "object_society_by_shortlink" ;
       Object_thread.Store.db, "object_thread" ;
       Object_timer.Store.db, "object_timer" ;
     ]

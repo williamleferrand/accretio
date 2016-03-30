@@ -60,6 +60,7 @@ let retrieve uid =
   lwt view = View_society.to_view uid in
   lwt members = retrieve_members uid in
   lwt data, playbook = $society(uid)->(data, playbook) in
+  Lwt_log.ign_info_f "society %d relies on playbook %d" uid playbook ;
   let automata, triggers, mailables, email_actions =
     let playbook = Registry.get playbook in
     let module P = (val playbook : Api.PLAYBOOK) in
