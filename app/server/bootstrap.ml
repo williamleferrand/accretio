@@ -41,7 +41,7 @@ let run () =
   lwt _ = Migration.run () in
 
   lwt _ = Registry.start () in
-  lwt _ = Imap_endpoint.start () in
+  let _ = ignore_result (Imap_endpoint.start ()) in
 
   (* starting notify *)
   Notify.dequeue_batches () ;
