@@ -141,10 +141,10 @@ let builder () =
         h3 [ pcdata "What kind of activities do you organize?" ] ;
         pcdata "Activities will include field trips to the SF Zoo and to the Discovery Museum in Sausalito. Depending on people's interests, we will also schedule music classes and art workshops with public and private providers, as well as laid-back playtimes at our beautiful public playgrounds."
       ] ;
-      div [
+      (* div [
         h3 [ pcdata "How much does it cost?" ] ;
         pcdata "The exact cost depends on the activities and the number of participants, but we initially aim at less than $80 for a whole day of activity for one children and one adult, lunch included."
-      ] ;
+      ] ; *)
       div [
         h3 [ pcdata "Who operates the bus?" ] ;
         pcdata "We are contracting with a well-known, fully insured charter bus company."
