@@ -125,31 +125,31 @@ edges ;
         <:str_item<
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Store.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_string"$ uid key =
-            Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
+            Ys_persistency.Store.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
 
           value $lid:"unset_"^field^"_by_string"$ key =
-            Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key) ;
+            Ys_persistency.Store.delete $lid:db_name$ (String.lowercase key) ;
 
           value $lid:"find_by_"^field$ key =
              Lwt.bind
-                (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                 (fun
                    [ None -> Lwt.return_none
                    | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
 
           value $lid:"is_"^field^"_assigned_to_other"$ uid key =
             Lwt.bind
-               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid' when Ys_uid.of_string uid' <> uid -> Lwt.return True
                  | _ -> Lwt.return False ]) ;
 
           value $lid:"is_"^field^"_assigned"$ key =
             Lwt.bind
-               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid -> Lwt.return (Some (Ys_uid.of_string uid))
                  | _ -> Lwt.return_none ]) ;
@@ -161,17 +161,17 @@ edges ;
         <:str_item<
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Store.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_string"$ uid key =
-            Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
+            Ys_persistency.Store.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
 
           value $lid:"unset_"^field^"_by_string"$ key =
-            Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key) ;
+            Ys_persistency.Store.delete $lid:db_name$ (String.lowercase key) ;
 
           value $lid:"find_by_"^field$ key =
              Lwt.bind
-                (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                 (fun
                    [ None -> Lwt.return_none
                    | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
@@ -181,7 +181,7 @@ edges ;
             [ None -> Lwt.return False
             | Some key ->
                Lwt.bind
-                 (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                 (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                  (fun
                    [ Some uid' when Ys_uid.of_string uid' <> uid -> Lwt.return True
                    | _ -> Lwt.return False ]) ] ;
@@ -191,7 +191,7 @@ edges ;
             [ None -> Lwt.return_none
             | Some key ->
                Lwt.bind
-                 (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                 (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                  (fun
                    [ Some uid -> Lwt.return (Some (Ys_uid.of_string uid))
                    | _ -> Lwt.return_none ]) ] ;
@@ -203,21 +203,21 @@ edges ;
         <:str_item<
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Store.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_strings"$ uid keys =
             Lwt_list.iter_s
-               (fun key -> Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid))
+               (fun key -> Ys_persistency.Store.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid))
                keys ;
 
           value $lid:"unset_"^field^"_by_strings"$ keys =
             Lwt_list.iter_s
-               (fun key -> Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key))
+               (fun key -> Ys_persistency.Store.delete $lid:db_name$ (String.lowercase key))
                keys ;
 
           value $lid:"find_by_"^(String.sub field 0 (String.length field - 1))$ key =
             Lwt.bind
-               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ None -> Lwt.return_none
                  | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
@@ -228,7 +228,7 @@ edges ;
           value $lid:"is_"^field^"_assigned_to_other"$ uid keys =
             Lwt.bind
                (Lwt_list.map_p
-                 (fun key -> Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                 (fun key -> Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                  keys)
                (fun bindings ->
                     Lwt.return (List.fold_left (fun acc -> fun [ Some uid' when Ys_uid.of_string uid' <> uid -> True | _ -> acc ]) False bindings)) ;
@@ -237,7 +237,7 @@ edges ;
           value $lid:"is_"^field^"_assigned"$ keys =
             Lwt.bind
                (Lwt_list.map_p
-                 (fun key -> Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                 (fun key -> Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                  keys)
                (fun bindings ->
                     Lwt.return (List.fold_left (fun acc -> fun [ Some uid -> Some (Ys_uid.of_string uid) | _ -> acc ]) None bindings)) ;
@@ -260,24 +260,24 @@ edges ;
 
           value $lid:db_name$ =
              let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ ^ "_by_" ^ $str:field$ in
-             Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+             Ys_persistency.Store.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
           value $lid:"set_"^field^"_by_string"$ uid key =
-            Ys_persistency.Ocsipersist.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
+            Ys_persistency.Store.put $lid:db_name$ (String.lowercase key) (Ys_uid.to_string uid) ;
 
           value $lid:"unset_"^field^"_by_string"$ key =
-            Ys_persistency.Ocsipersist.delete $lid:db_name$ (String.lowercase key) ;
+            Ys_persistency.Store.delete $lid:db_name$ (String.lowercase key) ;
 
           value $lid:"find_by_"^field$ key =
              Lwt.bind
-                (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+                (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                 (fun
                    [ None -> Lwt.return_none
                    | Some uid -> Lwt.return (Some (Ys_uid.of_string uid)) ]) ;
 
           value $lid:"is_"^field^"_assigned_to_other"$ uid key =
             Lwt.bind
-               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid' when Ys_uid.of_string uid' <> uid -> Lwt.return True
                  | _ -> Lwt.return False ]) ;
@@ -285,7 +285,7 @@ edges ;
 
           value $lid:"is_"^field^"_assigned"$ key =
             Lwt.bind
-               (Ys_persistency.Ocsipersist.get $lid:db_name$ (String.lowercase key))
+               (Ys_persistency.Store.get $lid:db_name$ (String.lowercase key))
                (fun
                  [ Some uid -> Lwt.return (Some (Ys_uid.of_string uid))
                  | _ -> Lwt.return_none ]) ;
@@ -325,7 +325,7 @@ let rec generate_set_functions _loc aliases builders = function
         do {
           ignore ($wrap_with_modules _loc (<:expr< $lid:("bin_write_"^lid)$ >>) modules$ buf v ~pos:0) ;
           Bin_prot.Common.blit_buf_string buf s size ;
-          Ys_persistency.Ocsipersist.put db $wrap_field _loc field$ s }
+          Ys_persistency.Store.put db $wrap_field _loc field$ s }
        >>
 
   | _ -> assert false
@@ -351,7 +351,7 @@ let rec generate_get_functions _loc required builders = function
          some of the builders *)
       value rec $lid:"get_"^field$ uid =
          Lwt.bind
-          (Ys_persistency.Ocsipersist.get db $wrap_field _loc field$)
+          (Ys_persistency.Store.get db $wrap_field _loc field$)
           (fun
             [ None ->
                   $try
@@ -860,7 +860,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
 
     value db =
         let dir = Ys_config.get_string "db-root-dir" ^ "/" ^ $str:module_name$ in
-        Ys_persistency.Ocsipersist.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
+        Ys_persistency.Store.open_db_blocking ~cache_size:(Ys_config.get_int "cache-size") dir ;
 
     value uid_current = ref None ;
     value uid_mutex = Lwt_mutex.create () ;
@@ -874,7 +874,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
                 [ Some uid -> Lwt.return uid
                 | None ->
                    Lwt.bind
-                     (Ys_persistency.Ocsipersist.max_key db)
+                     (Ys_persistency.Store.max_key db)
                      (fun
                         [ None -> Lwt.return 0
                         | Some uid -> Lwt.return uid ]) ])
@@ -885,7 +885,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
     value iter_lwt f =
           Lwt.bind
              (Lwt.bind
-               (Ys_persistency.Ocsipersist.max_key db)
+               (Ys_persistency.Store.max_key db)
                (fun
                    [ None -> Lwt.return 0
                   | Some max_key -> Lwt.return max_key ]))
@@ -902,7 +902,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
            (match marker with
                [ None ->
                    Lwt.bind
-                      (Ys_persistency.Ocsipersist.max_key db)
+                      (Ys_persistency.Store.max_key db)
                       (fun
                          [ None -> Lwt.return 0
                          | Some max_key -> Lwt.return max_key ])
@@ -933,7 +933,7 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
      exception Not_found_unsafe;
      value get uid =
         Lwt.bind
-          (Ys_persistency.Ocsipersist.Batch.get db [| $list:load_keys$ |])
+          (Ys_persistency.Store.Batch.get db [| $list:load_keys$ |])
           (fun fields ->
             $List.fold_left
                (fun acc (s, f) -> <:expr< Lwt.bind ($s$) (fun $lid:f$ -> $acc$) >>)

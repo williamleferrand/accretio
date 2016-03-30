@@ -28,7 +28,7 @@ open Lwt_preemptive
 
 (* ocsipersist storage *)
 
-module Ocsipersist =
+module OcsipersistStorage =
 struct
 
   let open_db_blocking ~cache_size name =
@@ -116,7 +116,7 @@ struct
   let from_leveldb_to_ocsipersist name =
     Lwt_log.ign_info_f "migrating data from leveldb to ocsipersist for table %s" name ;
     let dbin = LevelDBStorage.open_db_blocking ~cache_size:0 name in
-    let dbout = Ocsipersist.open_db_blocking ~cache_size:0 name in
+    let dbout = OcsipersistStorage.open_db_blocking ~cache_size:0 name in
 
     let it = LevelDB.Iterator.make dbin in
     LevelDB.Iterator.seek_to_first it ;
@@ -127,7 +127,7 @@ struct
       | true ->
         let key = LevelDB.Iterator.get_key it in
         let value = LevelDB.Iterator.get_value it in
-        lwt _ = Ocsipersist.put dbout key value in
+        lwt _ = OcsipersistStorage.put dbout key value in
         LevelDB.Iterator.next it ;
         drain ()
     in
@@ -139,4 +139,18 @@ struct
     return_unit
 
 
+  let from_ocsipersist_to_leveldb dbout name =
+    Lwt_log.ign_info_f "migrating data from ocsipersist to leveldb for table %s" name ;
+    let dbin = OcsipersistStorage.open_db_blocking ~cache_size:0 name in
+    lwt _ =
+      Ocsipersist.iter_step
+        (LevelDBStorage.put dbout)
+        dbin
+    in
+    Lwt_log.ign_info_f "done transferring table %s" name ;
+    return_unit ;
+
 end
+
+
+module Store = LevelDBStorage
