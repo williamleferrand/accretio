@@ -30,6 +30,7 @@ open View_society
 {server{
 
 let retrieve uid =
+  Lwt_log.ign_info_f "retrieving society %d" uid ;
   lwt leader = $society(uid)->leader in
   lwt is_leader =
     solve_acl

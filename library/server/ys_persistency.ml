@@ -78,7 +78,9 @@ end
 module LevelDBStorage =
 struct
 
-  let open_db_blocking ~cache_size = LevelDB.open_db ~cache_size
+  let open_db_blocking ~cache_size name =
+   (* LevelDB.destroy name ; *)
+    LevelDB.open_db ~cache_size name
 
   let get db = detach (LevelDB.get db)
 
@@ -98,6 +100,7 @@ struct
   end
 
   let max_key db =
+    Lwt_log.ign_info_f "calling max_key" ;
     try_lwt
       let iterator = LevelDB.Iterator.make db in
       LevelDB.Iterator.seek_to_last iterator ;
@@ -153,4 +156,4 @@ struct
 end
 
 
-module Store = LevelDBStorage
+ module Store = LevelDBStorage
