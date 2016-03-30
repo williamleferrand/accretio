@@ -126,22 +126,21 @@ let load_playbook file =
 
 *)
 
-let _ =
-  ignore_result
-    (lwt _ = register (module Demo) in
-     lwt _ = register (module Breadmaking) in
-     lwt _ = register (module Serc_weekly) in
-     lwt _ = register (module Children_circle) in
-     lwt _ = register (module Dinners_with_friends) in
-     lwt _ = register (module Accretio_grooming) in
-     lwt _ = register (module Accretio_sanity) in
-     lwt _ = register (module Monthly_bbq) in
-     lwt _ = register (module Flying_club) in
-     lwt _ = register (module Field_trips) in
-     lwt _ = register (module Coop_babysitting) in
-     lwt _ = register (module Ecd_at_home_preschool) in
-     lwt _ = register (module Diy_velo_bambou) in
-     lwt _ = register (module Mandarin_circle_time) in
-     lwt _ = register (module Children_schoolbus) in
-     (* lwt _ = register (module Bay_tours) in *)
-     return_unit)
+let start () =
+  lwt _ = register (module Demo) in
+  lwt _ = register (module Breadmaking) in
+  lwt _ = register (module Serc_weekly) in
+  lwt _ = register (module Children_circle) in
+  lwt _ = register (module Dinners_with_friends) in
+  lwt _ = register (module Accretio_grooming) in
+  lwt _ = register (module Accretio_sanity) in
+  lwt _ = register (module Monthly_bbq) in
+  lwt _ = register (module Flying_club) in
+  lwt _ = register (module Field_trips) in
+  lwt _ = register (module Coop_babysitting) in
+  lwt _ = register (module Ecd_at_home_preschool) in
+  lwt _ = register (module Diy_velo_bambou) in
+  lwt _ = register (module Mandarin_circle_time) in
+  lwt _ = register (module Children_schoolbus) in
+  (* lwt _ = register (module Bay_tours) in *)
+  return_unit

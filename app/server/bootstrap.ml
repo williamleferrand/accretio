@@ -38,8 +38,13 @@ let run () =
   Lwt_log.append_rule "main" Lwt_log.Info ;
   (* Lwt_log.append_rule "*" Lwt_log.Info ; *)
 
-  (* running all migrations *)
   lwt _ = Migration.run () in
+
+  lwt _ = Registry.start () in
+  lwt _ = Imap_endpoint.start () in
+
+  (* starting notify *)
+  Notify.dequeue_batches () ;
 
   (* initializing some objects *)
   lwt _ =

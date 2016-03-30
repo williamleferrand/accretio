@@ -436,14 +436,13 @@ let wait_mail host port user pass mbox =
   >>= iterate_over_emails imap_offset
 
 
-let _ =
+let start () =
   Lwt_log.ign_info_f "starting imap loop" ;
-  ignore_result
-    (never_stop
-       (fun () ->
-          wait_mail
-            (Ys_config.get_string Ys_config.imap_host)
-            (Ys_config.get_int Ys_config.imap_port)
-            (Ys_config.get_string Ys_config.imap_user)
-            (Ys_config.get_string Ys_config.imap_pass)
-            (Ys_config.get_string Ys_config.imap_mbox)))
+  never_stop
+    (fun () ->
+       wait_mail
+         (Ys_config.get_string Ys_config.imap_host)
+         (Ys_config.get_int Ys_config.imap_port)
+         (Ys_config.get_string Ys_config.imap_user)
+         (Ys_config.get_string Ys_config.imap_pass)
+         (Ys_config.get_string Ys_config.imap_mbox))

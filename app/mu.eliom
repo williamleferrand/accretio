@@ -120,7 +120,7 @@ let update_invite_code =
 let _ =
   let () = Ocsigen_config.set_maxrequestbodysizeinmemory 10000000 in
   ignore_result (Bootstrap.run ()) ;
-  Notify.dequeue_batches () ;
+
   Lwt_log.ign_info "Starting Mu" ;
 
   register_page_no_param

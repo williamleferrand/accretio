@@ -201,29 +201,33 @@ let move_to_ocsipersist () =
       "object_timer"
     ]
 
+let move_back_to_leveldb () =
+  Lwt_log.ign_info "moving all the ocsipersist data back to leveldb" ;
+  Lwt_list.iter_s
+    (fun (db, name) ->
+       let name = Ys_config.get_string "db-root-dir" ^ "/" ^ name in
+       Ys_persistency.Siphon.from_ocsipersist_to_leveldb db name)
+    [
+      Object_image.Store.db, "object_image" ;
+      Object_member.Store.db, "object_member" ;
+      Object_member.Store.db, "object_member_by_emails" ;
+      Object_member.Store.db, "object_member_by_recovery_token" ;
+      Object_member.Store.db, "object_member_by_shunts" ;
+      Object_message.Store.db, "object_message" ;
+      Object_message.Store.db, "object_message_by_reference" ;
+      Object_payment.Store.db, "object_payment" ;
+      Object_payment.Store.db, "object_payment_by_shortlink" ;
+      Object_playbook.Store.db, "object_playbook" ;
+      Object_playbook.Store.db, "object_playbook_by_hash" ;
+      Object_society.Store.db, "object_society" ;
+      Object_society.Store.db, "object_society_by_shortlink" ;
+      Object_thread.Store.db, "object_thread" ;
+      Object_timer.Store.db, "object_timer" ;
+    ]
+
 let run () =
   try_lwt
-    (* lwt _ = move_to_ocsipersist () in *)
-    lwt _ = reset_society_tombstones () in
-
-    lwt _ = create_playbook_threads () in
-    lwt _ = reset_message_transport () in
-    lwt _ = reset_all_stacks () in
-
-    lwt _ = reattach_payments () in
-    (* lwt _ = load_all_and_check_for_errors () in *)
-
-    (* lwt _ = reset_all_boxes () in *)
-    (* reset_all_cohorts () ; *)
-    (* lwt _ = relink_all_transitions () in
-       lwt _ = inspect_parents () in
-       lwt _ = insert_owner_in_parent_cohort () in
-       lwt _ = archive_cohorts () in
-       lwt _ = update_all_pools () in *)
-    (* lwt _ = all_members_locked_are_ghosts () in *)
-    (* lwt _ = touch_all_names () in *)
-    (* lwt _ = recompute_followers_for_thoughts () in *)
-
+    (* lwt _ = move_back_to_leveldb () in *)
     return_unit
   with exn ->
     Lwt_log.ign_error_f ~exn "error caught while running the migrations" ;
