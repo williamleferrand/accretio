@@ -127,9 +127,9 @@ let builder () =
         Raw.img ~src:(uri_of_string (fun () -> "img/school_bus.png")) ~alt:"" ()
       ] ;
       ol ~a:[ a_class [ "left" ]] [
-        li [ pcdata "We pick you and your child at your doorstep" ] ;
-        li [ pcdata "We all drive to exciting activities (zoo, music classes, ...)" ] ;
-        li [ pcdata "We drop you back after a rich day of learning and playing" ] ;
+        li [ pcdata "We pick you and your child up at your doorstep" ] ;
+        li [ pcdata "We head out to exciting activities (zoo, music classes, ...)" ] ;
+        li [ pcdata "We drive you back after a rich day of learning and playing" ] ;
       ] ;
     ] ;
 
