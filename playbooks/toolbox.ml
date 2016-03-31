@@ -139,3 +139,6 @@ let salutations_fr member =
     "", _ | _, Object_member.Neutral -> return (pcdata "Bonjour,")
   | name, Object_member.Male -> return (pcdata ("Cher " ^ name ^ ","))
   | name, Object_member.Female -> return (pcdata ("Chère " ^ name ^ ","))
+
+let signature context =
+  $member(context.society_supervisor)->name
