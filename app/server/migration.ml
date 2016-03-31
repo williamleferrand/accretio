@@ -257,7 +257,7 @@ let relink_messages_from_followers () =
 
 let run () =
   try_lwt
-    lwt _ = relink_messages_from_followers  () in
+    (* lwt _ = relink_messages_from_followers  () in *)
     (* lwt _ = move_back_to_leveldb () in *)
     return_unit
   with exn ->
