@@ -96,7 +96,13 @@ check:
 
 
 learn:
-	cd _build && camlp4o `ocamlfind query lwt.syntax`/lwt-syntax-options.cma  `ocamlfind query lwt.syntax`/lwt-syntax.cma  `ocamlfind query type_conv`/pa_type_conv.cma `ocamlfind query deriving`/pa_deriving_common.cma `ocamlfind query deriving-yojson`/syntax.cma `ocamlfind query ocamlgraph`/graph.cma library/syntax/pa_operators.cma library/syntax/pa_playbooks.cma app/server/dinners_with_friends.ml -export -printer o -o app/server/dinners_with_friends.pp.ml
+	cd _build && camlp4o `ocamlfind query lwt.syntax`/lwt-syntax-options.cma  `ocamlfind query lwt.syntax`/lwt-syntax.cma  `ocamlfind query type_conv`/pa_type_conv.cma `ocamlfind query deriving`/pa_deriving_common.cma `ocamlfind query deriving-yojson`/syntax.cma`ocamlfind query ocamlgraph`/graph.cma library/syntax/pa_operators.cma ../playbooks/children_schoolbus.ml -printer o -o app/server/children_schoolbus.pp.ml
+
+learn2:
+	cd _build && camlp4o `ocamlfind query deriving`/pa_deriving_common.cma `ocamlfind query deriving`/pa_deriving_std.cma `ocamlfind query deriving-yojson`/syntax.cma ../playbooks/children_schoolbus.ml -printer o -o app/server/children_schoolbus.pp.ml
+
+learn3:
+	cd _build && camlp4o `ocamlfind query lwt.syntax`/lwt-syntax-options.cma  `ocamlfind query lwt.syntax`/lwt-syntax.cma  `ocamlfind query type_conv`/pa_type_conv.cma `ocamlfind query deriving`/pa_deriving_common.cma `ocamlfind query deriving`/pa_deriving_std.cma `ocamlfind query deriving-yojson`/syntax.cma  ../playbooks/children_schoolbus.ml -printer o -o app/server/children_schoolbus.pp.ml
 
 
 dot:

@@ -32,6 +32,7 @@ open View_society
 open Vault
 
 let request_to_join_ (society, email, content) =
+  let stage = "process_join_request" in
   Lwt_log.ign_info_f "request to join society %d from email %s" society email ;
   (* we assume here that the playbook on the other side has the core_join_request component loaded.
      if it doesn't, the message will still reach the inbox but won't be dispatched *)
@@ -57,13 +58,27 @@ let request_to_join_ (society, email, content) =
               ~content
               ~raw:content
               ~origin:(Object_message.Member sender)
-              ~destination:(Object_message.Stage "process_join_request")
+              ~destination:(Object_message.Stage stage)
               ~reference:(Object_message.create_reference content)
               () with
   | `Object_already_exists _ -> return_none
   | `Object_created message ->
     lwt _ = $member(sender)<-messages += (`Email, message.Object_message.uid) in
-    lwt _ = Executor.stack_int society "process_join_request" message.Object_message.uid in
+    lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
+    (* lwt _ = Executor.stack_int society "process_join_request" message.Object_message.uid in *)
+
+    lwt playbook = $society(society)->playbook in
+    let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+
+    lwt _ =
+      match_lwt Playbook.dispatch_message_automatically message.Object_message.uid stage with
+        None -> return_unit
+      | Some call ->
+        lwt _ = $message(message.Object_message.uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
+        lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+        return_unit
+    in
+    lwt _ = Notify.check_society society in
     return (Some ())
 
 let request_to_join = server_function ~name:"society-public-request-to-join" Json.t<int * string * string> request_to_join_

@@ -334,7 +334,7 @@ let rules_copy_playbooks_server prefix folder =
     ~dep:(folder ^ "/%.ml")
     ~prod:(prefix ^ "/%.ml")
     (fun env _ ->
-       tag_file (env (prefix ^ "/%.ml")) [ "use_playbooks" ] ;
+       tag_file (env (prefix ^ "/%.ml")) [ "use_playbooks" ] ; (* is it needed? *)
        (Cmd (S [ A "cp" ;
                  P (env (folder ^ "/%.ml")) ;
                  P (env (prefix ^ "/%.ml")) ])))
@@ -439,7 +439,9 @@ let dispatch_ys hook =
     register_extension "operators" ;
 
     register_extension
-      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ; A "-ppopt" ; Sh "`ocamlfind query deriving`/pa_deriving_common.cma" ;
+      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ;
+                A "-ppopt" ; Sh "`ocamlfind query deriving`/pa_deriving_common.cma" ;
+                A "-ppopt" ; Sh "`ocamlfind query deriving`/pa_deriving_tc.cma" ;
                 A "-ppopt" ; Sh "`ocamlfind query deriving-yojson`/syntax.cma" ; ]
       ~after:[ A "-ppopt" ; A "-export" ] "playbooks" ;
 

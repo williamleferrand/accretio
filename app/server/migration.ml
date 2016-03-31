@@ -23,7 +23,6 @@
 open Lwt
 open Ys_uid
 
-
 let reset_all_boxes () =
   Lwt_log.ign_info_f "resetting all in/out boxes" ;
   Object_society.Store.fold_flat_lwt

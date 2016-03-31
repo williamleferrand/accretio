@@ -34,7 +34,6 @@ let sphinx_pool =
                     (* this might be an expensive call *)
                     try
                       Mysql.ping dbd;
-                      Printf.printf "Pinging sphinx, positive\n" ;
                       flush stdout ;
                       true
                     with exn ->
