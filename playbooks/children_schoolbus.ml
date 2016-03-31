@@ -246,7 +246,7 @@ let ask_member_for_missing_fields context (member, fields) =
           br () ;
           pcdata "Thanks for your note! I'm very excited by the feedback that we had so far, let's see if we can get enough people to set up a first field trip." ; br () ;
           br () ;
-          (match List.length fields with 1 -> pcdata "I've one more question." | _ -> pcdata "I've a few more questions :)") ; questions ; br () ;
+          (match List.length fields with 1 -> pcdata "I've one more question. " | _ -> pcdata "I've a few more questions :) ") ; questions ; br () ;
           br () ;
           pcdata "Thanks," ; br () ;
           pcdata signature ;
@@ -259,7 +259,7 @@ let ask_member_for_missing_fields context (member, fields) =
       context.reply_to
         ~message
         ~content:[
-          (match List.length fields with 1 -> pcdata "Thanks, I've one more question :)" | _ -> pcdata "Thanks. I've a few more questions :)") ; br () ;
+          (match List.length fields with 1 -> pcdata "Thanks, I've one more question :) " | _ -> pcdata "Thanks. I've a few more questions :) ") ; br () ;
           br () ;
           questions ; br () ;
           br () ;
