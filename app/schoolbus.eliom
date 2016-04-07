@@ -88,6 +88,13 @@ open Ys_react
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
+
+(* the block that show the profiles *******************************************)
+
+
+
+(* the /schoolbus page ********************************************************)
+
 let builder () =
 
   let form =

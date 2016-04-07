@@ -80,3 +80,62 @@ let fetch_raw address =
 
 let script () =
   script ~a:[ a_src (uri_of_string (fun () -> "/js-map.js")) ] (pcdata "")
+
+
+(* directions API for the TSP *************************************************)
+
+type status =
+    OK
+  | NOT_FOUND
+  | ZERO_RESULTS
+  | MAX_WAYPOINTS_EXCEEDED
+  | INVALID_REQUEST
+  | OVER_QUERY_LIMIT
+  | REQUEST_DENIED
+  | UNKNOWN_ERROR with yojson
+
+type duration = {
+  text : string ;
+  value : int ;
+} with yojson
+
+type step = {
+  duration : duration ;
+  html_instructions : string
+} with yojson
+
+type leg = {
+  duration : duration ;
+  steps : step list
+} with yojson
+
+type route = {
+  legs : leg list
+} with yojson
+
+type directions = {
+
+  status : string ;
+  routes : route list ;
+
+} with yojson
+
+
+let get_directions origin destination waypoints =
+  let api_key = Ys_config.get_string Ys_config.google_maps_api_key in
+  let parameters = [ "key", api_key ;
+                     "origin", origin ;
+                     "destination", destination ] in
+  let parameters =
+    match waypoints with
+      [] -> parameters
+    | _ as waypoints ->
+      ("waypoints", String.concat "|" ("optimize:true" :: waypoints)) :: parameters
+  in
+  let url = Printf.sprintf "https://maps.googleapis.com/maps/api/directions/json?%s" (Netencoding.Url.mk_url_encoded_parameters parameters) in
+  try_lwt
+    lwt s, _ = Ys_http.get_url url () in
+    Lwt_log.ign_info_f "got result for directions from google maps: %s" s ;
+    let result = Yojson_directions.from_string s in
+    return result
+  with exn -> fail exn

@@ -74,7 +74,7 @@ let default_profile uid name email = {
 
 (* some helpers ***************************************************************)
 
-let get_profile context member =
+let get_or_create_profile context member =
   let create_and_return_new_profile () =
     lwt name, email = $member(member)->(name, preferred_email) in
     let profile = default_profile member name email in
@@ -89,7 +89,19 @@ let get_profile context member =
       return (Yojson_profile.from_string profile)
     with _ -> create_and_return_new_profile ()
 
+let get_profile context member =
+  match_lwt context.get ~key:(key_profile member) with
+    None -> return_none
+  | Some profile ->
+    try
+      return (Some (Yojson_profile.from_string profile))
+    with _ -> return_none
+
 (* the stages *****************************************************************)
+
+(******************************************************************************)
+(* ONBOARDING                                                                 *)
+(******************************************************************************)
 
 let check_if_member_already_exists context message =
   lwt sender = context.get_message_sender ~message in
@@ -103,7 +115,7 @@ let noop context () =
 
 let ask_supervisor_to_extract_information context message =
   lwt sender = context.get_message_sender ~message in
-  lwt profile = get_profile context sender in
+  lwt profile = get_or_create_profile context sender in
   let stringified = Yojson_profile.to_string profile in
   lwt email = $member(sender)->preferred_email in
   lwt _ =
@@ -274,6 +286,87 @@ let store_reply context message =
   lwt _ = context.set ~key:(key_last_message sender) ~value:(string_of_int message) in
   return (`Message message)
 
+(******************************************************************************)
+(* COMPUTING THE GROUPS                                                       *)
+(******************************************************************************)
+
+(*
+ we group people
+    - so that children have more or less the same age
+    - so that the groups are more or less the same day over day
+    - so that the bus pickup can be done in a small amount of time
+*)
+
+let group_all_members context () =
+  (* this will only work if we have less than 23 members as this is the limit
+     of the TSP in google maps (and the limit of the bus size?) *)
+  Lwt_log.ign_info_f "grouping all members" ;
+  lwt members = $society(context.society)->members in
+  lwt profiles =
+    Lwt_list.fold_left_s
+      (fun acc (_, uid) ->
+         match_lwt get_profile context uid with
+         | Some profile when profile.neighborhood <> "" -> return (profile :: acc)
+         | _ -> return acc)
+      []
+      members
+  in
+  Lwt_log.ign_info_f "we have %d profiles" (List.length profiles) ;
+  let profiles = Ys_list.take 22 profiles in
+  try_lwt
+    let open Ys_googlemaps in
+    (* bit of hard coding here .. *)
+    lwt directions =
+      get_directions
+        "1168 Greenwich Street San Francisco"
+        "SF Zoo"
+        (List.map (fun profiles -> profiles.neighborhood) profiles)
+    in
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Directions between all members"
+        ~content:[
+          pcdata "Here are the directions between home & the SF Zoo, picking up all members on the way:" ; br () ;
+          br () ;
+          ul (List.map (fun profile -> li [ pcdata profile.name ; pcdata " -> " ; pcdata profile.neighborhood ]) profiles) ;
+          br () ;
+          div
+            (List.map
+               (fun route ->
+                  let total_duration = List.fold_left (fun acc leg -> acc + leg.duration.value + 120) 0 route.legs in
+                  let total_duration = total_duration / 60 in
+                  div [
+                    div [ pcdata "total duration including 2m per stop: " ; pcdata (string_of_int total_duration) ; pcdata "min" ] ;
+                    div
+                      (List.map
+                         (fun leg ->
+                            div [
+                              div [ pcdata "duration: " ; pcdata leg.duration.text ] ;
+                              ul (List.map (fun step -> li [ Unsafe.data step.html_instructions]) leg.steps)
+                            ])
+                         route.legs)
+                  ])
+               directions.routes)
+        ]
+        ()
+    in
+    return `None
+  with exn ->
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Couldn't compute the directions"
+        ~content:[
+          pcdata "I couldn't compute the directions because of " ; pcdata (Printexc.to_string exn) ; br () ;
+          br () ;
+          pcdata "You might need to edit some of the profiles to get the full address"
+        ]
+        ()
+    in
+  return `None
+
+
+
+
 
 (* the playbook ***************************************************************)
 
@@ -290,6 +383,7 @@ PLAYBOOK
         store_profile_and_ask_for_missing_elements ~> `ThankMember of int ~> thank_member
         store_profile_and_ask_for_missing_elements ~> `AskMemberForMissingFields of (int * profile_fields) ~> ask_member_for_missing_fields<forward> ~> `Message of email ~> store_reply ~> `Message of email ~> ask_supervisor_to_extract_information
 
+*group_all_members
 
 PROPERTIES
   - "Your duties", "None! All you have is to show up on time with your child at the pickup spot."

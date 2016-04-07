@@ -30,6 +30,8 @@
 <app/server/ys_config.ml>: pkg_tyxml.parser
 <app/server/ys_persistency.ml>: pkg_leveldb
 <app/server/ys_aliases.ml>: pkg_aliases.patriciatree, pkg_mysql
+<app/server/ys_googlemaps.ml>: pkg_deriving.syntax.tc,pkg_deriving-yojson.syntax
+
 <app/server/engine.ml>: pkg_mysql
 <app/server/logs.ml>: pkg_mysql
 

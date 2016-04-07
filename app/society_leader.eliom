@@ -854,10 +854,11 @@ let dom bundle =
   let data = RList.init bundle.data in
 
   let data_dom =
+    let input_key = input ~a:[ a_input_type `Text ; a_placeholder "Key" ] () in
+    let input_value = Raw.textarea  ~a:[ a_placeholder "Value" ] (pcdata "") in
+
     let add_data =
-      let input_key = input  ~a:[ a_input_type `Text ; a_placeholder "Key" ] () in
-      let input_value = input  ~a:[ a_input_type `Text ; a_placeholder "Value" ] () in
-      let add _ =
+        let add _ =
         match Ys_dom.get_value input_key with
           "" -> Help.warning "Please specify a key"
         | _ as key ->
@@ -865,19 +866,21 @@ let dom bundle =
             (fun _ ->
                rpc
                %set_value
-                   (view.uid, key, Some (Ys_dom.get_value input_value))
-                   (fun d -> RList.update data d ; Ys_dom.set_value input_key "" ; Ys_dom.set_value input_value ""))
+                   (view.uid, key, Some (Ys_dom.get_value_textarea input_value))
+                   (fun d -> RList.update data d ; Ys_dom.set_value input_key "" ; Ys_dom.set_value_textarea input_value ""))
       in
       let add =
         button
-
-          ~a:[ a_onclick add ]
+          ~a:[ a_button_type `Button ;
+               a_onclick add ]
           [ pcdata "Add" ]
       in
-      div ~a:[ a_class [ "add-data" ; "left" ]] [
-        input_key ;
-        input_value ;
-        add ;
+      div ~a:[ a_class [ "add-data" ; "box" ; "left" ]] [
+        div ~a:[ a_class [ "box-section" ]] [ input_key ] ;
+        div ~a:[ a_class [ "box-section" ]] [ input_value ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          add
+        ] ;
       ]
     in
     let format_data (key, value) =
@@ -887,12 +890,24 @@ let dom bundle =
       in
       let remove =
         button
-
-          ~a:[ a_onclick remove ]
+          ~a:[ a_button_type `Button ;
+               a_onclick remove ]
           [ pcdata "Remove" ]
       in
+      let edit _ =
+        Ys_dom.set_value input_key key ;
+        Ys_dom.set_value_textarea input_value value
+      in
+      let edit =
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick edit ]
+          [ pcdata "Edit" ]
+      in
+
       div ~a:[ a_class [ "data-item" ; "left" ]] [
         pcdata key ; pcdata " -> " ; pcdata value ;
+        edit ;
         remove ;
       ]
     in
@@ -1017,6 +1032,14 @@ let dom bundle =
 
   in
 
+  (* the custom blocks - TODO: try to do something less ugly there ***********)
+
+  let custom_blocks =
+    match bundle.view.View_society.playbook.View_playbook.name with
+    | "Children schoolbus" -> Schoolbus_blocks.dom ()
+    | _ -> div []
+  in
+
   (* the main dom *)
 
   div ~a:[ a_class [ "society-leader" ]] [
@@ -1040,6 +1063,8 @@ let dom bundle =
           ] ;
         ] ;
       ] ;
+
+      custom_blocks ;
 
       div ~a:[ a_class [ "triggers" ]] [
         h2 [ pcdata "Triggers" ] ;
