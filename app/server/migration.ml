@@ -224,8 +224,40 @@ let move_to_ocsipersist () =
       Object_timer.Store.db, "object_timer" ;
     ]
 
+let relink_messages_from_followers () =
+  Lwt_log.ign_info_f "relinking messages from followers" ;
+  lwt _ =
+    Object_society.Store.fold_flat_lwt
+      (fun _ uid ->
+         lwt followers = $society(uid)->followers in
+         lwt _ =
+           Lwt_list.iter_s
+             (fun (_, follower) ->
+                lwt messages = $member(follower)->messages in
+                lwt messages =
+                  Lwt_list.filter_s
+                    (fun (`Email, uid) ->
+                      match_lwt $message(uid)->destination with
+                         | Object_message.Stage stage when stage = "process_join_request" -> return_true
+                         | _ -> return_false)
+                 messages
+               in
+               lwt _=
+                 Lwt_list.iter_s
+                   (fun (`Email, message) -> lwt _ = $society(uid)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message) in return_unit)
+                   messages
+               in
+               return_unit) followers in
+               return (Some ()))
+      ()
+      None
+      (-1)
+  in
+  return_unit
+
 let run () =
   try_lwt
+    (* lwt _ = relink_messages_from_followers  () in *)
     (* lwt _ = move_back_to_leveldb () in *)
     return_unit
   with exn ->

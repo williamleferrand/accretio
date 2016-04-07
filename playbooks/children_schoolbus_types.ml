@@ -17,26 +17,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+type child = {
+  name : string ;
+  age_string : string ;
+  age_in_months : int ;
+} with yojson
 
-open Lwt
-open Eliom_content.Html5
+type profile = {
+  uid : int ;
+  email : string ;
+  name : string ;
+  children : child list ;
+  neighborhood : string ;
+  schedule : string ;
+} with yojson
 
-let init service pipe session fb_app_id stripe_key =
-  (* the first step is to update the session, even before registering any handler *)
-  Updater.start () ;
-  Sessions.update_session session ;
-  (* Sessions.register_pipe pipe ;
-  Sessions.register_fb_app_id fb_app_id ; *)
-  (* register the container *)
-  Lwt.ignore_result
-    (lwt _ = Ys_googlemaps.load () in
-     Ys_stripe.load () ;
-     lwt _ = Ys_stripe.set_publishable_key stripe_key in
-     lwt _ = Eliom_client.wait_load_end () in
-     Dom_html.window##scroll(0, 1) ;
-     Manip.appendToBody (Nutshell.body ()) ;
-     Manip.appendToBody (Footer.dom ()) ;
-     Service.init () ;
-     Service.goto service ;
-     (* Ys_facebook.load !Sessions.fb_params ; *)
-     return_unit)
+type profile_field = Name | Children | Neighborhood | Schedule with yojson
+type profile_fields = profile_field list with yojson

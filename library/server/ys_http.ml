@@ -53,7 +53,7 @@ let read_stream_full = function
     Lwt.return s
 
 let read_stream_bound ?max stream =
-  let max = match max with None -> 8192 | Some max -> max in
+  let max = match max with None -> 100000 | Some max -> max in
   match stream with
   | None -> Lwt.return ""
   | Some stream ->

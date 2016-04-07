@@ -229,23 +229,23 @@ let update_member_tags = server_function ~name:"society-leader-update-member-tag
 (* mailbox *)
 
 let get_messages_inbox (society, since) =
-  Lwt_log.ign_info_f "get_messages_inbox for society %d since %Ld" society since ;
+  Lwt_log.ign_debug_f "get_messages_inbox for society %d since %Ld" society since ;
   lwt inbox = $society(society)->inbox in
   let inbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) inbox in
   let inbox = List.rev inbox in
   lwt messages = Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) inbox in
-  Lwt_log.ign_info_f "got %d inbox messages" (List.length messages) ;
+  Lwt_log.ign_debug_f "got %d inbox messages" (List.length messages) ;
   return messages
 
 let get_messages_inbox = server_function ~name:"society-leader-get-messages-inbox" Json.t<int * int64> get_messages_inbox
 
 let get_messages_outbox (society, since) =
-  Lwt_log.ign_info_f "get_messages_outbox for society %d since %Ld" society since ;
+  Lwt_log.ign_debug_f "get_messages_outbox for society %d since %Ld" society since ;
   lwt outbox = $society(society)->outbox in
   let outbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) outbox in
   let outbox = List.rev outbox in
   lwt messages = Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) outbox in
-  Lwt_log.ign_info_f "got %d outbox messages" (List.length messages) ;
+  Lwt_log.ign_debug_f "got %d outbox messages" (List.length messages) ;
   return messages
 
 let get_messages_outbox = server_function ~name:"society-leader-get-messages-outbox" Json.t<int * int64> get_messages_outbox
@@ -854,10 +854,11 @@ let dom bundle =
   let data = RList.init bundle.data in
 
   let data_dom =
+    let input_key = input ~a:[ a_input_type `Text ; a_placeholder "Key" ] () in
+    let input_value = Raw.textarea  ~a:[ a_placeholder "Value" ] (pcdata "") in
+
     let add_data =
-      let input_key = input  ~a:[ a_input_type `Text ; a_placeholder "Key" ] () in
-      let input_value = input  ~a:[ a_input_type `Text ; a_placeholder "Value" ] () in
-      let add _ =
+        let add _ =
         match Ys_dom.get_value input_key with
           "" -> Help.warning "Please specify a key"
         | _ as key ->
@@ -865,19 +866,21 @@ let dom bundle =
             (fun _ ->
                rpc
                %set_value
-                   (view.uid, key, Some (Ys_dom.get_value input_value))
-                   (fun d -> RList.update data d ; Ys_dom.set_value input_key "" ; Ys_dom.set_value input_value ""))
+                   (view.uid, key, Some (Ys_dom.get_value_textarea input_value))
+                   (fun d -> RList.update data d ; Ys_dom.set_value input_key "" ; Ys_dom.set_value_textarea input_value ""))
       in
       let add =
         button
-
-          ~a:[ a_onclick add ]
+          ~a:[ a_button_type `Button ;
+               a_onclick add ]
           [ pcdata "Add" ]
       in
-      div ~a:[ a_class [ "add-data" ; "left" ]] [
-        input_key ;
-        input_value ;
-        add ;
+      div ~a:[ a_class [ "add-data" ; "box" ; "left" ]] [
+        div ~a:[ a_class [ "box-section" ]] [ input_key ] ;
+        div ~a:[ a_class [ "box-section" ]] [ input_value ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          add
+        ] ;
       ]
     in
     let format_data (key, value) =
@@ -887,12 +890,24 @@ let dom bundle =
       in
       let remove =
         button
-
-          ~a:[ a_onclick remove ]
+          ~a:[ a_button_type `Button ;
+               a_onclick remove ]
           [ pcdata "Remove" ]
       in
+      let edit _ =
+        Ys_dom.set_value input_key key ;
+        Ys_dom.set_value_textarea input_value value
+      in
+      let edit =
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick edit ]
+          [ pcdata "Edit" ]
+      in
+
       div ~a:[ a_class [ "data-item" ; "left" ]] [
         pcdata key ; pcdata " -> " ; pcdata value ;
+        edit ;
         remove ;
       ]
     in
@@ -1017,6 +1032,15 @@ let dom bundle =
 
   in
 
+  (* the custom blocks - TODO: try to do something less ugly there ***********)
+
+  let custom_blocks =
+    match bundle.view.View_society.playbook.View_playbook.name with
+    | "Children schoolbus" ->
+      div ~a:[ a_class [ "custom-blocks" ]] (Schoolbus_blocks.doms bundle.view.View_society.uid data ())
+    | _ -> pcdata ""
+  in
+
   (* the main dom *)
 
   div ~a:[ a_class [ "society-leader" ]] [
@@ -1040,6 +1064,8 @@ let dom bundle =
           ] ;
         ] ;
       ] ;
+
+      custom_blocks ;
 
       div ~a:[ a_class [ "triggers" ]] [
         h2 [ pcdata "Triggers" ] ;

@@ -103,6 +103,8 @@ let yelp_consumer_secret = "yelp-consumer-secret"
 let yelp_token = "yelp-token"
 let yelp_token_secret = "yelp-token-secret"
 
+let google_maps_api_key = "google-maps-api-key"
+
 let required =
   [
     db_root_dir ;
@@ -137,6 +139,7 @@ let required =
     yelp_consumer_secret ;
     yelp_token ;
     yelp_token_secret ;
+    google_maps_api_key ;
   ]
 
 (* other values are read from the xml configuration file ***********************)

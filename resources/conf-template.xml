@@ -77,11 +77,11 @@
     </eliommodule>
       </site>
 
-      <!-- <deflate compress="only">
+      <deflate compress="only">
         <type>text/html</type>
         <type>text/css</type>
         <extension>js</extension>
-      </deflate> -->
+      </deflate>
 
     </host>
 
