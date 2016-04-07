@@ -74,7 +74,7 @@ ys_external.initialize_map = function (url, lwt_wakener) {
     ys_external.__load_callback = lwt_wakener ;
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src = url + "&sensor=false&callback=ys_external.__load_callback";
+    script.src = url + "&callback=ys_external.__load_callback";
     script.id = "google-map-script" ;
     document.body.appendChild(script);
 }
@@ -92,6 +92,18 @@ ys_external.create_autocomplete = function (){
 	})
     }
     return f;
+}
+
+
+ys_external.geocode_address = function (address, lwt_wakener){
+    var geocoder = new google.maps.Geocoder();
+    geocoder.geocode({'address': address, 'region':null}, function(results, status) {
+	if (status == google.maps.GeocoderStatus.OK && results.length > 0) {
+            lwt_wakener(true);
+        } else {
+            lwt_wakener(false);
+        }
+    })
 }
 function youtube_parser(url){
     var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#\&\?]*).*/;

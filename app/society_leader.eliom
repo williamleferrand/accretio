@@ -229,23 +229,23 @@ let update_member_tags = server_function ~name:"society-leader-update-member-tag
 (* mailbox *)
 
 let get_messages_inbox (society, since) =
-  Lwt_log.ign_info_f "get_messages_inbox for society %d since %Ld" society since ;
+  Lwt_log.ign_debug_f "get_messages_inbox for society %d since %Ld" society since ;
   lwt inbox = $society(society)->inbox in
   let inbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) inbox in
   let inbox = List.rev inbox in
   lwt messages = Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) inbox in
-  Lwt_log.ign_info_f "got %d inbox messages" (List.length messages) ;
+  Lwt_log.ign_debug_f "got %d inbox messages" (List.length messages) ;
   return messages
 
 let get_messages_inbox = server_function ~name:"society-leader-get-messages-inbox" Json.t<int * int64> get_messages_inbox
 
 let get_messages_outbox (society, since) =
-  Lwt_log.ign_info_f "get_messages_outbox for society %d since %Ld" society since ;
+  Lwt_log.ign_debug_f "get_messages_outbox for society %d since %Ld" society since ;
   lwt outbox = $society(society)->outbox in
   let outbox = List.filter (fun (`Message slip, _) -> slip.Object_society.received_on > since) outbox in
   let outbox = List.rev outbox in
   lwt messages = Lwt_list.map_p (fun (`Message slip, uid) -> lwt view = View_message.to_view uid in return (slip.Object_society.received_on, view)) outbox in
-  Lwt_log.ign_info_f "got %d outbox messages" (List.length messages) ;
+  Lwt_log.ign_debug_f "got %d outbox messages" (List.length messages) ;
   return messages
 
 let get_messages_outbox = server_function ~name:"society-leader-get-messages-outbox" Json.t<int * int64> get_messages_outbox
@@ -1037,7 +1037,7 @@ let dom bundle =
   let custom_blocks =
     match bundle.view.View_society.playbook.View_playbook.name with
     | "Children schoolbus" ->
-      div ~a:[ a_class [ "custom-blocks" ]] (Schoolbus_blocks.doms data ())
+      div ~a:[ a_class [ "custom-blocks" ]] (Schoolbus_blocks.doms bundle.view.View_society.uid data ())
     | _ -> pcdata ""
   in
 

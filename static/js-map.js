@@ -93,3 +93,15 @@ ys_external.create_autocomplete = function (){
     }
     return f;
 }
+
+
+ys_external.geocode_address = function (address, lwt_wakener){
+    var geocoder = new google.maps.Geocoder();
+    geocoder.geocode({'address': address, 'region':null}, function(results, status) {
+	if (status == google.maps.GeocoderStatus.OK && results.length > 0) {
+            lwt_wakener(true);
+        } else {
+            lwt_wakener(false);
+        }
+    })
+}

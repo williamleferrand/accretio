@@ -210,6 +210,11 @@ let create_autocomplete () =
       Lwt.return res in
     g
 
+let geocode address =
+  let (res, w) = Lwt.task () in
+  let _ = ys_external##_geocode_address_(Js.string address, Js.Unsafe.inject (fun r -> Lwt.wakeup w (Js.to_bool r))) in
+  res
+
 let load () =
   Js.Opt.case
     (Dom_html.document##getElementById (Js.string "google-map-script"))
@@ -272,6 +277,7 @@ let create_autocomplete dom =
 
 let on_place_changed autocomplete callback : unit =
   (google())##maps##event##addListener(autocomplete, Js.string "place_changed", Js.wrap_callback callback)
+
 
 (*
 
