@@ -7,7 +7,7 @@
 # generic typing tags
 ################################################################################
 
-<app/type/*.ml{,i}>: pkg_deriving.syntax, pkg_js_of_ocaml.deriving.syntax, pkg_js_of_ocaml.syntax
+<app/type/*.ml{,i}>: pkg_deriving.syntax, pkg_js_of_ocaml.deriving.syntax
 
 
 ################################################################################
@@ -56,17 +56,16 @@
 
 <app/client/object_*>: use_graph_client
 
-<app/client/*.ml{,i}>: pkg_lwt, pkg_lwt.syntax, pkg_eliom.client, use_operators, syntax_camlp4o, pkg_calendar
-<app/client/*.ml{,i}> and not <app/client/object*>: pkg_js_of_ocaml.syntax, pkg_deriving.syntax, pkg_js_of_ocaml.deriving.syntax
+<app/client/*.ml{,i}>: pkg_lwt, pkg_lwt.syntax, pkg_eliom.client, use_operators, syntax_camlp4o, pkg_calendar, pkg_js_of_ocaml.syntax, pkg_deriving-yojson
+# <app/client/*.ml{,i}> and not <app/client/object*>: pkg_js_of_ocaml.syntax
 
-<app/client/mu.js>: pkg_bytes, pkg_eliom.client, pkg_js_of_ocaml.syntax, pkg_js_of_ocaml.deriving.syntax, pkg_ocamlgraph, pkg_calendar
+<app/client/mu.js>: pkg_bytes, pkg_eliom.client, pkg_ocamlgraph, pkg_calendar, pkg_deriving-yojson
 
 ################################################################################
 # testing tags
 ################################################################################
 
 <test/*>: pkg_oUnit, pkg_lwt.syntax, pkg_lwt, pkg_lwt.preemptive, pkg_str, thread, syntax_camlp4o, pkg_calendar
-
 
 ################################################################################
 # some libs tags

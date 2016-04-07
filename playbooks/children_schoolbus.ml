@@ -24,6 +24,8 @@ open Toolbox
 
 open Ys_uid
 
+open Children_schoolbus_types
+
 let author = "william@accret.io"
 let name = "Children schoolbus"
 let description = "this playbook organizes a preschool on wheels by proposing activities, booking a bus and organizing pickups/dropoffs"
@@ -37,24 +39,6 @@ let key_profile = sprintf "profile-%d"
 let key_last_message = sprintf "last-message-%d"
 
 (* the profile of a member ****************************************************)
-
-type child = {
-  name : string ;
-  age_string : string ;
-  age_in_months : int ;
-} with yojson
-
-type profile = {
-  uid : int ;
-  email : string ;
-  name : string ;
-  children : child list ;
-  neighborhood : string ;
-  schedule : string ;
-} with yojson
-
-type profile_field = Name | Children | Neighborhood | Schedule with yojson
-type profile_fields = profile_field list with yojson
 
 let default_child =
   {

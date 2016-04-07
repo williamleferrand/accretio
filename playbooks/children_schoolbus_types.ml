@@ -17,47 +17,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+type child = {
+  name : string ;
+  age_string : string ;
+  age_in_months : int ;
+} with yojson
 
-{shared{
+type profile = {
+  uid : int ;
+  email : string ;
+  name : string ;
+  children : child list ;
+  neighborhood : string ;
+  schedule : string ;
+} with yojson
 
-open Lwt
-open Sessions
-open Ys_uid
-open Vault
-
-}}
-
-{server{
-
-}}
-
-{client{
-
-open React
-open Ys_react
-open Eliom_content.Html5
-open Eliom_content.Html5.D
-
-open Children_schoolbus_types
-
-let profiles data =
-  let regex = Regexp.regexp "profile-[0-9]+" in
-
-  div ~a:[ a_class [ "schoolbus-profiles" ]] [
-    RList.map_in_div
-      (function (key, value) ->
-        match Regexp.string_match regex key 0 with
-          None -> pcdata ""
-        | Some _ ->
-          let profile = "" in
-          pcdata key
-      )
-      data
-  ]
-
-let doms data () =
-  [
-    profiles data
-  ]
-
-}}
+type profile_field = Name | Children | Neighborhood | Schedule with yojson
+type profile_fields = profile_field list with yojson

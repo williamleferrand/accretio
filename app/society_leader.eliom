@@ -1036,8 +1036,9 @@ let dom bundle =
 
   let custom_blocks =
     match bundle.view.View_society.playbook.View_playbook.name with
-    | "Children schoolbus" -> Schoolbus_blocks.dom ()
-    | _ -> div []
+    | "Children schoolbus" ->
+      div ~a:[ a_class [ "custom-blocks" ]] (Schoolbus_blocks.doms data ())
+    | _ -> pcdata ""
   in
 
   (* the main dom *)

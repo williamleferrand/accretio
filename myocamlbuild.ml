@@ -192,6 +192,7 @@ let copy_rule_client =
        in
        tag_file file
          [ "pkg_eliom.client"; "pkg_eliom.syntax.client"; "thread";
+           "pkg_js_of_ocaml.deriving.syntax" ; "pkg_deriving.syntax" ;
            "syntax_camlp4o";
          ];
        flag_infer file type_inferred;
@@ -334,7 +335,7 @@ let rules_copy_playbooks_server prefix folder =
     ~dep:(folder ^ "/%.ml")
     ~prod:(prefix ^ "/%.ml")
     (fun env _ ->
-       tag_file (env (prefix ^ "/%.ml")) [ "use_playbooks" ] ; (* is it needed? *)
+       tag_file (env (prefix ^ "/%.ml")) [ "use_playbooks" ] ;
        (Cmd (S [ A "cp" ;
                  P (env (folder ^ "/%.ml")) ;
                  P (env (prefix ^ "/%.ml")) ])))
@@ -344,6 +345,7 @@ let rules_copy_playbooks_client prefix folder =
     ~dep:(folder ^ "/%.ml")
     ~prod:(prefix ^ "/%.ml")
     (fun env _ ->
+       tag_file (env (prefix ^ "/%.ml")) [ "use_playbooks_client" ] ;
        (Cmd (S [ A "cp" ;
                  P (env (folder ^ "/%.ml")) ;
                  P (env (prefix ^ "/%.ml")) ])))
@@ -431,6 +433,13 @@ let dispatch_ys hook =
       flag [ "ocaml"; "infer_interface"; use ] (S (before @ [ A "-ppopt"; A library ] @ after)) ;
     in
 
+    let register_extension_ ?(before=[]) ?(after=[]) label =
+      let use = "use_"^label in
+      flag [ "ocaml"; "compile"; use ] (S (before @ after)) ;
+      flag [ "ocaml"; "ocamldep"; use ] (S (before)) ;
+      flag [ "ocaml"; "infer_interface"; use ] (S (before @ after)) ;
+    in
+
     register_extension "graph" ;
 
     register_extension
@@ -445,12 +454,21 @@ let dispatch_ys hook =
                 A "-ppopt" ; Sh "`ocamlfind query deriving-yojson`/syntax.cma" ; ]
       ~after:[ A "-ppopt" ; A "-export" ] "playbooks" ;
 
+    register_extension_
+      ~before:[ A "-ppopt" ; Sh "`ocamlfind query type_conv`/pa_type_conv.cma" ;
+                A "-ppopt" ; Sh "`ocamlfind query deriving`/pa_deriving_common.cma" ;
+                A "-ppopt" ; Sh "`ocamlfind query deriving`/pa_deriving_tc.cma" ;
+                A "-ppopt" ; Sh "`ocamlfind query deriving-yojson`/syntax.cma" ; ]
+      "playbooks_client" ;
+
     (* copy the graph to the server *)
     rules_copy_graph "app" "graph" ;
     rules_copy_graph_client "app" "graph" ;
 
     (* copy the playbooks to the app *)
     rules_copy_playbooks_server "app/server" "playbooks" ;
+    rules_copy_playbooks_client "app/client" "playbooks" ;
+
     rules_copy_ml_server "app/server" "api" ;
     (* rules_copy_playbooks_client "app/client" "playbooks" ; *)
 
