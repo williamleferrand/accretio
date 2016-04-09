@@ -775,12 +775,20 @@ let dom bundle =
           [ pcdata "Remove" ]
       in
 
-      div ~a:[ a_class [ "member" ]] [
-        span ~a:[ a_class [ "member-name" ]] [ pcdata member.View_member.name ] ;
-        span ~a:[ a_class [ "member-email" ]] [ pcdata member.View_member.email ] ;
-        tag_input ;
-        tag_update ;
-        remove ;
+      div ~a:[ a_class [ "member" ; "box" ; ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          pcdata member.View_member.name
+        ] ;
+        div ~a:[ a_class [ "box-section" ]] [
+          pcdata member.View_member.email
+        ] ;
+        div ~a:[ a_class [ "box-section" ]] [
+          tag_input ;
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          tag_update ;
+          remove ;
+        ] ;
       ]
     in
 
@@ -803,14 +811,22 @@ let dom bundle =
           ~a:[ a_onclick create ]
           [ pcdata "Create" ]
       in
-      div ~a:[ a_class [ "add-member" ; "left" ]] [
-        input_email ; input_tags ; create
+      div ~a:[ a_class [ "add-member" ; "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          input_email
+        ] ;
+        div ~a:[ a_class [ "box-section" ]] [
+          input_tags
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          create
+        ]
       ]
     in
 
     div ~a:[ a_class [ "members" ]] [
       h2 [ pcdata "Members" ] ;
-      RList.map_in_div_hd ~a:[ a_class [ "members-existing" ; "clearfix" ]] add_member format_member members ;
+      RList.map_in_div_hd ~a:[ a_class [ "members-existing" ]] add_member format_member members ;
     ]
 
   in
@@ -875,7 +891,7 @@ let dom bundle =
                a_onclick add ]
           [ pcdata "Add" ]
       in
-      div ~a:[ a_class [ "add-data" ; "box" ; "left" ]] [
+      div ~a:[ a_class [ "add-data" ; "box" ]] [
         div ~a:[ a_class [ "box-section" ]] [ input_key ] ;
         div ~a:[ a_class [ "box-section" ]] [ input_value ] ;
         div ~a:[ a_class [ "box-action" ]] [
@@ -905,10 +921,14 @@ let dom bundle =
           [ pcdata "Edit" ]
       in
 
-      div ~a:[ a_class [ "data-item" ; "left" ]] [
-        pcdata key ; pcdata " -> " ; pcdata value ;
-        edit ;
-        remove ;
+      div ~a:[ a_class [ "data-item" ; "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          pcdata key ; pcdata " -> " ; pcdata value ;
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          edit ;
+          remove ;
+        ]
       ]
     in
     div ~a:[ a_class [ "data" ]] [
@@ -1037,8 +1057,8 @@ let dom bundle =
   let custom_blocks =
     match bundle.view.View_society.playbook.View_playbook.name with
     | "Children schoolbus" ->
-      div ~a:[ a_class [ "custom-blocks" ]] (Schoolbus_blocks.doms bundle.view.View_society.uid data ())
-    | _ -> pcdata ""
+      Schoolbus_blocks.doms bundle.view.View_society.uid data ()
+    | _ -> []
   in
 
   (* the main dom *)
@@ -1049,36 +1069,37 @@ let dom bundle =
       div ~a:[ a_class [ "logs"; "left" ]] [  stack ; logs ] ;
       graph ;
     ] ;
-    div ~a:[ a_class [ "society-leader-lower" ]] [
+    div ~a:[ a_class [ "society-leader-lower" ]]
 
-      div ~a:[ a_class [ "mailboxes" ]] [
-        h2 [ pcdata "Mailboxes" ] ;
-        div ~a:[ a_class [ "clearfix" ]] [
-          div ~a:[ a_class [ "inbox-outer" ; "left" ]] [
-            h3 [ pcdata "Inbox" ] ;
-            inbox ;
-          ] ;
-          div ~a:[ a_class [ "outbox-outer" ; "left" ]] [
-            h3 [ pcdata "Outbox" ] ;
-            outbox
-          ] ;
-        ] ;
-      ] ;
+      (((div ~a:[ a_class [ "mailboxes" ]] [
+           h2 [ pcdata "Mailboxes" ] ;
+           div ~a:[ a_class [ "clearfix" ]] [
+             div ~a:[ a_class [ "inbox-outer" ; "left" ]] [
+               h3 [ pcdata "Inbox" ] ;
+               inbox ;
+             ] ;
+             div ~a:[ a_class [ "outbox-outer" ; "left" ]] [
+               h3 [ pcdata "Outbox" ] ;
+               outbox
+             ] ;
+           ] ;
+         ]) ;
 
-      custom_blocks ;
+         :: custom_blocks) @
 
-      div ~a:[ a_class [ "triggers" ]] [
-        h2 [ pcdata "Triggers" ] ;
-        div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
-      ] ;
-      members ;
-      messenger ;
-      data_dom ;
-      parameters ;
-      name ;
-      description ;
-      supervisor ;
+         [
+           div ~a:[ a_class [ "triggers" ]] [
+             h2 [ pcdata "Triggers" ] ;
+             div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
+           ] ;
+           members ;
+           messenger ;
+           data_dom ;
+           parameters ;
+           name ;
+           description ;
+           supervisor])
     ]
-  ]
+
 
 }}

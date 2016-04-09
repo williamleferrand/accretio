@@ -51,18 +51,7 @@
                 padding: 10px 0;
                 font-size: 24px;
             }
-             input[type="number"], input[type="text"] {
-                    padding: 10px;
-                    font-size: 14px;
-                    color: #3d3d3d;
-                    box-sizing: border-box;
-                    width: 100px;
-                    border-radius: 5px;
-                    border: none;
-                    resize: none;
-                    margin-right: 10px;
-                    display: inline ;
-                }
+
         }
 
         .mailboxes {
@@ -111,25 +100,29 @@
                 padding-right: 10px;
                 float: left ;
             }
+            input[type="number"], input[type="text"] {
+                    padding: 10px;
+                    font-size: 14px;
+                    color: #3d3d3d;
+                    box-sizing: border-box;
+                    width: 100px;
+                    border-radius: 5px;
+                    border: none;
+                    resize: none;
+                    margin-right: 10px;
+                    display: inline ;
+            }
         }
 
         .members {
             background-color: #CECECE;
 
             .add-member {
-                float: left ;
+
             }
 
             .member {
-                float: left ;
-                margin-left: 20px;
-                .member-email {
-                    margin: 0 5px;
-                }
-                button {
-                    margin-right: 10px;
-                }
-
+                margin-top: 10px ;
             }
 
         }
@@ -147,8 +140,7 @@
         .data {
             background-color: #F9D5F9 ;
             .data-item {
-                margin-left: 20px;
-                padding: 3px 0;
+                margin-top: 10px;
             }
         }
 

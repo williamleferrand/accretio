@@ -52,6 +52,7 @@ type 'output context =
     cancel_timers : query:string -> unit Lwt.t ;
 
     (* messaging utilities *)
+
     message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
     message_supervisor : subject:string -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
     reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
@@ -90,6 +91,11 @@ type 'output context =
     request_payment : member:uid -> label:string -> evidence:Object_message.attachments -> amount:float -> on_success:(uid -> 'output) -> on_failure:(uid -> 'output) -> uid option Lwt.t ;
     payment_direct_link : payment:uid -> string Lwt.t ;
     payment_amount : payment:uid -> float Lwt.t ;
+
+    (* meta *)
+
+    search_societies : query:string -> unit -> uid list Lwt.t ;
+    create_society : ?label:string -> playbook:string -> name:string -> description:string -> unit -> uid option Lwt.t ;
 
   }
 

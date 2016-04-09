@@ -578,6 +578,42 @@ let context_factory mode society =
     let payment_amount ~payment =
       $payment(payment)->amount
 
+    (* meta *)
+
+    let search_societies ~query () =
+      Object_society.Store.search_societies society query
+
+    let create_society ?label ~playbook ~name ~description () =
+      log_info "creating a new society, %s playbook %s %s" name playbook description ;
+      let label =
+        match label with
+          None -> name
+        | Some label -> label in
+      match_lwt Ys_shortlink.create () with
+        None ->
+        log_error "couldn't create shortlink" ;
+        return_none
+      | Some shortlink ->
+        match_lwt Object_playbook.Store.search_name playbook with
+          [] ->
+          log_error "playbook %s doesn't exist" playbook ;
+          return_none
+        | playbook :: _ ->
+           match_lwt Object_society.Store.create
+                      ~shortlink
+                      ~leader:society_supervisor
+                      ~name
+                      ~description
+                      ~playbook
+                      ~mode:Object_society.Public
+                      ~data:[]
+                      () with
+           | `Object_already_exists (_, uid) -> return (Some uid)
+           | `Object_created obj ->
+             lwt _ = $member(society_supervisor)<-societies += (`Society, obj.Object_society.uid) in
+             lwt _ = $society(society)<-societies += (`Society label, obj.Object_society.uid) in
+             return (Some obj.Object_society.uid)
+
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
@@ -628,6 +664,9 @@ let context_factory mode society =
       request_payment ;
       payment_direct_link ;
       payment_amount ;
+
+      search_societies ;
+      create_society ;
     }
 
   end in

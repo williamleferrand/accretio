@@ -41,6 +41,10 @@ let data_key_to_document =
   function
     `Key label -> Some label
 
+let society_to_document =
+  function
+    `Society label -> Some label
+
 type data = (string * string) list with bin_io, default_value([])
 
 type slip =
@@ -89,10 +93,14 @@ type t = {
 
   followers : [ `Follower ] edges ;
 
+  societies : [ `Society of string ] edges ;
+
 } with vertex
   (
     {
-      aliases = [ `String shortlink ; `PlainText name ; `PlainText description ; `PlainTextEdge timers timer_to_document ; `PlainTextEdge members edge_to_document ; `PlainTextEdge data_keys data_key_to_document ] ;
+      aliases = [ `String shortlink ; `PlainText name ; `PlainText description ; `PlainTextEdge timers timer_to_document ;
+                  `PlainTextEdge societies society_to_document ;
+                  `PlainTextEdge members edge_to_document ; `PlainTextEdge data_keys data_key_to_document ] ;
       required = [ shortlink ; leader ; name ; description ; mode ; playbook ] ;
       uniques = [ shortlink ]
     }

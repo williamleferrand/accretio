@@ -358,6 +358,9 @@ PLAYBOOK
 
    #import core_join_request
 
+
+(* onboarding process *)
+
    process_join_request<forward> ~> `Message of email ~> check_if_member_already_exists
 
       check_if_member_already_exists ~> `Yes ~> noop
@@ -367,7 +370,17 @@ PLAYBOOK
         store_profile_and_ask_for_missing_elements ~> `ThankMember of int ~> thank_member
         store_profile_and_ask_for_missing_elements ~> `AskMemberForMissingFields of (int * profile_fields) ~> ask_member_for_missing_fields<forward> ~> `Message of email ~> store_reply ~> `Message of email ~> ask_supervisor_to_extract_information
 
+
+(* organizing a trip *)
+
+
+
+(* some administrative work *)
+
 *group_all_members
+
+
+
 
 PROPERTIES
   - "Your duties", "None! All you have is to show up on time with your child at the pickup spot."
