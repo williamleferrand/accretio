@@ -142,6 +142,21 @@ let profiles society data =
         [ pcdata "Update" ]
     in
 
+    (* groups *)
+    let groups = Raw.input ~a:[ a_input_type `Text ; a_value (String.concat ", " profile.groups) ] () in
+    let update_groups _ =
+      let groups = Ys_dom.get_value groups in
+      let groups = Regexp.split (Regexp.regexp "[\t ' ']*,[\t ' ']*") groups in
+      let profile = { profile with groups } in
+      detach_rpc %update_profile (society, Yojson_profile.to_string profile) (RList.update data)
+    in
+    let update_groups =
+      button
+        ~a:[ a_button_type `Button ;
+             a_onclick update_groups ]
+        [ pcdata "Update" ]
+    in
+
     (* the form *)
     div ~a:[ a_class [ "box" ; "schoolbus-profile" ]] [
       h3 [ pcdata profile.name ; pcdata " (" ; pcdata (string_of_int profile.uid) ; pcdata ")" ] ;
@@ -156,6 +171,10 @@ let profiles society data =
       div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
         h4 [ pcdata "Children" ];
         div (List.map format_child profile.children)
+      ] ;
+      div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
+        h4 [ pcdata "Groups" ];
+        groups ; update_groups ;
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-raw" ]] [
         h4 [ pcdata "Raw" ];

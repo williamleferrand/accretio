@@ -53,7 +53,8 @@ let default_profile uid name email = {
   name ;
   children = [ default_child ] ;
   neighborhood = "" ;
-  schedule = ""
+  schedule = "";
+  groups = [] ;
 }
 
 (* some helpers ***************************************************************)
