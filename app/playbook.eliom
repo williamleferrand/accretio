@@ -96,6 +96,7 @@ let create_society (playbook, name, description, data) : (string * Ys_uid.uid) o
          let uid = society.Object_society.uid in
          lwt _ = $member(session.member_uid)<-societies +=! (`Society, uid) in
          lwt _ = $playbook(playbook)<-societies +=! (`Society, uid) in
+         lwt _ = Executor.stack_unit uid Api.Stages.init () in
          return (Some (shortlink, uid))
        | `Object_already_exists (_, uid) -> return (Some (shortlink, uid)))
 

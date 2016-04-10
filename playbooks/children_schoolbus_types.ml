@@ -30,6 +30,7 @@ type profile = {
   children : child list ;
   neighborhood : string ;
   schedule : string ;
+  groups : string list ;
 } with yojson
 
 type profile_field = Name | Children | Neighborhood | Schedule with yojson

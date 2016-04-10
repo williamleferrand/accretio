@@ -75,9 +75,9 @@ type t = {
 } with vertex
   (
     {
-      aliases = [ `PlainText description ; `PlainText name ; `String hash ; `PlainText tags ] ;
+      aliases = [ `String name ; `PlainText description ; `PlainText name ; `String hash ; `PlainText tags ] ;
       required = [ owner ; name ; description ; hash ; scope ; thread ] ;
-      uniques = [ hash ] ;
+      uniques = [ hash ; name ] ;
       builders = [ (scope, (fun _ -> return Ys_scope.Private)) ] ;
     }
   )

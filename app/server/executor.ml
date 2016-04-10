@@ -43,10 +43,12 @@ sig
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
   val message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
-  val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
+  val reply_to : message:uid -> ?original_stage:bool -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
   val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
 
 end
+
+let reminder_label uid = sprintf "remindemail%d" uid
 
 let check_missing_parameters society =
   lwt playbook, data = $society(society)->(playbook, data) in
@@ -138,11 +140,11 @@ let context_factory mode society =
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
           send_message ~data ~attachments member subject !flat_content
 
-        let reply_to ~message ?(data=[]) ~content () =
+        let reply_to ~message ?(original_stage=false) ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _ | _, Object_message.Member member ->
-            message_member ~member ~subject:(subject) ~data ~content ()
+            message_member ~member ~subject:subject ~data ~content ()
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none
@@ -211,11 +213,17 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(in_reply_to=None) ?(reference=None) ?(attachments=[]) ?(data=[]) member subject content =
+        let send_message ?(stage=None) ?(in_reply_to=None) ?(reference=None) ?(attachments=[]) ?(data=[]) member subject content =
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
-            let origin = Object_message.Stage Stage_Specifics.stage in
+            let stage =
+              match stage with
+                None -> Stage_Specifics.stage
+              | Some stage -> stage
+            in
+            let origin = Object_message.Stage stage in
+
             lwt uid =
               match_lwt Object_message.Store.create
                           ~society
@@ -245,17 +253,25 @@ let context_factory mode society =
         let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
           send_message ~data ~attachments member subject content
 
-        let reply_to ~message ?(data=[]) ~content () =
+        let reply_to ~message ?(original_stage=false) ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
+          lwt stage =
+            match original_stage with
+              false -> return_none
+            | true ->
+              match_lwt $message(message)->origin with
+                Object_message.Stage stage -> return (Some stage)
+              | _ -> return_none
+          in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _
           | _, Object_message.Member member ->
             (match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
-              log_warning "can't reply_to message %d, no transport, doing direct message" message ;
-              send_message ~data member (subject) content
+              lwt reference = $message(message)->reference in
+              send_message ~stage ~in_reply_to:(Some reference) ~data member (subject) content
             | Object_message.Email email ->
-              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member (subject) content)
+              send_message ~stage ~in_reply_to:(Some email.Object_message.message_id) ~data member (subject) content)
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none
@@ -578,6 +594,68 @@ let context_factory mode society =
     let payment_amount ~payment =
       $payment(payment)->amount
 
+    (* meta *)
+
+    let search_societies ~query () =
+      Object_society.Store.search_societies society query
+
+    let create_society ~playbook ~name ~description () =
+      log_info "creating a new society, %s playbook %s %s" name playbook description ;
+        match_lwt Ys_shortlink.create () with
+        None ->
+        log_error "couldn't create shortlink" ;
+        return_none
+      | Some shortlink ->
+        match_lwt Object_playbook.Store.search_name playbook with
+          [] ->
+          log_error "playbook %s doesn't exist" playbook ;
+          return_none
+        | playbook :: _ ->
+           match_lwt Object_society.Store.create
+                      ~shortlink
+                      ~leader:society_supervisor
+                      ~name
+                      ~description
+                      ~playbook
+                      ~mode:Object_society.Public
+                      ~data:[]
+                      () with
+           | `Object_already_exists (_, uid) -> return (Some uid)
+           | `Object_created obj ->
+             lwt _ = $member(society_supervisor)<-societies += (`Society, obj.Object_society.uid) in
+             lwt _ = $society(society)<-societies += (`Society name, obj.Object_society.uid) in
+             return (Some obj.Object_society.uid)
+
+(* shadow message_member with timeouts *)
+
+    let message_member ~member ?remind_after ?(attachments=[]) ?(data=[]) ~subject ~content () =
+      match_lwt message_member ~member ~attachments ~data ~subject ~content () with
+            None -> return_none
+          | Some uid ->
+            match remind_after with
+              None -> return (Some uid)
+            | Some duration ->
+              let label = reminder_label uid in
+              (* a bit hackish here *)
+              let y, m, d, s = Calendar.Period.ymds duration in
+              let duration = s + (d * 24 * 3600) in
+              let call = {
+                stage = Api.Stages.remind__ ;
+                args = Deriving_Yojson.Yojson_int.to_string uid ;
+                schedule = Delayed duration ;
+                created_on = Ys_time.now ()
+              } in
+              lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
+              log_info "setting timer %s" label ;
+              match_lwt Object_timer.Store.create
+                            ~society
+                            ~call
+                            () with
+              | `Object_already_created _ -> return (Some uid)
+              | `Object_created timer ->
+                lwt _ = $society(society)<-timers += (`Label label, timer.Object_timer.uid) in
+                return (Some uid)
+
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
@@ -628,6 +706,9 @@ let context_factory mode society =
       request_payment ;
       payment_direct_link ;
       payment_amount ;
+
+      search_societies ;
+      create_society ;
     }
 
   end in
@@ -755,6 +836,16 @@ let push_and_execute society call =
 
 let unit_args = Yojson_unit.to_string ()
 
+
+let stack_unit society stage () =
+  push society
+    {
+      stage ;
+      args = unit_args ;
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
+    }
+
 let stack_and_trigger_unit society stage =
   push_and_execute society
     {
@@ -870,6 +961,39 @@ let check_all_crons () =
          lwt _ = Eliom_reference.set last_minute_checked (Some minute) in
          return minute
 with exn -> Lwt_log.ign_error_f ~exn "exception caught when running crons" ; return minute
+
+
+(* This could loop if there is a loop in the message graph *)
+let cancel_reminders society message =
+  Lwt_log.ign_info_f "recieved message %d, cancelling all reminders for all referenced messages" message ;
+  let rec cancel message =
+    let label = reminder_label message in
+    lwt timers = Object_society.Store.search_timers society label in
+    lwt calls =
+      Lwt_list.fold_left_s
+        (fun acc uid ->
+           try_lwt
+             lwt call = $timer(uid)->call in
+             return (call :: acc)
+           with _ -> return acc)
+          []
+       timers in
+    let timers = List.fold_left (fun acc uid -> UidSet.add uid acc) UidSet.empty timers in
+    lwt _ = $society(society)<-timers %% (List.filter (fun (`Label _, timer) -> not (UidSet.mem timer timers))) in
+    lwt _ = $society(society)<-stack %% (fun stack ->
+                 List.filter
+                   (fun call -> not (List.mem call calls))
+                   stack)
+    in
+    lwt references = $message(message)->references in
+    Lwt_list.iter_s
+      (fun reference ->
+         match_lwt Object_message.Store.find_by_reference reference with
+           None -> return_unit
+         | Some message -> cancel message)
+      references
+  in
+  cancel message
 
 let rec start_cron () =
   lwt next_minute =

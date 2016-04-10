@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+(* Ideally code here should only rely on the API signature as this is intended
+   to be part of the playbook .. *)
 
 {shared{
 
@@ -31,6 +33,9 @@ open Children_schoolbus_types
 
 {server{
 
+(* there are a lot of ways to mess up the link between profiles & societies
+   membership .. *)
+
 let update_profile (society, profile) =
   Lwt_log.ign_info_f "updating profile in society %d, %s" society profile ;
   let profile = Yojson_profile.from_string profile in
@@ -38,7 +43,27 @@ let update_profile (society, profile) =
   protected_connected
     (fun _ ->
        lwt _ = $member(profile.uid)<-name %% (fun _ -> profile.name) in
-       lwt _ = $society(society)<-data %% (fun data -> (key, Yojson_profile.to_string profile) :: List.remove_assoc key data) in
+       lwt _ = $society(society)<-data %%% (fun data ->
+           lwt _ =
+             match profile.children with
+               [] -> return_unit
+             | _ ->
+               Lwt_list.iter_s
+                 (fun group ->
+                    lwt societies = Object_society.Store.search_societies society group in
+                    Lwt_list.iter_p
+                      (fun society ->
+                         lwt members = $society(society)->members in
+                         match Ys_uid.Edges.mem profile.uid members with
+                           true -> return_unit
+                         | false ->
+                       lwt _ = $society(society)<-members += (`Member [ "active" ], profile.uid) in
+                       Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
+                       Executor.stack_int society Api.Stages.new_member profile.uid)
+                   societies)
+                 profile.groups in
+           return ((key, Yojson_profile.to_string profile) :: List.remove_assoc key data))
+       in
        lwt data = $society(society)->data in
        return (Some data))
 
@@ -57,6 +82,34 @@ open Eliom_content.Html5.D
 
 let profiles society data =
   let regex = Regexp.regexp "profile-[0-9]+" in
+
+  let update_schema profile =
+    let raw = Raw.textarea (pcdata profile) in
+    let update_raw _ =
+      try
+        let profile = Ys_dom.get_value_textarea raw in
+        let profile = Yojson_profile.from_string profile in
+        let profile = Yojson_profile.to_string profile in
+        detach_rpc %update_profile (society, profile) (RList.update data)
+      with _ -> Help.warning "couldn't parse JSON"
+    in
+    let update_raw =
+      button
+        ~a:[ a_button_type `Button ;
+             a_onclick update_raw ]
+        [ pcdata "Update" ]
+    in
+
+    div ~a:[ a_class [ "box" ; "schoolbus-profile" ]] [
+      h3 [ pcdata "The schema has changed, please migrate the JSON below" ] ;
+      div ~a:[ a_class [ "box-section" ]] [
+        raw ;
+      ] ;
+      div ~a:[ a_class [ "box-action" ]] [
+        update_raw
+      ]
+    ]
+  in
 
   let format_profile profile =
     (* name *)
@@ -97,25 +150,66 @@ let profiles society data =
       ]
     in
 
+    (* raw *)
+    let raw = Raw.textarea (pcdata (Yojson_profile.to_string profile)) in
+    let update_raw _ =
+      try
+        let profile = Ys_dom.get_value_textarea raw in
+        let profile = Yojson_profile.from_string profile in
+        let profile = Yojson_profile.to_string profile in
+        detach_rpc %update_profile (society, profile) (RList.update data)
+      with _ -> Help.warning "couldn't parse JSON"
+    in
+    let update_raw =
+      button
+        ~a:[ a_button_type `Button ;
+             a_onclick update_raw ]
+        [ pcdata "Update" ]
+    in
+
+    (* groups *)
+    let groups = Raw.input ~a:[ a_input_type `Text ; a_value (String.concat ", " profile.groups) ] () in
+    let update_groups _ =
+      let groups = Ys_dom.get_value groups in
+      let groups = Regexp.split (Regexp.regexp "[\t ' ']*,[\t ' ']*") groups in
+      let profile = { profile with groups } in
+      detach_rpc %update_profile (society, Yojson_profile.to_string profile) (RList.update data)
+    in
+    let update_groups =
+      button
+        ~a:[ a_button_type `Button ;
+             a_onclick update_groups ]
+        [ pcdata "Update" ]
+    in
+
     (* the form *)
-    div ~a:[ a_class [ "profile" ]] [
+    div ~a:[ a_class [ "box" ; "schoolbus-profile" ]] [
       h3 [ pcdata profile.name ; pcdata " (" ; pcdata (string_of_int profile.uid) ; pcdata ")" ] ;
-      div ~a:[ a_class [ "profile-name" ]] [
+      div ~a:[ a_class [ "box-section" ; "profile-name" ]] [
         h4 [ pcdata "Name" ] ;
         name ; update_name
       ] ;
-      div ~a:[ a_class [ "profile-neighborhood" ]] [
-        h4 [ pcdata "Pick up point" ] ;
+      div ~a:[ a_class [ "box-section";  "profile-neighborhood" ]] [
+        h4 [ pcdata "Address" ] ;
         neighborhood ; update_neighborhood
       ] ;
-      div ~a:[ a_class [ "profile-children" ]] [
+      div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
         h4 [ pcdata "Children" ];
         div (List.map format_child profile.children)
-      ]
+      ] ;
+      div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
+        h4 [ pcdata "Groups" ];
+        groups ; update_groups ;
+      ] ;
+      div ~a:[ a_class [ "box-section" ; "profile-raw" ]] [
+        h4 [ pcdata "Raw" ];
+        raw ; update_raw ;
+      ] ;
     ]
   in
 
   div ~a:[ a_class [ "schoolbus-profiles" ]] [
+    h2 [ pcdata "Profiles" ] ;
     RList.map_in_div
       (function (key, value) ->
         match Regexp.string_match regex key 0 with
@@ -125,10 +219,7 @@ let profiles society data =
             let profile = Yojson_profile.from_string value in
             format_profile profile
           with exn ->
-            div [
-              h3 [ pcdata key ] ;
-              pcdata "Error when decoding the profile"
-            ]
+            update_schema value
       )
       data
   ]

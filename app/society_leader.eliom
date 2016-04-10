@@ -37,6 +37,7 @@ type bundle =
     (* society info *)
     members : (View_member.t * string list) list ;
     data : (string * string) list ;
+    societies : View_society.t list ;
   }
 
 }}
@@ -59,7 +60,7 @@ let retrieve_members uid =
 let retrieve uid =
   lwt view = View_society.to_view uid in
   lwt members = retrieve_members uid in
-  lwt data, playbook = $society(uid)->(data, playbook) in
+  lwt data, playbook, societies = $society(uid)->(data, playbook, societies) in
   Lwt_log.ign_info_f "society %d relies on playbook %d" uid playbook ;
   let automata, triggers, mailables, email_actions =
     let playbook = Registry.get playbook in
@@ -67,7 +68,7 @@ let retrieve uid =
     P.automata, P.triggers, P.mailables, P.email_actions
   in
   let triggers = List.fast_sort (fun (_, s1) (_, s2) -> String.compare s1 s2) triggers in
-
+  lwt societies = Lwt_list.map_s (fun (_, uid) -> View_society.to_view uid) societies in
   return
     {
       uid ;
@@ -78,6 +79,7 @@ let retrieve uid =
       email_actions ;
       members ;
       data ;
+      societies ;
     }
 
 let update_mode (uid, mode) =
@@ -440,6 +442,43 @@ let update_supervisor (society, email) =
 
 let update_supervisor = server_function ~name:"society-leader-update-supervisor" Json.t<int * string> update_supervisor
 
+let add_society (society, playbook, name, description) : View_society.t option Lwt.t =
+  Lwt_log.ign_info_f "creating new children society in society %d, playbook %s, name %s, description %s" society playbook name description ;
+  protected_connected
+    (fun session ->
+       match_lwt Object_playbook.Store.find_by_name playbook with
+         None ->
+         Lwt_log.ign_error_f "couldn't locate playbook %s" playbook ;
+         return_none
+       | Some playbook ->
+         (* TODO: add some safeguards here around duplicates in societies *)
+         match_lwt Ys_shortlink.create () with
+           None ->
+           Lwt_log.ign_error_f "couldn't create shortlink" ;
+           return_none
+         | Some shortlink ->
+           match_lwt Object_society.Store.create
+                       ~shortlink
+                       ~leader:session.member_uid
+                       ~name
+                       ~description
+                       ~playbook
+                       ~mode:Object_society.Public
+                       ~data:[]
+                       () with
+           | `Object_already_exists (_, uid) ->
+             (* fishy *)
+             return_none
+           | `Object_created obj ->
+             let child = obj.Object_society.uid in
+             lwt _ = $society(society)<-societies += (`Society name, child) in
+             lwt _ = $member(session.member_uid)<-societies += (`Society, child) in
+             lwt _ = Executor.stack_unit child Api.Stages.init () in
+             lwt view = View_society.to_view child in
+             return (Some view))
+
+let add_society = server_function ~name:"society-leader-add-society" Json.t<int * string * string * string> add_society
+
 }}
 
 {client{
@@ -775,12 +814,20 @@ let dom bundle =
           [ pcdata "Remove" ]
       in
 
-      div ~a:[ a_class [ "member" ]] [
-        span ~a:[ a_class [ "member-name" ]] [ pcdata member.View_member.name ] ;
-        span ~a:[ a_class [ "member-email" ]] [ pcdata member.View_member.email ] ;
-        tag_input ;
-        tag_update ;
-        remove ;
+      div ~a:[ a_class [ "member" ; "box" ; ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          pcdata member.View_member.name
+        ] ;
+        div ~a:[ a_class [ "box-section" ]] [
+          pcdata member.View_member.email
+        ] ;
+        div ~a:[ a_class [ "box-section" ]] [
+          tag_input ;
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          tag_update ;
+          remove ;
+        ] ;
       ]
     in
 
@@ -803,14 +850,22 @@ let dom bundle =
           ~a:[ a_onclick create ]
           [ pcdata "Create" ]
       in
-      div ~a:[ a_class [ "add-member" ; "left" ]] [
-        input_email ; input_tags ; create
+      div ~a:[ a_class [ "add-member" ; "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          input_email
+        ] ;
+        div ~a:[ a_class [ "box-section" ]] [
+          input_tags
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          create
+        ]
       ]
     in
 
     div ~a:[ a_class [ "members" ]] [
       h2 [ pcdata "Members" ] ;
-      RList.map_in_div_hd ~a:[ a_class [ "members-existing" ; "clearfix" ]] add_member format_member members ;
+      RList.map_in_div_hd ~a:[ a_class [ "members-existing" ]] add_member format_member members ;
     ]
 
   in
@@ -875,7 +930,7 @@ let dom bundle =
                a_onclick add ]
           [ pcdata "Add" ]
       in
-      div ~a:[ a_class [ "add-data" ; "box" ; "left" ]] [
+      div ~a:[ a_class [ "add-data" ; "box" ]] [
         div ~a:[ a_class [ "box-section" ]] [ input_key ] ;
         div ~a:[ a_class [ "box-section" ]] [ input_value ] ;
         div ~a:[ a_class [ "box-action" ]] [
@@ -905,15 +960,19 @@ let dom bundle =
           [ pcdata "Edit" ]
       in
 
-      div ~a:[ a_class [ "data-item" ; "left" ]] [
-        pcdata key ; pcdata " -> " ; pcdata value ;
-        edit ;
-        remove ;
+      div ~a:[ a_class [ "data-item" ; "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [
+          pcdata key ; pcdata " -> " ; pcdata value ;
+        ] ;
+        div ~a:[ a_class [ "box-action" ]] [
+          edit ;
+          remove ;
+        ]
       ]
     in
     div ~a:[ a_class [ "data" ]] [
       h2 [ pcdata "Data" ] ;
-      RList.map_in_div_hd ~a:[ a_class [ "clearfix" ]] add_data format_data data
+      RList.map_in_div_hd add_data format_data data
     ]
   in
 
@@ -1037,8 +1096,53 @@ let dom bundle =
   let custom_blocks =
     match bundle.view.View_society.playbook.View_playbook.name with
     | "Children schoolbus" ->
-      div ~a:[ a_class [ "custom-blocks" ]] (Schoolbus_blocks.doms bundle.view.View_society.uid data ())
-    | _ -> pcdata ""
+      Schoolbus_blocks.doms bundle.view.View_society.uid data ()
+    | _ -> []
+  in
+
+  (* the societies *)
+
+  let societies =
+    let societies = RList.init bundle.societies in
+    let add_society =
+      let playbook = input ~a:[ a_input_type `Text  ; a_placeholder "Playbook" ] () in
+      let name = input ~a:[ a_input_type `Text ; a_placeholder "Name" ] () in
+      let description = Raw.textarea ~a:[ a_placeholder "Description" ] (pcdata "") in
+      let create _ =
+        match Ys_dom.get_value playbook, Ys_dom.get_value name, Ys_dom.get_value_textarea description with
+        "", _, _ -> Help.warning "please specify a playbook"
+        | _, "", _ -> Help.warning "please give your society a name"
+        | _, _, "" -> Help.warning "please give your society a description"
+        | playbook_s, name_s, description_s ->
+          detach_rpc %add_society (bundle.view.uid, playbook_s, name_s, description_s)
+              (fun society ->
+                 Ys_dom.set_value playbook "" ;
+                 Ys_dom.set_value name "" ;
+                 Ys_dom.set_value_textarea description "" ;
+                 RList.add societies society)
+      in
+      let create =
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick create ]
+          [ pcdata "Create" ]
+      in
+      div ~a:[ a_class [ "add-society" ; "add-box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [ playbook ] ;
+        div ~a:[ a_class [ "box-section" ]] [ name ] ;
+        div ~a:[ a_class [ "box-section" ]] [ description ] ;
+        div ~a:[ a_class [ "box-action" ]] [ create ] ;
+      ]
+    in
+    let format_society society =
+      div ~a:[ a_class [ "box" ]] [
+        pcdata society.View_society.name
+      ]
+    in
+    div ~a:[ a_class [ "societies" ]] [
+      h2 [ pcdata "Societies" ] ;
+      RList.map_in_div_hd add_society format_society societies
+    ]
   in
 
   (* the main dom *)
@@ -1049,36 +1153,38 @@ let dom bundle =
       div ~a:[ a_class [ "logs"; "left" ]] [  stack ; logs ] ;
       graph ;
     ] ;
-    div ~a:[ a_class [ "society-leader-lower" ]] [
+    div ~a:[ a_class [ "society-leader-lower" ]]
 
-      div ~a:[ a_class [ "mailboxes" ]] [
-        h2 [ pcdata "Mailboxes" ] ;
-        div ~a:[ a_class [ "clearfix" ]] [
-          div ~a:[ a_class [ "inbox-outer" ; "left" ]] [
-            h3 [ pcdata "Inbox" ] ;
-            inbox ;
-          ] ;
-          div ~a:[ a_class [ "outbox-outer" ; "left" ]] [
-            h3 [ pcdata "Outbox" ] ;
-            outbox
-          ] ;
-        ] ;
-      ] ;
+      (((div ~a:[ a_class [ "mailboxes" ]] [
+           h2 [ pcdata "Mailboxes" ] ;
+           div ~a:[ a_class [ "clearfix" ]] [
+             div ~a:[ a_class [ "inbox-outer" ; "left" ]] [
+               h3 [ pcdata "Inbox" ] ;
+               inbox ;
+             ] ;
+             div ~a:[ a_class [ "outbox-outer" ; "left" ]] [
+               h3 [ pcdata "Outbox" ] ;
+               outbox
+             ] ;
+           ] ;
+         ]) ;
 
-      custom_blocks ;
+         :: custom_blocks) @
 
-      div ~a:[ a_class [ "triggers" ]] [
-        h2 [ pcdata "Triggers" ] ;
-        div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
-      ] ;
-      members ;
-      messenger ;
-      data_dom ;
-      parameters ;
-      name ;
-      description ;
-      supervisor ;
+         [
+           div ~a:[ a_class [ "triggers" ]] [
+             h2 [ pcdata "Triggers" ] ;
+             div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
+           ] ;
+           members ;
+           societies ;
+           messenger ;
+           data_dom ;
+           parameters ;
+           name ;
+           description ;
+           supervisor])
     ]
-  ]
+
 
 }}

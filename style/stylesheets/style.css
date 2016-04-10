@@ -1187,8 +1187,58 @@ h2 {
   padding: 10px 0;
   font-size: 24px;
 }
-/* line 54, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower > div input[type="number"], .society-leader .society-leader-lower > div input[type="text"] {
+/* line 57, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes {
+  background-color: green;
+}
+/* line 59, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox-outer, .society-leader .society-leader-lower .mailboxes .outbox-outer {
+  width: 50%;
+}
+/* line 61, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox-outer h3, .society-leader .society-leader-lower .mailboxes .outbox-outer h3 {
+  text-align: center;
+  font-size: 18px;
+  line-height: 36px;
+}
+/* line 67, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox, .society-leader .society-leader-lower .mailboxes .outbox {
+  overflow-y: scroll;
+  max-height: 250px;
+  padding: 10px;
+}
+/* line 71, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox .message-box, .society-leader .society-leader-lower .mailboxes .outbox .message-box {
+  border-bottom: 1px solid white;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+/* line 78, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox {
+  background-color: black;
+  color: white;
+}
+/* line 82, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox .tagger button {
+  margin-right: 10px;
+}
+/* line 89, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .outbox {
+  background-color: pink;
+}
+/* line 95, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .triggers {
+  background-color: orange;
+}
+/* line 97, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .triggers .trigger {
+  width: 550px;
+  padding-bottom: 10px;
+  padding-right: 10px;
+  float: left;
+}
+/* line 103, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .triggers input[type="number"], .society-leader .society-leader-lower .triggers input[type="text"] {
   padding: 10px;
   font-size: 14px;
   color: #3d3d3d;
@@ -1200,99 +1250,35 @@ h2 {
   margin-right: 10px;
   display: inline;
 }
-/* line 68, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes {
-  background-color: green;
-}
-/* line 70, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .inbox-outer, .society-leader .society-leader-lower .mailboxes .outbox-outer {
-  width: 50%;
-}
-/* line 72, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .inbox-outer h3, .society-leader .society-leader-lower .mailboxes .outbox-outer h3 {
-  text-align: center;
-  font-size: 18px;
-  line-height: 36px;
-}
-/* line 78, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .inbox, .society-leader .society-leader-lower .mailboxes .outbox {
-  overflow-y: scroll;
-  max-height: 250px;
-  padding: 10px;
-}
-/* line 82, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .inbox .message-box, .society-leader .society-leader-lower .mailboxes .outbox .message-box {
-  border-bottom: 1px solid white;
-  margin-bottom: 10px;
-  padding-bottom: 10px;
-}
-/* line 89, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .inbox {
-  background-color: black;
-  color: white;
-}
-/* line 93, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .inbox .tagger button {
-  margin-right: 10px;
-}
-/* line 100, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .mailboxes .outbox {
-  background-color: pink;
-}
-/* line 106, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .triggers {
-  background-color: orange;
-}
-/* line 108, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .triggers .trigger {
-  width: 550px;
-  padding-bottom: 10px;
-  padding-right: 10px;
-  float: left;
-}
-/* line 116, ../sass/_society_leader.scss */
+/* line 117, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members {
   background-color: #CECECE;
 }
-/* line 119, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .members .add-member {
-  float: left;
-}
-/* line 123, ../sass/_society_leader.scss */
+/* line 124, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members .member {
-  float: left;
-  margin-left: 20px;
+  margin-top: 10px;
 }
-/* line 126, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .members .member .member-email {
-  margin: 0 5px;
-}
-/* line 129, ../sass/_society_leader.scss */
-.society-leader .society-leader-lower .members .member button {
-  margin-right: 10px;
-}
-/* line 137, ../sass/_society_leader.scss */
+/* line 130, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger {
   background-color: yellow;
 }
-/* line 139, ../sass/_society_leader.scss */
+/* line 132, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger button {
   margin-left: 10px;
 }
-/* line 142, ../sass/_society_leader.scss */
+/* line 135, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger .messenger-controls {
   margin-top: 10px;
 }
-/* line 147, ../sass/_society_leader.scss */
+/* line 140, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .data {
   background-color: #f9d5f9;
 }
-/* line 149, ../sass/_society_leader.scss */
+/* line 142, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .data .data-item {
-  margin-left: 20px;
-  padding: 3px 0;
+  margin-top: 10px;
 }
-/* line 156, ../sass/_society_leader.scss */
+/* line 148, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .supervisor input[type="text"] {
   width: 100%;
 }
@@ -1662,4 +1648,20 @@ h2 {
   font-weight: bold;
   font-size: 16px;
   margin-bottom: 10px;
+}
+
+/* the blocks */
+/* line 74, ../sass/_schoolbus.scss */
+.society-leader .schoolbus-profiles {
+  background-color: red;
+}
+/* line 78, ../sass/_schoolbus.scss */
+.society-leader .schoolbus-profile {
+  margin-bottom: 10px;
+}
+/* line 81, ../sass/_schoolbus.scss */
+.society-leader .schoolbus-profile h4 {
+  font-size: 16px;
+  line-height: 18px;
+  margin-bottom: 16px;
 }

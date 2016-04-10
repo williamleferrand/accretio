@@ -313,6 +313,9 @@ let process_email =
                   lwt _ = $member(sender)<-messages += (`Email, message.Object_message.uid) in
                   lwt _ = $society(society)<-inbox += ((`Message Object_society.({ received_on = Ys_time.now () ; read = false })), message.Object_message.uid) in
                   Lwt_log.ign_info_f "message object created, uid is %d" message.Object_message.uid ;
+
+                  (* here we need to cancel reminding timers *)
+                  lwt _ = Executor.cancel_reminders society message.Object_message.uid in
                   (* should we add the member to the society automatically?? *)
 
                   if target_stage = "" then
