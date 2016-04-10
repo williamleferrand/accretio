@@ -103,7 +103,7 @@ let new_member__ context member =
       lwt _ =
         context.message_member
           ~member
-          ~remind_after:(Calendar.Period.lmake ~hour:22 ())
+          ~remind_after:(Calendar.Period.lmake ~hour:36 ())
           ~subject:"Preschool on wheels - quick question"
           ~content:[
             salutations ; br () ;
