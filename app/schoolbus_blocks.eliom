@@ -44,15 +44,19 @@ let update_profile (society, profile) =
     (fun _ ->
        lwt _ = $member(profile.uid)<-name %% (fun _ -> profile.name) in
        lwt _ = $society(society)<-data %%% (fun data ->
-           lwt _ = Lwt_list.iter_s
-             (fun group ->
-                lwt societies = Object_society.Store.search_societies society group in
-                Lwt_list.iter_p
-                  (fun society ->
-                     lwt members = $society(society)->members in
-                     match Ys_uid.Edges.mem profile.uid members with
-                       true -> return_unit
-                     | false ->
+           lwt _ =
+             match profile.children with
+               [] -> return_unit
+             | _ ->
+               Lwt_list.iter_s
+                 (fun group ->
+                    lwt societies = Object_society.Store.search_societies society group in
+                    Lwt_list.iter_p
+                      (fun society ->
+                         lwt members = $society(society)->members in
+                         match Ys_uid.Edges.mem profile.uid members with
+                           true -> return_unit
+                         | false ->
                        lwt _ = $society(society)<-members += (`Member [ "active" ], profile.uid) in
                        Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
                        Executor.stack_int society Api.Stages.new_member profile.uid)

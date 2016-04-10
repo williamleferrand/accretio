@@ -48,6 +48,8 @@ sig
 
 end
 
+let reminder_label uid = sprintf "remindemail%d" uid
+
 let check_missing_parameters society =
   lwt playbook, data = $society(society)->(playbook, data) in
   lwt parameters = $playbook(playbook)->parameters in
@@ -252,8 +254,8 @@ let context_factory mode society =
           | _, Object_message.Member member ->
             (match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
-              log_warning "can't reply_to message %d, no transport, doing direct message" message ;
-              send_message ~data member (subject) content
+              lwt reference = $message(message)->reference in
+              send_message ~in_reply_to:(Some reference) ~data member (subject) content
             | Object_message.Email email ->
               send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member (subject) content)
           | _ ->
@@ -610,6 +612,36 @@ let context_factory mode society =
              lwt _ = $society(society)<-societies += (`Society name, obj.Object_society.uid) in
              return (Some obj.Object_society.uid)
 
+(* shadow message_member with timeouts *)
+
+    let message_member ~member ?remind_after ?(attachments=[]) ?(data=[]) ~subject ~content () =
+      match_lwt message_member ~member ~attachments ~data ~subject ~content () with
+            None -> return_none
+          | Some uid ->
+            match remind_after with
+              None -> return (Some uid)
+            | Some duration ->
+              let label = reminder_label uid in
+              (* a bit hackish here *)
+              let y, m, d, s = Calendar.Period.ymds duration in
+              let duration = s + (d * 24 * 3600) in
+              let call = {
+                stage = Api.Stages.remind__ ;
+                args = Deriving_Yojson.Yojson_int.to_string uid ;
+                schedule = Delayed duration ;
+                created_on = Ys_time.now ()
+              } in
+              lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
+              log_info "setting timer %s" label ;
+              match_lwt Object_timer.Store.create
+                            ~society
+                            ~call
+                            () with
+              | `Object_already_created _ -> return (Some uid)
+              | `Object_created timer ->
+                lwt _ = $society(society)<-timers += (`Label label, timer.Object_timer.uid) in
+                return (Some uid)
+
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
@@ -915,6 +947,39 @@ let check_all_crons () =
          lwt _ = Eliom_reference.set last_minute_checked (Some minute) in
          return minute
 with exn -> Lwt_log.ign_error_f ~exn "exception caught when running crons" ; return minute
+
+
+(* This could loop if there is a loop in the message graph *)
+let cancel_reminders society message =
+  Lwt_log.ign_info_f "recieved message %d, cancelling all reminders for all referenced messages" message ;
+  let rec cancel message =
+    let label = reminder_label message in
+    lwt timers = Object_society.Store.search_timers society label in
+    lwt calls =
+      Lwt_list.fold_left_s
+        (fun acc uid ->
+           try_lwt
+             lwt call = $timer(uid)->call in
+             return (call :: acc)
+           with _ -> return acc)
+          []
+       timers in
+    let timers = List.fold_left (fun acc uid -> UidSet.add uid acc) UidSet.empty timers in
+    lwt _ = $society(society)<-timers %% (List.filter (fun (`Label _, timer) -> not (UidSet.mem timer timers))) in
+    lwt _ = $society(society)<-stack %% (fun stack ->
+                 List.filter
+                   (fun call -> not (List.mem call calls))
+                   stack)
+    in
+    lwt references = $message(message)->references in
+    Lwt_list.iter_s
+      (fun reference ->
+         match_lwt Object_message.Store.find_by_reference reference with
+           None -> return_unit
+         | Some message -> cancel message)
+      references
+  in
+  cancel message
 
 let rec start_cron () =
   lwt next_minute =

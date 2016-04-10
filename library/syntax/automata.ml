@@ -81,28 +81,39 @@ end
 
 module G = Graph.Persistent.Digraph.ConcreteBidirectionalLabeled(Vertex)(Edge)
 
+let static_type = function
+  | "init__" -> Some `Unit
+  | "new_member__" -> Some `Int
+  | "remind__" -> Some `Int
+  | _ -> None
+
 let extract_inbound_type _loc automata stage =
-  let edges =
-    G.fold_pred_e
-      (fun edge acc ->
-         match G.E.label edge with
-           <:ctyp< _ >> -> acc
-         | _ as edge -> edge :: acc)
-      automata
-      stage
-      []
-  in
-  match edges with
-    <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
-  | <:ctyp< `$uid:constr$ of $t$ >> :: _ -> Some t
-  | <:ctyp< `$uid:constr$ >> :: _ -> Some <:ctyp< unit >>
+  (* very important: force typing for stages defined in Api.Stages *)
+  match static_type (Vertex.stage stage) with
+  | Some `Unit -> Some <:ctyp< unit >>
+  | Some `Int -> Some <:ctyp< int >>
   | _ ->
-    match List.mem Tickable (Vertex.options stage) with
-      true -> Some <:ctyp< unit >>
-    | false ->
-      match List.mem Mailbox (Vertex.options stage) with
-        true -> Some <:ctyp< int >>
-      | false -> None
+    let edges =
+      G.fold_pred_e
+        (fun edge acc ->
+           match G.E.label edge with
+             <:ctyp< _ >> -> acc
+           | _ as edge -> edge :: acc)
+        automata
+        stage
+        []
+    in
+    match edges with
+      <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
+    | <:ctyp< `$uid:constr$ of $t$ >> :: _ -> Some t
+    | <:ctyp< `$uid:constr$ >> :: _ -> Some <:ctyp< unit >>
+    | _ ->
+      match List.mem Tickable (Vertex.options stage) with
+        true -> Some <:ctyp< unit >>
+      | false ->
+        match List.mem Mailbox (Vertex.options stage) with
+          true -> Some <:ctyp< int >>
+        | false -> None
 
 let outbound_types _loc automata =
   G.fold_vertex
@@ -276,7 +287,7 @@ let triggers _loc automata =
          | false ->
            match List.mem Mailbox (Vertex.options stage) with
              true -> Some `Int
-           | false -> None
+           | false -> static_type (Vertex.stage stage)
        in
 
        let extract_type = function
