@@ -32,8 +32,7 @@ let remind__ context message =
   lwt _ =
     context.reply_to
       ~message
-      ~content:[ pcdata "I'm almost done collecting feedback from other participants; have you seen my previous message? Thanks!" ; br () ;
-               ]
+      ~content:[ pcdata "Have you seen my previous message? Thanks!" ; br () ]
       ()
   in
   return `None
