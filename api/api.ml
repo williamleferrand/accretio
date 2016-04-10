@@ -95,7 +95,7 @@ type 'output context =
     (* meta *)
 
     search_societies : query:string -> unit -> uid list Lwt.t ;
-    create_society : ?label:string -> playbook:string -> name:string -> description:string -> unit -> uid option Lwt.t ;
+    create_society : playbook:string -> name:string -> description:string -> unit -> uid option Lwt.t ;
 
   }
 
@@ -142,4 +142,12 @@ sig
   val parameters : (string * string) list
   val properties : (string * string) list
 
+end
+
+
+(* reserved stages names *)
+module Stages =
+struct
+  let init = "init__"
+  let new_member = "new_member__"
 end

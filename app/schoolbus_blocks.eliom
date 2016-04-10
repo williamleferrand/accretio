@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
+(* Ideally code here should only rely on the API signature as this is intended
+   to be part of the playbook .. *)
 
 {shared{
 
@@ -31,6 +33,9 @@ open Children_schoolbus_types
 
 {server{
 
+(* there are a lot of ways to mess up the link between profiles & societies
+   membership .. *)
+
 let update_profile (society, profile) =
   Lwt_log.ign_info_f "updating profile in society %d, %s" society profile ;
   let profile = Yojson_profile.from_string profile in
@@ -38,7 +43,23 @@ let update_profile (society, profile) =
   protected_connected
     (fun _ ->
        lwt _ = $member(profile.uid)<-name %% (fun _ -> profile.name) in
-       lwt _ = $society(society)<-data %% (fun data -> (key, Yojson_profile.to_string profile) :: List.remove_assoc key data) in
+       lwt _ = $society(society)<-data %%% (fun data ->
+           lwt _ = Lwt_list.iter_s
+             (fun group ->
+                lwt societies = Object_society.Store.search_societies society group in
+                Lwt_list.iter_p
+                  (fun society ->
+                     lwt members = $society(society)->members in
+                     match Ys_uid.Edges.mem profile.uid members with
+                       true -> return_unit
+                     | false ->
+                       lwt _ = $society(society)<-members += (`Member [ "active" ], profile.uid) in
+                       Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
+                       Executor.stack_int society Api.Stages.new_member profile.uid)
+                   societies)
+                 profile.groups in
+           return ((key, Yojson_profile.to_string profile) :: List.remove_assoc key data))
+       in
        lwt data = $society(society)->data in
        return (Some data))
 
@@ -165,7 +186,7 @@ let profiles society data =
         name ; update_name
       ] ;
       div ~a:[ a_class [ "box-section";  "profile-neighborhood" ]] [
-        h4 [ pcdata "Pick up point" ] ;
+        h4 [ pcdata "Address" ] ;
         neighborhood ; update_neighborhood
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-children" ]] [

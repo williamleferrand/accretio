@@ -583,13 +583,9 @@ let context_factory mode society =
     let search_societies ~query () =
       Object_society.Store.search_societies society query
 
-    let create_society ?label ~playbook ~name ~description () =
+    let create_society ~playbook ~name ~description () =
       log_info "creating a new society, %s playbook %s %s" name playbook description ;
-      let label =
-        match label with
-          None -> name
-        | Some label -> label in
-      match_lwt Ys_shortlink.create () with
+        match_lwt Ys_shortlink.create () with
         None ->
         log_error "couldn't create shortlink" ;
         return_none
@@ -611,7 +607,7 @@ let context_factory mode society =
            | `Object_already_exists (_, uid) -> return (Some uid)
            | `Object_created obj ->
              lwt _ = $member(society_supervisor)<-societies += (`Society, obj.Object_society.uid) in
-             lwt _ = $society(society)<-societies += (`Society label, obj.Object_society.uid) in
+             lwt _ = $society(society)<-societies += (`Society name, obj.Object_society.uid) in
              return (Some obj.Object_society.uid)
 
     (* now we finally have the context that we'll feed to the specific stage *)
@@ -793,6 +789,16 @@ let push_and_execute society call =
   return_unit
 
 let unit_args = Yojson_unit.to_string ()
+
+
+let stack_unit society stage () =
+  push society
+    {
+      stage ;
+      args = unit_args ;
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
+    }
 
 let stack_and_trigger_unit society stage =
   push_and_execute society
