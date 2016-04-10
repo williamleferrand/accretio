@@ -32,6 +32,7 @@ let remind__ context message =
   lwt _ =
     context.reply_to
       ~message
+      ~original_stage:true
       ~content:[ pcdata "Have you seen my previous message? Thanks!" ; br () ]
       ()
   in

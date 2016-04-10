@@ -55,7 +55,7 @@ type 'output context =
 
     message_member : member:uid -> ?remind_after:Calendar.Period.t -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
     message_supervisor : subject:string -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
-    reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
+    reply_to : message:uid -> ?original_stage:bool -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
     forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
 
     (* getting talent & tagging people *)

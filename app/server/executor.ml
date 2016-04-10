@@ -43,7 +43,7 @@ sig
   val log_error :  ?exn:exn -> ('a, unit, string, unit) Pervasives.format4 -> 'a
 
   val message_member : member:uid -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
-  val reply_to : message:uid -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
+  val reply_to : message:uid -> ?original_stage:bool -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
   val forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t
 
 end
@@ -140,11 +140,11 @@ let context_factory mode society =
           Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
           send_message ~data ~attachments member subject !flat_content
 
-        let reply_to ~message ?(data=[]) ~content () =
+        let reply_to ~message ?(original_stage=false) ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _ | _, Object_message.Member member ->
-            message_member ~member ~subject:(subject) ~data ~content ()
+            message_member ~member ~subject:subject ~data ~content ()
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none
@@ -213,11 +213,17 @@ let context_factory mode society =
                Lwt_log.ign_error_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
 
-        let send_message ?(in_reply_to=None) ?(reference=None) ?(attachments=[]) ?(data=[]) member subject content =
+        let send_message ?(stage=None) ?(in_reply_to=None) ?(reference=None) ?(attachments=[]) ?(data=[]) member subject content =
             let flat_content = ref "" in
             Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
-            let origin = Object_message.Stage Stage_Specifics.stage in
+            let stage =
+              match stage with
+                None -> Stage_Specifics.stage
+              | Some stage -> stage
+            in
+            let origin = Object_message.Stage stage in
+
             lwt uid =
               match_lwt Object_message.Store.create
                           ~society
@@ -247,17 +253,25 @@ let context_factory mode society =
         let message_member ~member ?(attachments=[]) ?(data=[]) ~subject ~content () =
           send_message ~data ~attachments member subject content
 
-        let reply_to ~message ?(data=[]) ~content () =
+        let reply_to ~message ?(original_stage=false) ?(data=[]) ~content () =
           lwt subject = $message(message)->subject in
+          lwt stage =
+            match original_stage with
+              false -> return_none
+            | true ->
+              match_lwt $message(message)->origin with
+                Object_message.Stage stage -> return (Some stage)
+              | _ -> return_none
+          in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _
           | _, Object_message.Member member ->
             (match_lwt $message(message)->transport with
             | Object_message.NoTransport ->
               lwt reference = $message(message)->reference in
-              send_message ~in_reply_to:(Some reference) ~data member (subject) content
+              send_message ~stage ~in_reply_to:(Some reference) ~data member (subject) content
             | Object_message.Email email ->
-              send_message ~in_reply_to:(Some email.Object_message.message_id) ~data member (subject) content)
+              send_message ~stage ~in_reply_to:(Some email.Object_message.message_id) ~data member (subject) content)
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none

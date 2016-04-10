@@ -103,14 +103,14 @@ let new_member__ context member =
       lwt _ =
         context.message_member
           ~member
-          ~remind_after:(Calendar.Period.lmake ~hour:26 ())
+          ~remind_after:(Calendar.Period.lmake ~minute:1 ())
           ~subject:"Preschool on wheels - quick question"
           ~content:[
             salutations ; br () ;
             br () ;
-            pcdata "I'm making progress on a proposal for a first trip. No date yet, but the destination would very likely be the SF Zoo." ; br () ;
+            pcdata "I'm making progress on a proposal for a first trip. No date yet, but the destination would very likely be the SF Zoo. I am working on getting firm quotes from various charter companies." ; br () ;
             br () ;
-            pcdata "I am working on getting firm quotes from various charter companies; to make things easier what would you think of doing the pickup from " ; pcdata pickup_point ; pcdata "? We could go doorstep to doorstep later." ; br () ;
+            pcdata "To make things easier for them what would you think of doing the pickup from " ; pcdata pickup_point ; pcdata " sometime around 8:30am? We could go doorstep to doorstep later." ; br () ;
           ]
           ()
       in
