@@ -224,6 +224,7 @@ let manage path step =
   manage [ "manage" ; "mailboxes" ] Service.ManageMailboxes ;
   manage [ "manage" ; "members" ] Service.ManageMembers ;
   manage [ "manage" ; "custom" ] Service.ManageCustom ;
+  manage [ "manage" ; "societies" ] Service.ManageSocieties ;
 
   register_page_no_param
     ~path:[ "create" ]

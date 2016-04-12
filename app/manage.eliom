@@ -74,6 +74,15 @@ let retrieve_custom uid =
        return (Some (playbook, data)))
 
 let retrieve_custom = server_function ~name:"manage-retrieve-custom" Json.t<int> retrieve_custom
+
+let retrieve_societies uid =
+  protected_connected
+    (fun _ ->
+       lwt societies = $society(uid)->societies in
+       lwt societies = Lwt_list.map_s (fun (_, uid) -> View_society.to_view uid) societies in
+       return (Some societies))
+
+let retrieve_societies = server_function ~name:"manage-retrieve-societies" Json.t<int> retrieve_societies
 }}
 
 {client{
@@ -98,14 +107,15 @@ let menu shortlink uid =
          Service.ManageHome, "Home" ;
          Service.ManageMailboxes, "Mailboxes" ;
          Service.ManageMembers, "Members" ;
-         Service.ManageCustom, "Custom"
+         Service.ManageCustom, "Custom" ;
+         Service.ManageSocieties, "Societies"
        ])
 
 let builder_home shortlink =
   function
   | None -> pcdata ""
   | Some bundle ->
-    div [
+    div ~a:[ a_class [ "manage" ]] [
       menu shortlink bundle.uid
     ]
 
@@ -224,6 +234,52 @@ let builder_custom shortlink uid = function
     ]
   | _ -> pcdata "no custom blocks"
 
+(* societies ******************************************************************)
+
+let builder_societies shortlink uid = function
+    None -> pcdata ""
+  | Some societies ->
+    let societies = RList.init societies in
+    let add_society =
+      let playbook = input ~a:[ a_input_type `Text  ; a_placeholder "Playbook" ] () in
+      let name = input ~a:[ a_input_type `Text ; a_placeholder "Name" ] () in
+      let description = Raw.textarea ~a:[ a_placeholder "Description" ] (pcdata "") in
+      let create _ =
+        match Ys_dom.get_value playbook, Ys_dom.get_value name, Ys_dom.get_value_textarea description with
+        "", _, _ -> Help.warning "please specify a playbook"
+        | _, "", _ -> Help.warning "please give your society a name"
+        | _, _, "" -> Help.warning "please give your society a description"
+        | playbook_s, name_s, description_s ->
+          detach_rpc %Society_leader.add_society (uid, playbook_s, name_s, description_s)
+              (fun society ->
+                 Ys_dom.set_value playbook "" ;
+                 Ys_dom.set_value name "" ;
+                 Ys_dom.set_value_textarea description "" ;
+                 RList.add societies society)
+      in
+      let create =
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick create ]
+          [ pcdata "Create" ]
+      in
+      div ~a:[ a_class [ "add-society" ; "box" ]] [
+        div ~a:[ a_class [ "box-section" ]] [ playbook ] ;
+        div ~a:[ a_class [ "box-section" ]] [ name ] ;
+        div ~a:[ a_class [ "box-section" ]] [ description ] ;
+        div ~a:[ a_class [ "box-action" ]] [ create ] ;
+      ]
+    in
+    let format_society society =
+      div ~a:[ a_class [ "box" ]] [
+        pcdata society.View_society.name
+      ]
+    in
+    div ~a:[ a_class [ "manage" ; "manage-societies" ]] [
+      menu shortlink uid ;
+      RList.map_in_div_hd ~a:[ a_class [ "societies" ]] add_society format_society societies
+    ]
+
 (* the routing dom ************************************************************)
 
 let dom shortlink uid =
@@ -234,6 +290,8 @@ let dom shortlink uid =
     Template.apply %retrieve_members (builder_members shortlink uid) uid
   | Service.ManageCustom ->
     Template.apply %retrieve_custom (builder_custom shortlink uid) uid
+  | Service.ManageSocieties ->
+    Template.apply %retrieve_societies (builder_societies shortlink uid) uid
   | _ -> S.const None
 
 }}

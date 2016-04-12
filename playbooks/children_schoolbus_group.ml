@@ -92,13 +92,14 @@ let extract_pickup_point context message =
 
 let new_member__ context member =
   context.log_info "we have a new member, %d" member ;
-  match_lwt context.get ~key:key_pickup_point with
-    None ->
-    return `None
-  | Some pickup_point ->
-    match_lwt context.check_tag_member ~member ~tag:tag_asked with
-      true -> return `None
-    | false ->
+  match_lwt context.check_tag_member ~member ~tag:tag_asked with
+    true -> return `None
+  | false ->
+    match_lwt context.get ~key:key_pickup_point with
+      None ->
+      (* let's ask if the member has a preferred pickup point *)
+      return (`AskMemberForPreferredPickupPoint member)
+    | Some pickup_point ->
       lwt salutations = salutations member in
       lwt _ =
         context.message_member
@@ -117,6 +118,30 @@ let new_member__ context member =
       lwt _ = context.tag_member ~member ~tags:[ tag_asked ] in
       return `None
 
+let ask_member_for_preferred_pickup_point context member =
+  match_lwt context.check_tag_member ~member ~tag:tag_asked with
+    true -> return `None
+  | false ->
+    context.log_info "asking %d for a preferred pickup point" member ;
+    lwt salutations = salutations member in
+    lwt _ =
+        context.message_member
+          ~member
+          ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+          ~subject:"Preschool on wheels - quick question"
+          ~content:[
+            salutations ; br () ;
+            br () ;
+            pcdata "I'm making progress on a proposal for a first trip. No date yet, but the destination would very likely be the SF Zoo. I am working on getting firm quotes from various charter companies." ; br () ;
+            br () ;
+            pcdata "To make things easier for them it would help if we could do the pickup at a playground. Would that work with you and would you have a preferred playground? We could go doorstep to doorstep later." ; br () ;
+            br () ;
+            pcdata "Thanks!" ; br () ;
+          ]
+          ()
+    in
+    lwt _ = context.tag_member ~member ~tags:[ tag_asked ] in
+    return `None
 
 (* the playbook ***************************************************************)
 
@@ -125,7 +150,8 @@ PLAYBOOK
 #import core_remind
 
 *init__<forward> ~> `Message of email ~> extract_pickup_point
-new_member__
+
+new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_preferred_pickup_point
 
 
 PROPERTIES

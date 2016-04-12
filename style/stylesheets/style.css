@@ -1676,3 +1676,8 @@ h2 {
 .manage-members .members > div {
   margin-bottom: 20px;
 }
+
+/* line 25, ../sass/_manage.scss */
+.manage-societies .societies > div {
+  margin-bottom: 20px;
+}

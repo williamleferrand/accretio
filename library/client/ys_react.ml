@@ -253,6 +253,15 @@ module RList =
                [] -> div ~a empty_placeholder
              | _ as l -> div ~a (List.map f l)) t.s)
 
+    let map_in_div_ordered ?(a=[]) ?(empty_placeholder=[]) f t =
+      R.node
+        (S.map
+           (function
+               [] -> div ~a empty_placeholder
+             | _ as l ->
+               let l = List.fast_sort (fun a b -> compare (fst a) (fst b)) l in
+               div ~a (List.map f l)) t.s)
+
     let fold_in_div ?(a=[]) f acc t =
       R.node (S.map (fun l -> div ~a (List.fold_left f acc l)) t.s)
 
