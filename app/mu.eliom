@@ -197,12 +197,34 @@ let _ =
             (try_lwt
                let uid = int_of_string shortlink in
                lwt shortlink = $society(uid)->shortlink in
-               return (Service.Society(shortlink, uid), None, None)
+               return (Service.Society (shortlink, uid), None, None)
              with _ -> return (Service.Landing, None, None))
           | Some uid ->
             lwt name, description = $society(uid)->(name, description) in
             return (Service.Society (shortlink, uid), Some name, Some description))
     () ;
+let manage path step =
+  register_page_with_title
+    ~path
+    ~get_params:(string "shortlink")
+    ~extract_service:(fun _ shortlink ->
+        match_lwt Object_society.Store.find_by_shortlink shortlink with
+          | None ->
+            (try_lwt
+               let uid = int_of_string shortlink in
+               lwt shortlink = $society(uid)->shortlink in
+               return (Service.Manage (shortlink, uid, step), None, None)
+             with _ -> return (Service.Landing, None, None))
+          | Some uid ->
+            lwt name, description = $society(uid)->(name, description) in
+            return (Service.Manage (shortlink, uid, step), Some name, Some description))
+    () in
+
+  manage [ "manage" ] Service.ManageHome ;
+  manage [ "manage" ; "mailboxes" ] Service.ManageMailboxes ;
+  manage [ "manage" ; "members" ] Service.ManageMembers ;
+  manage [ "manage" ; "custom" ] Service.ManageCustom ;
+
   register_page_no_param
     ~path:[ "create" ]
     ~extract_service:(fun _ -> return Service.Create)

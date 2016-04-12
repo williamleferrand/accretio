@@ -98,6 +98,7 @@ let dispatch service : 'a option React.signal =
   | Create -> Create.dom ()
   | Landing -> Landing.dom ()
   | Society (_, uid) -> Society.dom uid
+  | Manage (shortlink, uid, step) -> Manage.dom shortlink uid step
   | Payment (_, uid) -> Payment.dom uid
   | Settings -> Settings.dom ()
   | Search query -> Search.dom query

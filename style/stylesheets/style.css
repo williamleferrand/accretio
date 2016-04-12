@@ -1651,17 +1651,28 @@ h2 {
 }
 
 /* the blocks */
-/* line 74, ../sass/_schoolbus.scss */
-.society-leader .schoolbus-profiles {
-  background-color: red;
+/* line 75, ../sass/_schoolbus.scss */
+.society-leader .schoolbus-profile, .manage .schoolbus-profile {
+  margin-bottom: 20px;
 }
 /* line 78, ../sass/_schoolbus.scss */
-.society-leader .schoolbus-profile {
-  margin-bottom: 10px;
-}
-/* line 81, ../sass/_schoolbus.scss */
-.society-leader .schoolbus-profile h4 {
+.society-leader .schoolbus-profile h4, .manage .schoolbus-profile h4 {
   font-size: 16px;
   line-height: 18px;
   margin-bottom: 16px;
+}
+
+/* line 3, ../sass/_manage.scss */
+.manage .manage-menu {
+  padding: 20px 0;
+  text-align: center;
+}
+/* line 6, ../sass/_manage.scss */
+.manage .manage-menu button {
+  margin: 0 5px;
+}
+
+/* line 16, ../sass/_manage.scss */
+.manage-members .members > div {
+  margin-bottom: 20px;
 }
