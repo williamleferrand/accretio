@@ -846,8 +846,7 @@ let dom bundle =
       in
       let create =
         button
-
-          ~a:[ a_onclick create ]
+          ~a:[ a_button_type `Button ; a_onclick create ]
           [ pcdata "Create" ]
       in
       div ~a:[ a_class [ "add-member" ; "box" ]] [

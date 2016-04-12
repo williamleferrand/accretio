@@ -31,6 +31,12 @@ open Ys_uid
 
 (* uid is replaced by int to simplify the use of deriving *)
 
+type manage_step =
+    ManageHome
+  | ManageMailboxes
+  | ManageMembers
+  | ManageCustom deriving (Json)
+
 type service =
   | Uninitialized
   (* admin services *)
@@ -49,6 +55,7 @@ type service =
   | Dashboard
   | Create
   | Society of string * int
+  | Manage of string * int * manage_step
   | Payment of string * int
   | Search of string option
   | Schoolbus
@@ -79,6 +86,10 @@ let path_of_service = function
   | Library -> [ "library" ]
   | Create -> [ "create" ]
   | Society (shortlink, _) -> [ "society" ; shortlink ]
+  | Manage (shortlink, _, ManageHome) -> [ "manage" ; shortlink ]
+  | Manage (shortlink, _, ManageMailboxes) -> [ "manage" ; "mailboxes" ; shortlink ]
+  | Manage (shortlink, _, ManageMembers) -> [ "manage" ; "members" ; shortlink ]
+  | Manage (shortlink, _, ManageCustom) -> [ "manage" ; "custom" ; shortlink ]
   | Payment (shortlink, _) -> [ "payment" ; shortlink ]
   | Search None -> [ "search" ]
   | Search (Some query) -> [ "search" ; query ]
