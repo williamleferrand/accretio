@@ -210,7 +210,7 @@ let profiles society data =
 
   div ~a:[ a_class [ "schoolbus-profiles" ]] [
     h2 [ pcdata "Profiles" ] ;
-    RList.map_in_div
+    RList.map_in_div_ordered
       (function (key, value) ->
         match Regexp.string_match regex key 0 with
           None -> pcdata ""

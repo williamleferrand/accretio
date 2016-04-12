@@ -1147,6 +1147,11 @@ let dom bundle =
   (* the main dom *)
 
   div ~a:[ a_class [ "society-leader" ]] [
+    div [
+      button ~a:[ a_button_type `Button ;
+                  a_onclick (fun _ -> Service.goto (Service.Manage (bundle.view.shortlink, bundle.view.uid, Service.ManageHome))) ]
+        [ pcdata "Manage" ]
+    ] ;
     mode ;
     div ~a:[ a_class [ "society-leader-upper" ; "clearfix" ]] [
       div ~a:[ a_class [ "logs"; "left" ]] [  stack ; logs ] ;
