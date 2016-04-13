@@ -42,7 +42,7 @@ let key_pickup_point = "pickup-point"
 
 let tag_asked = "asked"
 let tag_confirmed = "confirmed" (* <- people that have accepted the pickup spot *)
-
+let tag_agrees_with_pickup_point = "agreeswithpickuppoint"
 
 (* the stages *****************************************************************)
 
@@ -143,6 +143,37 @@ let ask_member_for_preferred_pickup_point context member =
     lwt _ = context.tag_member ~member ~tags:[ tag_asked ] in
     return `None
 
+let mark_agrees_with_pickup_point context message =
+  lwt member = context.get_message_sender ~message in
+  match_lwt context.check_tag_member ~member ~tag:tag_agrees_with_pickup_point with
+    true -> return `None
+  | false ->
+    lwt _ = context.tag_member ~member ~tags:[ tag_agrees_with_pickup_point ] in
+    return `None
+
+let count_participants context () =
+  lwt members = context.search_members ~query:tag_agrees_with_pickup_point () in
+  lwt members =
+    Lwt_list.map_s
+      (fun uid ->
+         lwt name, preferred_email = $member(uid)->(name, preferred_email) in
+         return (li [ pcdata name ; pcdata " -> " ; pcdata preferred_email ]))
+      members
+  in
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Participants count"
+      ~content:[
+        pcdata "Greetings," ; br () ;
+        br () ;
+        pcdata "There are " ; pcdata (string_of_int (List.length members)) ; pcdata " participants:" ; br () ;
+        br ();
+        ul members
+      ]
+      ()
+  in
+  return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -151,8 +182,10 @@ PLAYBOOK
 
 *init__<forward> ~> `Message of email ~> extract_pickup_point
 
+new_member__ ~> `AgreesWithPickupPoint of email ~> mark_agrees_with_pickup_point
 new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_preferred_pickup_point
 
+*count_participants
 
 PROPERTIES
   - "Your duties", "None"
