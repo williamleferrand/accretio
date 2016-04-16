@@ -17,36 +17,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *)
 
-type child = {
-  name : string ;
-  age_string : string ;
-  age_in_months : int ;
+type status =
+    OK
+  | NOT_FOUND
+  | ZERO_RESULTS
+  | MAX_WAYPOINTS_EXCEEDED
+  | INVALID_REQUEST
+  | OVER_QUERY_LIMIT
+  | REQUEST_DENIED
+  | UNKNOWN_ERROR with yojson
+
+type duration = {
+  text : string ;
+  value : int ;
 } with yojson
 
-type profile = {
-  uid : int ;
-  email : string ;
-  name : string ;
-  children : child list ;
-  neighborhood : string ;
-  schedule : string ;
-  groups : string list ;
+type step = {
+  duration : duration ;
+  html_instructions : string
 } with yojson
 
-type profile_field = Name | Children | Neighborhood | Schedule with yojson
-type profile_fields = profile_field list with yojson
-
-type quote_request = {
-  reference : string ;
-  route : Ys_googlemaps_types.route ;
-  comment : string ;
+type leg = {
+  duration : duration ;
+  steps : step list
 } with yojson
 
-type quote = {
-  reference : string ;
-  number_of_seats : int ;
-  cost : float ;
-  currency : string ;
+type route = {
+  legs : leg list
 } with yojson
 
-type quotes = quote list with yojson
+type directions = {
+  status : string ;
+  routes : route list ;
+} with yojson

@@ -300,6 +300,7 @@ let group_all_members context () =
   let profiles = Ys_list.take 22 profiles in
   try_lwt
     let open Ys_googlemaps in
+    let open Ys_googlemaps_types in
     (* bit of hard coding here .. *)
     lwt directions =
       get_directions
