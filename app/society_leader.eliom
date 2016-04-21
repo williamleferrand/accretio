@@ -571,6 +571,7 @@ let dom bundle =
       let tagger =
         match message.View_message.destination with
           View_message.Member _
+        | View_message.Society _
         | View_message.CatchAll -> pcdata ""
         | View_message.Stage stage ->
           try

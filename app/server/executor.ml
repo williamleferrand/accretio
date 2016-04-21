@@ -34,22 +34,7 @@ open Deriving_Yojson
 
 module SetString = Set.Make(String)
 
-(* some helpers to stack calls inside societies *******************************)
-
-let push society call =
-  lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in
-  return_unit
-
 let int_args i = Yojson_int.to_string i
-
-let stack_int society stage args =
-  push society
-    {
-      stage ;
-      args = int_args args ;
-      schedule = Immediate ;
-      created_on = Ys_time.now () ;
-    }
 
 (* the context factory -- there is a little bit a first class module magic
    so that pa_playbook can craft a context specific to each module ************)
@@ -463,7 +448,7 @@ let context_factory mode society =
         let call = Stage_Specifics.outbound_dispatcher duration output in
         log_info "we have the call" ;
         (* this *will* deadlock if we patch the stack, we need to use the sidecar *)
-        lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
+        lwt _ = $society(society)<-sidecar %% (fun s -> (society, call) :: s) in
         log_info "the call is set" ;
         (* that's ugly, but it gives us sphinx features right away *)
         match label with
@@ -656,7 +641,7 @@ let context_factory mode society =
         schedule = Delayed duration ;
         created_on = Ys_time.now ()
       } in
-      lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
+      lwt _ = $society(society)<-sidecar %% (fun s -> (society, call) :: s) in
       log_info "setting timer %s" label ;
       match_lwt Object_timer.Store.create
                   ~society
@@ -680,33 +665,37 @@ let context_factory mode society =
     (* atm, sending a message to a society bypasses the regular email protocol - to be changed later *)
     let society2 = society
     let message_society ~society ?remind_after ~stage ~subject ~content () =
-      if society = society2 then
-        (* if we wanted to handle this case, we would need to sidecar the call! *)
-        return_none
-      else
-        begin
-          let origin = Object_message.Stage Stage_Specifics.stage in
-          lwt uid =
-            match_lwt Object_message.Store.create
-                        ~society
-                        ~origin
-                        ~content
-                        ~subject
-                        ~destination:(Object_message.Society (society, stage))
-                        ~reference:(Object_message.create_reference subject)
-                        () with
-            | `Object_already_exists (_, uid) -> return uid
-            | `Object_created message -> return message.Object_message.uid
-          in
-          (* we are making the assumption that stage is indeed expecting an int
+      let origin = Object_message.Stage Stage_Specifics.stage in
+      lwt uid =
+        match_lwt Object_message.Store.create
+                    ~society
+                    ~origin
+                    ~content
+                    ~subject
+                    ~destination:(Object_message.Society (society, stage))
+                    ~reference:(Object_message.create_reference subject)
+                    () with
+        | `Object_already_exists (_, uid) -> return uid
+        | `Object_created message -> return message.Object_message.uid
+      in
+
+      lwt _ = $society(society2)<-outbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = false })), uid) in
+      lwt _ = $society(society)<-inbox += (`Message (Object_society.({ received_on = Ys_time.now (); read = false })), uid) in
+
+      (* we are making the assumption that stage is indeed expecting an int
              on the other side, we'll have ACL's to filter out unintended messages *)
-          lwt _ = stack_int society stage uid in
-          match remind_after with
-            None -> return (Some uid)
-          | Some remind_after ->
-            lwt _ = setup_reminder remind_after uid in
-            return (Some uid)
-        end
+      lwt _ =
+        $society(society2)<-sidecar %% (fun stack -> (society, {
+            stage ;
+            args = int_args uid ;
+            schedule = Immediate ;
+            created_on = Ys_time.now () ;
+          }) :: stack) in
+      match remind_after with
+        None -> return (Some uid)
+      | Some remind_after ->
+        lwt _ = setup_reminder remind_after uid in
+        return (Some uid)
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
@@ -847,7 +836,13 @@ let step society =
       (* moving back all side car calls back into the main stack *)
       Lwt_log.ign_info_f "moving the sidecar back into the main stack for society %d" society ;
       lwt _ = $society(society)<-sidecar %%% (fun sidecar ->
-          lwt _ = $society(society)<-stack %% (fun stack -> sidecar @ stack) in
+          lwt _ =
+            Lwt_list.iter_s
+              (fun (society, call) ->
+                 lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+                 return_unit)
+              sidecar
+          in
           return [])
       in
       Lwt_log.ign_info_f "deleting tombstoned calls from the stack for society %d" society ;
@@ -880,13 +875,16 @@ let step society =
 (* the strategy here is to push the call on the stack & awake; that way it gets
    inserted inside the history, etc etc. *)
 
+let push society call =
+  lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in
+  return_unit
+
 let push_and_execute society call =
   lwt _ = push society call in
   ignore_result (step society) ;
   return_unit
 
 let unit_args = Yojson_unit.to_string ()
-
 
 let stack_unit society stage () =
   push society
@@ -902,6 +900,15 @@ let stack_and_trigger_unit society stage =
     {
       stage ;
       args = unit_args ;
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
+    }
+
+let stack_int society stage args =
+  push society
+    {
+      stage ;
+      args = int_args args ;
       schedule = Immediate ;
       created_on = Ys_time.now () ;
     }
