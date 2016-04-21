@@ -35,7 +35,7 @@ type transport =
   | NoTransport
   | Email of transport_email with bin_io, default_value(NoTransport)
 
-type interlocutor = Stage of string | Member of uid | CatchAll with bin_io
+type interlocutor = Stage of string | Member of uid | CatchAll | Society of (uid * string) with bin_io
 
 type strings = string list with bin_io, default_value([])
 

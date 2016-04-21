@@ -30,10 +30,29 @@ open Ys_executor
 
 open Api
 
+open Deriving_Yojson
+
 module SetString = Set.Make(String)
 
+(* some helpers to stack calls inside societies *******************************)
+
+let push society call =
+  lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in
+  return_unit
+
+let int_args i = Yojson_int.to_string i
+
+let stack_int society stage args =
+  push society
+    {
+      stage ;
+      args = int_args args ;
+      schedule = Immediate ;
+      created_on = Ys_time.now () ;
+    }
+
 (* the context factory -- there is a little bit a first class module magic
-   so that pa_playbook can craft a context specific to each module *)
+   so that pa_playbook can craft a context specific to each module ************)
 
 module type MODE_SPECIFICS = functor (Stage_specifics : STAGE_SPECIFICS) ->
 sig
@@ -68,6 +87,18 @@ let check_missing_parameters society =
   in
   return missing_parameters
 
+let format_interlocutor =
+  function
+    Object_message.Stage stage ->
+    return (Printf.sprintf "Stage %s" stage)
+  | Object_message.Member member ->
+    lwt name, preferred_email = $member(member)->(name, preferred_email) in
+    return (Printf.sprintf "Member %s <%s>" name preferred_email)
+  | Object_message.CatchAll ->
+    return "CatchAll"
+  | Object_message.Society (society, stage) ->
+    lwt shortlink = $society(society)->shortlink in
+    return (Printf.sprintf "Society %d <%s+%s@accret.io>" society shortlink stage)
 
 let context_factory mode society =
 
@@ -97,6 +128,7 @@ let context_factory mode society =
             (fun message ->
                Lwt_log.ign_warning_f ?exn "society %d: %s" society message ;
                ignore_result (Logs.insert source timestamp message)) fmt
+
 
         let log_error = fun ?exn fmt ->
           let source = sprintf "context-error-%d" society in
@@ -144,7 +176,10 @@ let context_factory mode society =
           lwt subject = $message(message)->subject in
           match_lwt $message(message)->(origin, destination) with
           | Object_message.Member member, _ | _, Object_message.Member member ->
-            message_member ~member ~subject:subject ~data ~content ()
+            message_member ~member ~subject ~data ~content ()
+          | Object_message.Society (society, stage), _ | _, Object_message.Society (society, stage) ->
+            (* message_society ~society ~stage ~subject ~content:"" () *)
+            return_none
           | _ ->
             log_error "can't reply_to message %d" message ;
             return_none
@@ -152,16 +187,6 @@ let context_factory mode society =
         let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
           lwt original_content = $message(message)->raw in
           lwt original_origin, original_destination = $message(message)->(origin, destination) in
-          let format_interlocutor =
-            function
-              Object_message.Stage stage ->
-              return (Printf.sprintf "Stage %s" stage)
-            | Object_message.Member member ->
-              lwt name, preferred_email = $member(member)->(name, preferred_email) in
-              return (Printf.sprintf "Member %s <%s>" name preferred_email)
-            | Object_message.CatchAll ->
-              return "CatchAll"
-          in
 
           lwt origin = format_interlocutor original_origin in
           lwt destination = format_interlocutor original_destination in
@@ -282,16 +307,6 @@ let context_factory mode society =
           lwt reference, original_content, attachments = $message(message)->(reference, raw, attachments) in
 
           lwt original_origin, original_destination = $message(message)->(origin, destination) in
-          let format_interlocutor =
-            function
-              Object_message.Stage stage ->
-              return (Printf.sprintf "Stage %s" stage)
-            | Object_message.Member member ->
-              lwt name, preferred_email = $member(member)->(name, preferred_email) in
-              return (Printf.sprintf "Member %s <%s>" name preferred_email)
-            | Object_message.CatchAll ->
-              return "CatchAll"
-          in
 
           lwt origin = format_interlocutor original_origin in
           lwt destination = format_interlocutor original_destination in
@@ -435,6 +450,7 @@ let context_factory mode society =
       match_lwt $message(message)->origin with
       | Object_message.Stage _ -> failwith "this email was sent by a stage"
       | Object_message.CatchAll -> failwith "this email was sent from the catchall"
+      | Object_message.Society _ -> failwith "this email was sent from a society"
       | Object_message.Member member -> return member
 
     (* timers *)
@@ -496,6 +512,7 @@ let context_factory mode society =
                  match_lwt $message(message)->origin with
                    Object_message.Stage _ -> aux message
                  | Object_message.CatchAll -> aux message
+                 | Object_message.Society _ -> aux message
                  | Object_message.Member _ ->
                    match_lwt aux message with
                      None -> return (Some message)
@@ -628,33 +645,68 @@ let context_factory mode society =
 
 (* shadow message_member with timeouts *)
 
-    let message_member ~member ?remind_after ?(attachments=[]) ?(data=[]) ~subject ~content () =
-      match_lwt message_member ~member ~attachments ~data ~subject ~content () with
-            None -> return_none
-          | Some uid ->
-            match remind_after with
-              None -> return (Some uid)
-            | Some duration ->
-              let label = reminder_label uid in
-              (* a bit hackish here *)
-              let y, m, d, s = Calendar.Period.ymds duration in
-              let duration = s + (d * 24 * 3600) in
-              let call = {
-                stage = Api.Stages.remind__ ;
-                args = Deriving_Yojson.Yojson_int.to_string uid ;
-                schedule = Delayed duration ;
-                created_on = Ys_time.now ()
-              } in
-              lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
-              log_info "setting timer %s" label ;
-              match_lwt Object_timer.Store.create
-                            ~society
-                            ~call
-                            () with
-              | `Object_already_created _ -> return (Some uid)
-              | `Object_created timer ->
-                lwt _ = $society(society)<-timers += (`Label label, timer.Object_timer.uid) in
-                return (Some uid)
+    let setup_reminder remind_after uid =
+      let label = reminder_label uid in
+      (* a bit hackish here *)
+      let y, m, d, s = Calendar.Period.ymds remind_after in
+      let duration = s + (d * 24 * 3600) in
+      let call = {
+        stage = Api.Stages.remind__ ;
+        args = Deriving_Yojson.Yojson_int.to_string uid ;
+        schedule = Delayed duration ;
+        created_on = Ys_time.now ()
+      } in
+      lwt _ = $society(society)<-sidecar %% (fun s -> call :: s) in
+      log_info "setting timer %s" label ;
+      match_lwt Object_timer.Store.create
+                  ~society
+                  ~call
+                  () with
+      | `Object_already_created _ -> return_unit
+      | `Object_created timer ->
+        lwt _ = $society(society)<-timers += (`Label label, timer.Object_timer.uid) in
+        return_unit
+
+   let message_member ~member ?remind_after ?(attachments=[]) ?(data=[]) ~subject ~content () =
+     match_lwt message_member ~member ~attachments ~data ~subject ~content () with
+       None -> return_none
+     | Some uid ->
+       match remind_after with
+         None -> return (Some uid)
+       | Some remind_after ->
+         lwt _ = setup_reminder remind_after uid in
+         return (Some uid)
+
+    (* atm, sending a message to a society bypasses the regular email protocol - to be changed later *)
+    let society2 = society
+    let message_society ~society ?remind_after ~stage ~subject ~content () =
+      if society = society2 then
+        (* if we wanted to handle this case, we would need to sidecar the call! *)
+        return_none
+      else
+        begin
+          let origin = Object_message.Stage Stage_Specifics.stage in
+          lwt uid =
+            match_lwt Object_message.Store.create
+                        ~society
+                        ~origin
+                        ~content
+                        ~subject
+                        ~destination:(Object_message.Society (society, stage))
+                        ~reference:(Object_message.create_reference subject)
+                        () with
+            | `Object_already_exists (_, uid) -> return uid
+            | `Object_created message -> return message.Object_message.uid
+          in
+          (* we are making the assumption that stage is indeed expecting an int
+             on the other side, we'll have ACL's to filter out unintended messages *)
+          lwt _ = stack_int society stage uid in
+          match remind_after with
+            None -> return (Some uid)
+          | Some remind_after ->
+            lwt _ = setup_reminder remind_after uid in
+            return (Some uid)
+        end
 
     (* now we finally have the context that we'll feed to the specific stage *)
 
@@ -677,6 +729,7 @@ let context_factory mode society =
       cancel_timers ;
 
       message_member ;
+      message_society ;
       message_supervisor ;
       reply_to ;
       forward_to_supervisor ;
@@ -774,11 +827,15 @@ let step society =
                 return (call :: stack)
               | true ->
                 Lwt_log.ign_info_f "society %d is unstacking call to stage %s, args is %s" society call.Ys_executor.stage call.Ys_executor.args ;
-                lwt result = Playbook.step context_factory call in
-                lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
-                match result with
-                  None -> return tail
-                | Some followup -> return (followup :: tail)
+                try_lwt
+                  lwt result = Playbook.step context_factory call in
+                  lwt _ = $society(society)<-history %% (fun history -> (call, result) :: history) in
+                  match result with
+                    None -> return tail
+                  | Some followup -> return (followup :: tail)
+                with exn ->
+                  Lwt_log.ign_info_f ~exn "society %d caught error while running call to %s, dropping" society call.Ys_executor.stage ;
+                  return tail
           in
           look_for_first_call_due stack
       with exn -> Lwt_log.ign_error_f ~exn "Error inside the stack" ; return stack
@@ -819,15 +876,9 @@ let step society =
       (fun () -> step society)
   with exn -> Lwt_log.ign_error_f ~exn "can't step society %d" society ; return_unit
 
-let push society call =
-  lwt _ = $society(society)<-stack %% (fun calls -> call :: calls) in
-  return_unit
-
 (* the manual hooks for the UI control *)
 (* the strategy here is to push the call on the stack & awake; that way it gets
    inserted inside the history, etc etc. *)
-
-open Deriving_Yojson
 
 let push_and_execute society call =
   lwt _ = push society call in
@@ -851,17 +902,6 @@ let stack_and_trigger_unit society stage =
     {
       stage ;
       args = unit_args ;
-      schedule = Immediate ;
-      created_on = Ys_time.now () ;
-    }
-
-let int_args i = Yojson_int.to_string i
-
-let stack_int society stage args =
-  push society
-    {
-      stage ;
-      args = int_args args ;
       schedule = Immediate ;
       created_on = Ys_time.now () ;
     }

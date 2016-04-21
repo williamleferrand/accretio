@@ -58,7 +58,7 @@ let desk context message =
     return `None
 
 let compute_quote context (quote_request: quote_request) =
-  context.log_info "got quote request" ;
+  context.log_info "got quote request: %s %s" quote_request.reference quote_request.comment ;
   let empty_quote =
     {
       reference = quote_request.reference ;

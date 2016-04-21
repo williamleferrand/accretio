@@ -264,6 +264,9 @@ let reply_message (society, message, content) =
        lwt original_reference, subject = $message(message)->(reference, subject) in
 
        match_lwt $message(message)->origin with
+        | Object_message.Society _ ->
+          (* TODO: write the right code there *)
+          return (Some false)
         | Object_message.Member member ->
           (* we send the message out to the member, and we expect it to get routed back to the generic mailbox *)
           lwt uid =
@@ -397,6 +400,7 @@ let dispatch_message_manually (message, destination) =
        match_lwt $message(message)->destination with
         | Object_message.Member _ -> return_none
         | Object_message.CatchAll -> return_none
+        | Object_message.Society _ -> return_none
         | Object_message.Stage stage ->
           lwt society = $message(message)->society in
           lwt playbook = $society(society)->playbook in
@@ -449,36 +453,44 @@ let add_society (society, playbook, name, description) : View_society.t option L
   Lwt_log.ign_info_f "creating new children society in society %d, playbook %s, name %s, description %s" society playbook name description ;
   protected_connected
     (fun session ->
-       match_lwt Object_playbook.Store.find_by_name playbook with
-         None ->
-         Lwt_log.ign_error_f "couldn't locate playbook %s" playbook ;
-         return_none
-       | Some playbook ->
-         (* TODO: add some safeguards here around duplicates in societies *)
-         match_lwt Ys_shortlink.create () with
+       (* TODO: clean that up *)
+       match_lwt Object_society.Store.search_name name with
+       | child :: _ ->
+         (* relink with that *)
+         lwt _ = $society(society)<-societies +=! (`Society name, child) in
+         lwt view = View_society.to_view child in
+         return (Some view)
+       | [] ->
+         match_lwt Object_playbook.Store.find_by_name playbook with
            None ->
-           Lwt_log.ign_error_f "couldn't create shortlink" ;
+           Lwt_log.ign_error_f "couldn't locate playbook %s" playbook ;
            return_none
-         | Some shortlink ->
-           match_lwt Object_society.Store.create
-                       ~shortlink
-                       ~leader:session.member_uid
-                       ~name
-                       ~description
-                       ~playbook
-                       ~mode:Object_society.Public
-                       ~data:[]
-                       () with
-           | `Object_already_exists (_, uid) ->
-             (* fishy *)
+         | Some playbook ->
+           (* TODO: add some safeguards here around duplicates in societies *)
+           match_lwt Ys_shortlink.create () with
+             None ->
+             Lwt_log.ign_error_f "couldn't create shortlink" ;
              return_none
-           | `Object_created obj ->
-             let child = obj.Object_society.uid in
-             lwt _ = $society(society)<-societies += (`Society name, child) in
-             lwt _ = $member(session.member_uid)<-societies += (`Society, child) in
-             lwt _ = Executor.stack_unit child Api.Stages.init () in
-             lwt view = View_society.to_view child in
-             return (Some view))
+           | Some shortlink ->
+             match_lwt Object_society.Store.create
+                         ~shortlink
+                         ~leader:session.member_uid
+                         ~name
+                         ~description
+                         ~playbook
+                         ~mode:Object_society.Public
+                         ~data:[]
+                         () with
+             | `Object_already_exists (_, uid) ->
+               (* TODO: fishy *)
+               return_none
+             | `Object_created obj ->
+               let child = obj.Object_society.uid in
+               lwt _ = $society(society)<-societies += (`Society name, child) in
+               lwt _ = $member(session.member_uid)<-societies += (`Society, child) in
+               lwt _ = Executor.stack_unit child Api.Stages.init () in
+               lwt view = View_society.to_view child in
+               return (Some view))
 
 let add_society = server_function ~name:"society-leader-add-society" Json.t<int * string * string * string> add_society
 

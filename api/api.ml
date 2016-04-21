@@ -58,6 +58,9 @@ type 'output context =
     reply_to : message:uid -> ?original_stage:bool -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
     forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
 
+    (* not sure about the typing of content here; might be easier to forget HTML and go for raw text? *)
+    message_society : society:uid -> ?remind_after:Calendar.Period.t -> stage:string -> subject:string -> content:string -> unit -> uid option Lwt.t ;
+
     (* getting talent & tagging people *)
 
     search_members : ?max:int -> query:string -> unit -> uid list Lwt.t ;
