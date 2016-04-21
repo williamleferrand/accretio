@@ -200,7 +200,10 @@ let add_members (uid, emails, tags) =
               in
               Lwt_log.ign_info_f "adding member %d via email %s in society %d" member email uid ;
               let tags = "active" :: tags in
+
               lwt _ = $society(uid)<-members +=! (`Member tags, member) in
+              (* we need to call add_member here *)
+              lwt _ = Executor.stack_int uid Api.Stages.new_member member in
               return_unit)
            emails in
        lwt members = retrieve_members uid in
