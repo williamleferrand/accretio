@@ -183,7 +183,7 @@ let ask_members_for_their_opinion_on_pricing context message =
   try
     lwt content = context.get_message_content ~message in
     let quotes = Yojson_quotes.from_string content in
-    lwt members = context.search_members (sprintf "-%s" tag_asked_for_pricing) () in
+    lwt members = context.search_members (sprintf "-%s %s" tag_asked_for_pricing tag_agrees_with_pickup_point) () in
     context.log_info "asking %d members for their opinion on pricing" (List.length members) ;
     let quotes =
       List.map
@@ -206,12 +206,12 @@ let ask_members_for_their_opinion_on_pricing context message =
                ~content:[
                  greetings ; br () ;
                  br () ;
-                 pcdata "I'm making some progress about the preschool bus; I started to receive quotes for a first trip to the SF Zoo" ; br () ;
-                 br () ;
+                 pcdata "I have made some progress this week about the preschool bus; here are the quotes I got for a first full day trip to the SF Zoo:" ; br () ;
                  ul quotes ;
                  br () ;
                  pcdata "What are your thoughts? Cost would definitely go down if/once we do these trips on a regular basis, but for a first experiment we don't have much leverage." ; br ()  ;
                  br () ;
+                 pcdata "Costs for the activity itself and a lunch would be below $30 total for a child and one parent. Does anything here sound reasonable to you?"
                ]
                ()
            in
