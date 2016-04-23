@@ -355,7 +355,7 @@ let update_supervisor (society, email) =
 let update_supervisor = server_function ~name:"society-leader-update-supervisor" Json.t<int * string> update_supervisor
 
 let add_society (society, playbook, name, description) : View_society.t option Lwt.t =
-  Lwt_log.ign_info_f "creating new children society in society %d, playbook %s, name %s, description %s" society playbook name description ;
+  Lwt_log.ign_info_f "creating new children society in society %d, playbook %d, name %s, description %s" society playbook name description ;
   protected_connected
     (fun session ->
        (* TODO: clean that up *)
@@ -366,28 +366,23 @@ let add_society (society, playbook, name, description) : View_society.t option L
          lwt view = View_society.to_view child in
          return (Some view)
        | [] ->
-         match_lwt Object_playbook.Store.find_by_name playbook with
+         (* TODO: add some safeguards here around duplicates in societies *)
+         match_lwt Ys_shortlink.create () with
            None ->
-           Lwt_log.ign_error_f "couldn't locate playbook %s" playbook ;
+           Lwt_log.ign_error_f "couldn't create shortlink" ;
            return_none
-         | Some playbook ->
-           (* TODO: add some safeguards here around duplicates in societies *)
-           match_lwt Ys_shortlink.create () with
-             None ->
-             Lwt_log.ign_error_f "couldn't create shortlink" ;
-             return_none
-           | Some shortlink ->
-             match_lwt Object_society.Store.create
-                         ~shortlink
-                         ~leader:session.member_uid
-                         ~name
-                         ~description
-                         ~playbook
-                         ~mode:Object_society.Public
-                         ~data:[]
-                         () with
-             | `Object_already_exists (_, uid) ->
-               (* TODO: fishy *)
+         | Some shortlink ->
+           match_lwt Object_society.Store.create
+                       ~shortlink
+                       ~leader:session.member_uid
+                       ~name
+                       ~description
+                       ~playbook
+                       ~mode:Object_society.Public
+                       ~data:[]
+                       () with
+           | `Object_already_exists (_, uid) ->
+             (* TODO: fishy *)
                return_none
              | `Object_created obj ->
                let child = obj.Object_society.uid in
@@ -397,7 +392,19 @@ let add_society (society, playbook, name, description) : View_society.t option L
                lwt view = View_society.to_view child in
                return (Some view))
 
-let add_society = server_function ~name:"society-leader-add-society" Json.t<int * string * string * string> add_society
+let add_society = server_function ~name:"society-leader-add-society" Json.t<int * int * string * string> add_society
+
+let link_society (society1, society2) =
+  Lwt_log.ign_info_f "linking society %d as a children of society %d" society2 society1 ;
+  protected_connected
+    (fun session ->
+       lwt name = $society(society2)->name in
+       lwt _ = $society(society1)<-societies +=! (`Society name, society2) in
+       lwt _ = $member(session.member_uid)<-societies +=! (`Society, society2) in
+       lwt view = View_society.to_view society2 in
+       return (Some view))
+
+let link_society = server_function ~name:"society-leader-link-society" Json.t<int * int> link_society
 
 }}
 
@@ -1029,17 +1036,7 @@ let dom bundle =
       let name = input ~a:[ a_input_type `Text ; a_placeholder "Name" ] () in
       let description = Raw.textarea ~a:[ a_placeholder "Description" ] (pcdata "") in
       let create _ =
-        match Ys_dom.get_value playbook, Ys_dom.get_value name, Ys_dom.get_value_textarea description with
-        "", _, _ -> Help.warning "please specify a playbook"
-        | _, "", _ -> Help.warning "please give your society a name"
-        | _, _, "" -> Help.warning "please give your society a description"
-        | playbook_s, name_s, description_s ->
-          detach_rpc %add_society (bundle.view.uid, playbook_s, name_s, description_s)
-              (fun society ->
-                 Ys_dom.set_value playbook "" ;
-                 Ys_dom.set_value name "" ;
-                 Ys_dom.set_value_textarea description "" ;
-                 RList.add societies society)
+        Help.warning "use the manage interface"
       in
       let create =
         button

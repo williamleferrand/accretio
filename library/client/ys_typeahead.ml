@@ -26,38 +26,47 @@ open Ys_react
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
-let create ?(placeholder="") source extract format wrapper select =
+let create ?(placeholder="") source extract format_suggestion format_result wrapper select =
   let suggestions = RListUnique.create ~extract () in
-  let input = input ~a:[ a_placeholder placeholder ] ~input_type:`Text () in
+  let input = input ~a:[ a_placeholder placeholder ; a_input_type `Text ] () in
 
   let grab ev =
     let prefix = Ys_dom.get_value input in
     match ev##keyCode, RListUnique.to_list suggestions with
     | code, [] when code = Keycode.space || code = Keycode.return ->
       let prefix = String.trim prefix in
-      if (prefix <> "") then (select (`String prefix)) ;
+      if (prefix <> "") then
+        begin
+          select (`String prefix)
+        end ;
       RListUnique.clear suggestions ;
-      Ys_dom.set_value input "" ;
+      (* Ys_dom.set_value input "" ; *)
       true
     | _ ->
+      select (`String prefix) ;
       source prefix (fun results -> RListUnique.replace suggestions results) ;
-      true
+    true
   in
 
-  let finalize () =
-    match RListUnique.to_list suggestions with
-    | [] ->
-      let prefix = Ys_dom.get_value input in
-      let prefix = String.trim prefix in
-      if (prefix <> "") then (select (`String prefix)) ;
+  let finalize ?(reset=false) () =
+    match reset with
+    | true ->
       RListUnique.clear suggestions ;
-      Ys_dom.set_value input "" ;
-    | _ -> ()
+      Ys_dom.set_value input ""
+    | false ->
+      match RListUnique.to_list suggestions with
+      | [] ->
+        let prefix = Ys_dom.get_value input in
+        let prefix = String.trim prefix in
+        if (prefix <> "") then (select (`String prefix)) ;
+        RListUnique.clear suggestions
+      | _ ->
+        RListUnique.clear suggestions
   in
 
   let select elt =
     RListUnique.clear suggestions ;
-    Ys_dom.set_value input "" ;
+    Ys_dom.set_value input (format_result elt) ;
     select (`Elt elt) ;
     Ys_dom.focus input ;
   in
@@ -68,7 +77,7 @@ let create ?(placeholder="") source extract format wrapper select =
       (S.map
          (function results ->
 
-           let elts = List.map (fun v -> Some v, format v) results in
+           let elts = List.map (fun v -> Some v, format_suggestion v) results in
 
            let link (_, before) (elt, now) (_, after) other =
              Manip.Ev.onkeydown

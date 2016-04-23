@@ -241,22 +241,86 @@ let builder_societies shortlink uid = function
   | Some societies ->
     let societies = RList.init societies in
     let add_society =
-      let playbook = input ~a:[ a_input_type `Text  ; a_placeholder "Playbook" ] () in
-      let name = input ~a:[ a_input_type `Text ; a_placeholder "Name" ] () in
+      (* let playbook = input ~a:[ a_input_type `Text  ; a_placeholder "Playbook" ] () in *)
       let description = Raw.textarea ~a:[ a_placeholder "Description" ] (pcdata "") in
+
+      let selection_playbook, update_selection_playbook = S.create (`String "") in
+      let selection_society, update_selection_society = S.create (`String "") in
+
+      let select_playbook = function
+          `String name ->
+          Help.warning (Printf.sprintf "setting playbook name %s" name) ;
+          update_selection_playbook (`String name)
+        | `Elt playbook ->
+          Help.warning "setting a playbook" ;
+          update_selection_playbook (`Elt playbook) ;
+          (* we would need to reset the society here?? *)
+
+      in
+
+      let finalize_playbook, playbook =
+        Autocomplete.create_playbook ~placeholder:"Playbook" View_playbook.format_autocomplete (fun i -> i) select_playbook
+      in
+
+      let select_society =
+        function
+        | `String name ->
+          update_selection_society (`String name)
+        | `Elt society ->
+          update_selection_society (`Elt society) ;
+          Ys_dom.set_value_textarea description society.View_society.description ;
+          (* Ys_dom.set_value playbook society.View_society.playbook.View_playbook.name ; *)
+      in
+
+      let finalize_name, name =
+        Autocomplete.create_society ~placeholder:"Name" View_society.format_autocomplete (fun i -> i) select_society
+      in
+
+      let _ =
+        S.map
+          (function
+            | `String _ -> ()
+            | `Elt society -> ())
+          selection_society
+      in
+
+      List.iter
+        (fun elt ->
+           Ys_dom.onclick elt finalize_name ;
+           Ys_dom.register_on_change
+             elt
+             (fun _ ->
+                match S.value selection_society with
+                  `Elt _ -> update_selection_society (`String "")
+                | _ -> ()))
+        [ description ] ;
+
       let create _ =
-        match Ys_dom.get_value playbook, Ys_dom.get_value name, Ys_dom.get_value_textarea description with
-        "", _, _ -> Help.warning "please specify a playbook"
-        | _, "", _ -> Help.warning "please give your society a name"
-        | _, _, "" -> Help.warning "please give your society a description"
-        | playbook_s, name_s, description_s ->
-          detach_rpc %Society_leader.add_society (uid, playbook_s, name_s, description_s)
+        match S.value selection_society with
+        | `Elt society ->
+          detach_rpc %Society_leader.link_society (uid, View_society.uid society)
               (fun society ->
-                 Ys_dom.set_value playbook "" ;
-                 Ys_dom.set_value name "" ;
+                 finalize_playbook ~reset:true () ;
+                 finalize_name ~reset:true () ;
                  Ys_dom.set_value_textarea description "" ;
                  RList.add societies society)
+        | `String name ->
+          (match S.value selection_playbook with
+           | `String _ ->
+             Help.warning "Please select a playbook from the autocomplete"
+           | `Elt playbook ->
+             (match name, Ys_dom.get_value_textarea description with
+              | "", _ -> Help.warning "please give your society a name"
+              | _, "" -> Help.warning "please give your society a description"
+              | name_s, description_s ->
+                detach_rpc %Society_leader.add_society (uid, View_playbook.uid playbook, name_s, description_s)
+                    (fun society ->
+                       finalize_playbook ~reset:true () ;
+                       finalize_name ~reset:true () ;
+                       Ys_dom.set_value_textarea description "" ;
+                       RList.add societies society)))
       in
+
       let create =
         button
           ~a:[ a_button_type `Button ;

@@ -121,6 +121,11 @@ let register_on_return dom callback =
         | _ -> ());
        true)
 
+let register_on_change dom callback =
+  Manip.Ev.onkeydown
+    dom
+    (fun ev -> callback (); true)
+
 let delay_focus dom =
   ignore_result
     (Lwt_js.yield ()
@@ -136,3 +141,8 @@ let bridge anchor wrapper =
    let anchor = Html5.To_dom.of_span anchor in
   let wrapper = Html5.To_dom.of_span wrapper in
   anchor##innerHTML <- wrapper##innerHTML
+
+let onclick dom callback =
+  Manip.Ev.onclick
+    dom
+    (fun _ -> callback () ; true)
