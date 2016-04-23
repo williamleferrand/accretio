@@ -333,7 +333,7 @@ let process_email =
     with
     | exn ->
       Lwt_log.ign_error_f ~exn "something happened: %s when parsing offset %d" (Printexc.to_string exn) (Uint32.to_int offset) ;
-      Lwt.fail exn
+      return_none
 
   in
 

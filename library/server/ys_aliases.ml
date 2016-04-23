@@ -54,6 +54,7 @@ module PlainText =
 struct
 
   let insert table uid text timestamp =
+    Lwt_log.ign_info_f "inserting uid: %d, text: %s into %s" uid text table ;
     let text = strip text in
     Lwt_pool.use sphinx_pool
       (Lwt_preemptive.detach

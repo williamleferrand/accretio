@@ -821,6 +821,21 @@ let rec extract_create_patterns _loc required alias_mapper builders = function
 
   | _ -> assert false
 
+let generate_reset_plaintext _loc alias_mapper =
+  <:str_item< value reset_plaintext () =
+             let _ = Lwt_log.ign_info_f "resetting all aliases" in
+             Store.iter_lwt
+             (fun uid ->
+                $List.fold_left
+                  (fun acc ->
+                     function
+                       (field, `PlainText) | (field, `PlainTextEdge) ->
+                      <:expr< let _ = Lwt_log.ign_info_f "rebinding field %s for object %d" $str:field$ uid in
+                              Lwt.catch (fun () -> Lwt.bind (Store.$lid:"patch_"^field$ uid (fun v -> v)) (fun [ _ -> $acc$ ])) (fun [ _ -> $acc$]) >>
+                     | _ -> acc)
+                   <:expr< Lwt.return_unit >>
+                   alias_mapper$)
+  >>
 
 let generate_store _loc type_name tp uniques aliases required builders recursive =
   let load_keys, load_binders, load_builder, _ = extract_keys_and_builder _loc 0 tp in
@@ -848,6 +863,9 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
   let create_patterns, create_setters_lwt, create_fields = extract_create_patterns _loc required alias_mapper builders tp in
 
   let module_name = get_module_name _loc in
+
+  let reset_plaintext = generate_reset_plaintext _loc alias_mapper in
+
   <:str_item<
 
     module Store =
@@ -1003,7 +1021,12 @@ let generate_store _loc type_name tp uniques aliases required builders recursive
            create_patterns$ ;
 
 
-    end
+     end ;
+
+     module Admin =
+     struct
+       $reset_plaintext$ ;
+     end ;
 
   >>
 
