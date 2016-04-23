@@ -45,12 +45,12 @@ type t =
 {server{
 
 let to_interlocutor = function
-  Object_message.Stage stage -> return (Stage stage)
-| Object_message.Member uid ->
-  lwt view = View_member.to_view uid in return (Member view)
-| Object_message.CatchAll -> return CatchAll
-| Object_message.Society (uid, stage) ->
-  lwt view = View_society.to_view uid in return (Society (view, stage))
+    Object_message.Stage stage -> return (Stage stage)
+  | Object_message.Member uid ->
+    lwt view = View_member.to_view uid in return (Member view)
+  | Object_message.CatchAll -> return CatchAll
+  | Object_message.Society (uid, stage) ->
+    lwt view = View_society.to_view uid in return (Society (view, stage))
 
 let to_view uid =
   lwt created_on, origin, destination, reference, subject, content, action = $message(uid)->(created_on, origin, destination, reference, subject, content, action) in

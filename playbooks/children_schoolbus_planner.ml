@@ -86,11 +86,34 @@ let no_transportation_provider context () =
   in
   return `None
 
+let extract_quote context message =
+  lwt content = context.get_message_content ~message in
+  try
+    match Yojson_quote_reply.from_string content with
+    | Error error ->
+      context.log_info "caught error: %s" error ;
+      return `None
+    | _ ->
+      context.log_info "caught some good result" ;
+      return `None
+
+  with _ ->
+    context.log_error "couldn't decode message %d" message ;
+    lwt _ =
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Invalid reply from the transportation code"
+        ~content:[ pcdata "Couldn't understand this message" ]
+        ()
+    in
+    return `None
+
 PLAYBOOK
 
 #import core_remind
 
 *validate_transporation ~> `NoTransporationProvider ~> no_transportation_provider
+ validate_transporation ~> `Message of email ~> extract_quote
 
 
 PROPERTIES

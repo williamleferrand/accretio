@@ -62,7 +62,7 @@ type t = {
 
   created_on : timestamp ;
 
-  society : uid ;
+  (* society : uid ; what is this field about?? *)
 
   origin : interlocutor ;
   destination : interlocutor ;
@@ -86,7 +86,7 @@ type t = {
   (
     {
       aliases = [ `String reference ] ;
-      required = [ society ; origin ; content ; destination ; reference ] ;
+      required = [ origin ; content ; destination ; reference ] ;
       uniques = [ reference ] ;
     }
   )

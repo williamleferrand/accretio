@@ -259,109 +259,16 @@ let reply_message (society, message, content) =
   protected_connected
     (fun _ ->
        Lwt_log.ign_info_f "replying to message %d with content %s" message content ;
-       lwt playbook = $society(society)->playbook in
-       let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
-       lwt original_reference, subject = $message(message)->(reference, subject) in
+       return_none
 
-       match_lwt $message(message)->origin with
-        | Object_message.Society _ ->
-          (* TODO: write the right code there *)
-          return (Some false)
-        | Object_message.Member member ->
-          (* we send the message out to the member, and we expect it to get routed back to the generic mailbox *)
-          lwt uid =
-            match_lwt Object_message.Store.create
-                        ~origin:(Object_message.CatchAll)
-                        ~society
-                        ~content
-                        ~subject:("Re: " ^ subject)
-                        ~destination:(Object_message.Member member)
-                        ~references:[ original_reference ]
-                        ~reference:(Object_message.create_reference content)
-                        () with
-            | `Object_already_exists (_, uid) -> return uid
-            | `Object_created message -> return message.Object_message.uid in
-          lwt _ = $society(society)<-outbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
-          (* I would love to find a way to use the context here *)
-          (* instead of checking if we're a sandbox or not *)
-          lwt _ =
-            match_lwt $society(society)->mode with
-            | Object_society.Sandbox -> return_unit
-            | _ -> Notify.send_message uid
-          in
-          return (Some true)
-        | Object_message.CatchAll ->
-          lwt origin = $message(message)->destination in
-
-          lwt uid =
-            match_lwt Object_message.Store.create
-                        ~origin
-                        ~society
-                        ~content
-                        ~subject:("Re: " ^ subject)
-                        ~destination:Object_message.CatchAll
-                        ~references:[ original_reference ]
-                        ~reference:(Object_message.create_reference content)
-                        () with
-            | `Object_already_exists (_, uid) -> return uid
-            | `Object_created message -> return message.Object_message.uid in
-          lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
-          return (Some true)
-
-        | Object_message.Stage stage ->
-
-
-          lwt origin = $message(message)->destination in
-          Lwt_log.ign_info_f "message was emitted from stage %s" stage ;
-
-          lwt uid =
-            match_lwt Object_message.Store.create
-                        ~origin
-                        ~society
-                        ~content
-                        ~subject:("Re: " ^ subject)
-                        ~destination:(Object_message.Stage stage)
-                        ~references:[ original_reference ]
-                        ~reference:(Object_message.create_reference content)
-                        () with
-            | `Object_already_exists (_, uid) -> return uid
-            | `Object_created message -> return message.Object_message.uid in
-          lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
-
-          match_lwt Playbook.dispatch_message_automatically uid stage with
-          | None -> return (Some true)
-          | Some call ->
-            lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
-            lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
-            ignore_result (Executor.step society) ;
-            return (Some true))
+    )
 
 let reply_message = server_function ~name:"society-leader-reply-message" Json.t<int * int * string> reply_message
 
+(* TODO: deprecate this method when moving to the manage interface *)
 let create_message_and_trigger_stage (society, sender, content, stage) =
   Lwt_log.ign_info_f "creating message for society %d, sender is %d, content is %s, stage is %s" society sender content stage ;
-  lwt playbook = $society(society)->playbook in
-  let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
-  protected_connected
-    (fun _ ->
-       lwt uid =
-         match_lwt Object_message.Store.create
-                     ~origin:(Object_message.Member sender)
-                     ~society
-                     ~content
-                     ~destination:(Object_message.Stage stage)
-                     ~reference:(Object_message.create_reference content)
-                     () with
-         | `Object_already_exists (_, uid) -> return uid
-         | `Object_created message -> return message.Object_message.uid in
-       lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
-       match_lwt Playbook.dispatch_message_automatically uid stage with
-       | None -> return (Some ())
-       | Some call ->
-         lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
-         lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
-         ignore_result (Executor.step society) ;
-         return (Some ()))
+  return_none
 
 let create_message_and_trigger_stage = server_function ~name:"create-message-and-trigger-stage" Json.t<int * int * string * string> create_message_and_trigger_stage
 
@@ -400,9 +307,7 @@ let dispatch_message_manually (message, destination) =
        match_lwt $message(message)->destination with
         | Object_message.Member _ -> return_none
         | Object_message.CatchAll -> return_none
-        | Object_message.Society _ -> return_none
-        | Object_message.Stage stage ->
-          lwt society = $message(message)->society in
+        | Object_message.Society (society, stage) ->
           lwt playbook = $society(society)->playbook in
           let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
           match Playbook.dispatch_message_manually message stage destination with
@@ -571,8 +476,8 @@ let dom bundle =
       let tagger =
         match message.View_message.destination with
           View_message.Member _
-        | View_message.Society _
         | View_message.CatchAll -> pcdata ""
+        | View_message.Society (_, stage)
         | View_message.Stage stage ->
           try
             let options = List.assoc stage bundle.email_actions in

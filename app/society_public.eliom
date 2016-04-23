@@ -52,13 +52,12 @@ let request_to_join_ (society, email, content) =
   in
   lwt _ = $society(society)<-followers += (`Follower, sender) in
   match_lwt Object_message.Store.create
-              ~society
               ~subject:"Request to join"
               ~transport:Object_message.NoTransport
               ~content
               ~raw:content
               ~origin:(Object_message.Member sender)
-              ~destination:(Object_message.Stage stage)
+              ~destination:(Object_message.Society (society, stage))
               ~reference:(Object_message.create_reference content)
               () with
   | `Object_already_exists _ -> return_none

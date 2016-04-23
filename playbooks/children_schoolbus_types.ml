@@ -50,3 +50,5 @@ type quote = {
 } with yojson
 
 type quotes = quote list with yojson
+
+type quote_reply = Error of string | Quotes of quote list with yojson
