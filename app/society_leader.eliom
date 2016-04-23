@@ -44,6 +44,9 @@ type bundle =
 
 {server{
 
+open Eliom_content.Html5
+open Eliom_content.Html5.D
+
 open Vault
 
 let retrieve_members uid =
@@ -259,9 +262,27 @@ let reply_message (society, message, content) =
   protected_connected
     (fun _ ->
        Lwt_log.ign_info_f "replying to message %d with content %s" message content ;
-       return_none
-
-    )
+       match_lwt $message(message)->destination with
+        | Object_message.Society (society, stage) ->
+          begin
+            lwt context_factory = Executor.context_factory society in
+            let module Factory = (val context_factory : Api.STAGE_CONTEXT_FACTORY) in
+            let module Specifics : Api.STAGE_SPECIFICS =
+              struct
+                type outbound = unit
+                let outbound_dispatcher _ _ = Obj.magic ()
+                let stage = stage
+              end
+            in
+            let module Context = Factory(Specifics) in
+            let context = Context.context in
+            context.reply_to
+              ~message
+              ~content:[ pcdata content ]
+              ()
+          end
+        | _ ->
+          return_none)
 
 let reply_message = server_function ~name:"society-leader-reply-message" Json.t<int * int * string> reply_message
 
