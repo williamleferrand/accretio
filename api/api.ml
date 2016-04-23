@@ -53,10 +53,46 @@ type 'output context =
 
     (* messaging utilities *)
 
-    message_member : member:uid -> ?remind_after:Calendar.Period.t -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
-    message_supervisor : subject:string -> ?attachments:Object_message.attachments -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
-    reply_to : message:uid -> ?original_stage:bool -> ?data:(string * string) list -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
-    forward_to_supervisor : message:uid -> ?data:(string * string) list -> subject:string -> content:Html5_types.div_content_fun elt list -> unit -> uid option Lwt.t ;
+    message_member : member:uid ->
+      ?remind_after:Calendar.Period.t ->
+      ?attachments:Object_message.attachments ->
+      ?data:(string * string) list ->
+      subject:string ->
+      content:Html5_types.div_content_fun elt list ->
+      unit ->
+      uid option Lwt.t ;
+
+    message_supervisor : ?attachments:Object_message.attachments ->
+      ?data:(string * string) list ->
+      subject:string ->
+      content:Html5_types.div_content_fun elt list ->
+      unit ->
+      uid option Lwt.t ;
+
+    message_society : society:uid ->
+      ?remind_after:Calendar.Period.t ->
+      ?data:(string * string) list ->
+      stage:string ->
+      subject:string ->
+      content:string ->
+      unit ->
+      uid option Lwt.t ;
+
+    reply_to : message:uid ->
+      ?preserve_origin:bool ->
+      ?data:(string * string) list ->
+      content:Html5_types.div_content_fun elt list ->
+      unit ->
+      uid option Lwt.t ;
+
+    forward_to_supervisor : message:uid ->
+      ?data:(string * string) list ->
+      subject:string ->
+      content:Html5_types.div_content_fun elt list ->
+      unit ->
+      uid option Lwt.t ;
+
+    (* not sure about the typing of content here; might be easier to forget HTML and go for raw text? *)
 
     (* getting talent & tagging people *)
 
@@ -77,6 +113,8 @@ type 'output context =
     get_message_content : message:uid -> string Lwt.t ;
     get_message_raw_content : message:uid -> string Lwt.t ;
     get_message_sender : message:uid -> uid Lwt.t ;
+    (* ^^ this call will be deprecated soon as it assumes that the message has been
+       send by a user *)
     get_original_message : message:uid -> uid Lwt.t ;
     get_message_data : message:uid -> key:string -> string option Lwt.t ;
 

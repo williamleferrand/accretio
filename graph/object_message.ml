@@ -35,7 +35,7 @@ type transport =
   | NoTransport
   | Email of transport_email with bin_io, default_value(NoTransport)
 
-type interlocutor = Stage of string | Member of uid | CatchAll with bin_io
+type interlocutor = Stage of string | Member of uid | CatchAll | Society of (uid * string) with bin_io
 
 type strings = string list with bin_io, default_value([])
 
@@ -62,7 +62,7 @@ type t = {
 
   created_on : timestamp ;
 
-  society : uid ;
+  (* society : uid ; what is this field about?? *)
 
   origin : interlocutor ;
   destination : interlocutor ;
@@ -86,7 +86,7 @@ type t = {
   (
     {
       aliases = [ `String reference ] ;
-      required = [ society ; origin ; content ; destination ; reference ] ;
+      required = [ origin ; content ; destination ; reference ] ;
       uniques = [ reference ] ;
     }
   )

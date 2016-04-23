@@ -25,7 +25,7 @@ open Sessions
 open Ys_uid
 open Vault
 
-type interlocutor = Stage of string | Member of View_member.t | CatchAll
+type interlocutor = Stage of string | Member of View_member.t | CatchAll | Society of (View_society.t * string)
 
 type action = Pending | RoutedToStage of string
 type t =
@@ -45,9 +45,12 @@ type t =
 {server{
 
 let to_interlocutor = function
-  Object_message.Stage stage -> return (Stage stage)
-| Object_message.Member uid -> lwt view = View_member.to_view uid in return (Member view)
-| Object_message.CatchAll -> return CatchAll
+    Object_message.Stage stage -> return (Stage stage)
+  | Object_message.Member uid ->
+    lwt view = View_member.to_view uid in return (Member view)
+  | Object_message.CatchAll -> return CatchAll
+  | Object_message.Society (uid, stage) ->
+    lwt view = View_society.to_view uid in return (Society (view, stage))
 
 let to_view uid =
   lwt created_on, origin, destination, reference, subject, content, action = $message(uid)->(created_on, origin, destination, reference, subject, content, action) in
@@ -79,6 +82,7 @@ open Eliom_content.Html5.D
 
 let format_interlocutor = function
     | Stage stage -> [ pcdata "Stage " ; pcdata stage ]
+    | Society (society, stage) -> [ pcdata "Society " ; pcdata society.View_society.name ; pcdata " - " ; pcdata stage ]
     | Member member -> [ pcdata "Member " ; View_member.format_message member ]
     | CatchAll -> [ pcdata "CatchAll" ]
 

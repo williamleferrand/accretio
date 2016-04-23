@@ -284,7 +284,7 @@ let process_email =
                   if target_stage = "" then
                     Object_message.CatchAll
                   else
-                    Object_message.(Stage target_stage) in
+                    Object_message.Society (society, target_stage) in
 
                 let attachments =
                   List.map
@@ -295,13 +295,12 @@ let process_email =
 
                 match_lwt
                   Object_message.Store.create
-                    ~society
                     ~subject
                     ~transport
                     ~content
                     ~origin
                     ~destination
-                    ~reference:(Object_message.create_reference content)
+                    ~reference:message_id
                     ~references
                     ~attachments
                     ~raw

@@ -214,7 +214,14 @@ let format view =
                ])
 
            state
-        )
+        ) ;
+
+      div ~a:[ a_class [ "view-details" ]] [
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> Service.goto (Service.Playbook view.uid)) ]
+          [ pcdata "View details" ]
+      ] ;
     ] ;
   ]
 

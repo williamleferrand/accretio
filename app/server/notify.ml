@@ -219,6 +219,7 @@ let create_message message =
       let imap_prefix = Ys_config.get_string Ys_config.imap_prefix in
       match_lwt Object_society.Store.find_by_shortlink shortlink with
       | None ->
+        (* this won't end well I suppose .. *)
         return (Printf.sprintf "'Accretio' <%s+%s@accret.io>" imap_prefix shortlink)
       | Some uid ->
         lwt leader = $society(uid)->leader in
@@ -502,6 +503,7 @@ let send_direct_message sender target message =
 
 (* api emails going out *******************************************************)
 
+(*
 let api_send_message ?(attachments=[]) ?in_reply_to reference society destination subject member content =
   lwt locators = uids_to_locators [ member ] in
   lwt shortlink = $society(society)->shortlink in
@@ -537,6 +539,7 @@ let api_forward_message ?(attachments=[]) reference society destination subject 
            content ;
          })
     locators
+*)
 
 let check_society society =
   lwt leader, name = $society(society)->(leader, name) in
@@ -567,29 +570,45 @@ let check_society society =
     locators
 
 let send_message message =
-  match_lwt $message(message)->destination with
-  | Object_message.Member member ->
-    lwt locators = uids_to_locators [ member ] in
-    lwt subject, content, reference, society = $message(message)->(subject, content, reference, society) in
+  match_lwt $message(message)->origin with
+    Object_message.Society (society, stage) ->
     lwt shortlink = $society(society)->shortlink in
-    Lwt_list.iter_p
-    (fun locator ->
-       enqueue_message
-         {
-           uid = None ;
-           locator ;
-           references = Some reference ;
-           in_reply_to = None ;
-           reply_to = Some (shortlink, "") ;
-           attachments = [] ;
-           subject ;
-           content =
-             [
-               pcdata content
-             ]
-         })
-    locators
-| _ -> return_unit
+    (match_lwt $message(message)->destination with
+     | Object_message.Member member ->
+       lwt locators = uids_to_locators [ member ] in
+       lwt subject, content, reference, references, origin, attachments = $message(message)->(subject, content, reference, references, origin, attachments) in
+       let in_reply_to =
+         match references with
+           [] -> None
+         | reference :: _ -> Some reference
+       in
+
+       Lwt_list.iter_p
+         (fun locator ->
+            enqueue_message
+              {
+                uid = None ;
+                locator ;
+                references = Some reference ;
+                in_reply_to ;
+                reply_to = Some (shortlink, stage) ;
+                attachments ;
+                subject ;
+                content =
+                  [
+                    Unsafe.data content
+                  ]
+              })
+         locators
+     | Object_message.Society _ ->
+       Lwt_log.ign_error_f "message %d is sent to a society, it shouldn't go through the imap gateway" message ;
+       return_unit
+     | _ ->
+       Lwt_log.ign_error_f "message %d is sent to something weird, it shouldn't go through the imap gateway" message ;
+       return_unit)
+  | _ ->
+    Lwt_log.ign_error_f "message %d is not sent by a society, it shouldn't go through the imap gateway" message ;
+    return_unit
 
 
 let new_interest_for_playbook playbook email =

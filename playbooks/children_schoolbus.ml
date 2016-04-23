@@ -32,9 +32,12 @@ let description = "this playbook organizes a preschool on wheels by proposing ac
 let version = 0
 let tags = ""
 
+(* tags ***********************************************************************)
+
+let tag_mute = "mute"
+
 (* keys ***********************************************************************)
 
-let key_original_message = "original-message"
 let key_profile = sprintf "profile-%d"
 let key_last_message = sprintf "last-message-%d"
 
@@ -93,7 +96,10 @@ let check_if_member_already_exists context message =
   lwt members = $society(context.society)->members in
   match Ys_uid.Edges.mem sender members with
     true -> return `Yes
-  | false -> return (`No message)
+  | false ->
+    (* let's add the member now *)
+    lwt _ = context.add_member ~member:sender in
+    return (`No message)
 
 let noop context () =
   return `None
@@ -106,7 +112,6 @@ let ask_supervisor_to_extract_information context message =
   lwt _ =
     context.forward_to_supervisor
       ~message
-      ~data:[ key_original_message, string_of_int message ]
       ~subject:"Your input is needed"
       ~content:[
         pcdata "Greetings," ; br () ;
@@ -139,7 +144,7 @@ let store_profile_and_ask_for_missing_elements context message =
       List.filter
         (function
           | Name -> profile.name = ""
-          | Children ->(try profile.children = [] || ((List.hd profile.children).age_string = "") with _ -> true)
+          | Children -> (try profile.children = [] || ((List.hd profile.children).age_string = "") with _ -> true)
           | Neighborhood -> profile.neighborhood = ""
           | Schedule -> profile.schedule = "")
         fields
@@ -166,31 +171,33 @@ let store_profile_and_ask_for_missing_elements context message =
     in
     return `None
 
-
 let thank_member context member =
   lwt salutations = salutations member in
-  (* we add the member at the end of the onboarding process *)
+  (* we add the member at the end of the onboarding process, although we could have done it earlier? *)
   lwt _ = context.add_member ~member in
   match_lwt context.get ~key:(key_last_message member) with
   | None ->
-    let _ =
-      context.message_member
-        ~member
-        ~subject:"Preschool on wheels"
-        ~content:[
-        salutations ; br () ;
-        br () ;
-        pcdata "Thanks for your note. We would need a little more participants to fill up the first bus, do you know people who would be interested in joining us?"
-      ]
-      () in
-    return `None
+    (match_lwt context.check_tag_member ~member ~tag:tag_mute with
+       true -> return `None
+     | false ->
+       let _ =
+         context.message_member
+           ~member
+           ~subject:"Preschool on wheels"
+           ~content:[
+             salutations ; br () ;
+             br () ;
+             pcdata "Thanks for your note. I'll follow up shortly with more details but we would need a little more participants to fill up the first bus, do you know people who would be interested in joining us?"
+           ]
+           () in
+       return `None)
   | Some message ->
     let message = int_of_string message in
     let _ =
       context.reply_to
         ~message
         ~content:[
-          pcdata "Thanks, that's great. We would need a little more participants to fill up the first bus, do you know people who would be interested in joining us?"
+          pcdata "Thanks, that's great. I'll follow up shortly with more details but we would need a little more participants to fill up the first bus, do you know people who would be interested in joining us?"
         ]
         ()
     in
@@ -300,6 +307,7 @@ let group_all_members context () =
   let profiles = Ys_list.take 22 profiles in
   try_lwt
     let open Ys_googlemaps in
+    let open Ys_googlemaps_types in
     (* bit of hard coding here .. *)
     lwt directions =
       get_directions
@@ -349,8 +357,31 @@ let group_all_members context () =
     in
   return `None
 
-
-
+let new_member__ context member =
+  (* let's see if we have a profile *)
+  match_lwt get_profile context member with
+    Some _ -> return `None
+  | None ->
+    context.log_info "new member, asking supervisor for a hint about this member" ;
+    lwt _ = context.tag_member ~member ~tags:[ tag_mute ] in
+    lwt profile = get_or_create_profile context member in
+    let stringified = Yojson_profile.to_string profile in
+    lwt email = $member(member)->preferred_email in
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Your input is needed"
+        ~content:[
+          pcdata "Greetings," ; br () ;
+          br () ;
+          pcdata "You just added " ; pcdata email ; pcdata " to the group, do you want to prefill the profile?" ; br () ;
+          br () ;
+          pcdata "Could you fill up the Json below? (and return only the json)" ; br () ;
+          br () ;
+          pcdata stringified ; br () ;
+        ]
+        ()
+    in
+    return `None
 
 
 (* the playbook ***************************************************************)
@@ -358,7 +389,6 @@ let group_all_members context () =
 PLAYBOOK
 
    #import core_join_request
-
 
 (* onboarding process *)
 
@@ -371,6 +401,7 @@ PLAYBOOK
         store_profile_and_ask_for_missing_elements ~> `ThankMember of int ~> thank_member
         store_profile_and_ask_for_missing_elements ~> `AskMemberForMissingFields of (int * profile_fields) ~> ask_member_for_missing_fields<forward> ~> `Message of email ~> store_reply ~> `Message of email ~> ask_supervisor_to_extract_information
 
+new_member__<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
 
 (* organizing a trip *)
 
