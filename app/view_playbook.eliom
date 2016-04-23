@@ -51,6 +51,9 @@ type t =
     properties : property list ;
   }
 
+let uid t = t.uid
+let name t = t.name
+
 }}
 
 {server{
@@ -224,5 +227,8 @@ let format view =
       ] ;
     ] ;
   ]
+
+let format_autocomplete view =
+  Raw.input ~a:[ a_value view.name ] ()
 
 }}

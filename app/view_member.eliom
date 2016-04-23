@@ -33,6 +33,7 @@ type t = {
 }
 
 let uid t = t.uid
+let name t = t.name
 
 }}
 

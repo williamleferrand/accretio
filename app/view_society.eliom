@@ -38,6 +38,9 @@ type t =
     playbook: View_playbook.t ;
   }
 
+let uid t = t.uid
+let name t = t.name
+
 }}
 
 {server{
@@ -83,5 +86,8 @@ let format view =
     div ~a:[ a_class [ "name" ]] [ pcdata view.name ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;
   ]
+
+let format_autocomplete view =
+  Raw.input ~a:[ a_value view.name ] ()
 
 }}
