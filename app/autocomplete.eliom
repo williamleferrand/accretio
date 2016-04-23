@@ -47,7 +47,6 @@ let users = autocomplete "users" Object_member.Store.search_name View_member.to_
 let societies = autocomplete "societies" Object_society.Store.search_name View_society.to_view
 let playbooks = autocomplete "playbooks" Object_playbook.Store.search_name View_playbook.to_view
 
-
 }}
 
 {client{

@@ -224,10 +224,23 @@ let move_to_ocsipersist () =
       Object_timer.Store.db, "object_timer" ;
     ]
 
+let reset_plaintext () =
+  lwt _ = Object_image.Admin.reset_plaintext () in
+  lwt _ = Object_member.Admin.reset_plaintext () in
+  lwt _ = Object_message.Admin.reset_plaintext ()  in
+  lwt _ = Object_payment.Admin.reset_plaintext ()  in
+  lwt _ = Object_playbook.Admin.reset_plaintext ()  in
+  lwt _ = Object_society.Admin.reset_plaintext ()  in
+  lwt _ = Object_thread.Admin.reset_plaintext ()  in
+  lwt _ = Object_timer.Admin.reset_plaintext ()  in
+  lwt _ = Object_member.Admin.reset_plaintext ()  in
+  return_unit
+
 let run () =
   try_lwt
     (* lwt _ = relink_messages_from_followers  () in *)
     (* lwt _ = move_back_to_leveldb () in *)
+    lwt _ = reset_plaintext () in
     return_unit
   with exn ->
     Lwt_log.ign_error_f ~exn "error caught while running the migrations" ;

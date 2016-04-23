@@ -89,14 +89,24 @@ let no_transportation_provider context () =
 let extract_quote context message =
   lwt content = context.get_message_content ~message in
   try
-    match Yojson_quote_reply.from_string content with
-    | Error error ->
-      context.log_info "caught error: %s" error ;
-      return `None
-    | _ ->
-      context.log_info "caught some good result" ;
-      return `None
-
+    let quotes = Yojson_quotes.from_string content in
+    lwt groups = context.search_societies ~query:"preschool*" () in
+    context.log_info "sending the quotes to %d groups" (List.length groups) ;
+    lwt _ =
+      Lwt_list.iter_s
+        (fun society ->
+           lwt _ =
+             context.message_society
+               ~society
+               ~stage:"validate_pricing"
+               ~subject:"Validate pricing"
+               ~content:(Yojson_quotes.to_string quotes)
+               ()
+           in
+           return_unit)
+        groups
+    in
+    return `None
   with _ ->
     context.log_error "couldn't decode message %d" message ;
     lwt _ =
@@ -107,6 +117,9 @@ let extract_quote context message =
         ()
     in
     return `None
+
+
+
 
 PLAYBOOK
 

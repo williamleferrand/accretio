@@ -71,7 +71,8 @@ let compute_quote context ((message, quote_request): (int * quote_request)) =
       reference = quote_request.reference ;
       number_of_seats = 0  ;
       cost = 0.0 ;
-      currency = "USD"
+      currency = "USD" ;
+      description = "" ;
     }
   in
   lwt _ =
@@ -108,19 +109,39 @@ let extract_quote_and_send_it_back context message =
     return `None
   | Some message ->
     let message = int_of_string message in
-    let quote_reply = Error "couldn't compute quote" in
-    let empty_quote =
+    (* I'm going to hardcode the quotes for tonight *)
+    let sfminibus =
       {
-        reference = "coucou" ;
-        number_of_seats = 0  ;
-        cost = 0.0 ;
-        currency = "USD"
+        reference = "" ;
+        number_of_seats = 21  ;
+        cost = 900.0 ;
+        currency = "USD" ;
+        description = "From SFMinibus, 21 seats bus with seatbelts" ;
       }
     in
+    let coach21_23 =
+      {
+        reference = "" ;
+        number_of_seats = 23  ;
+        cost = 800.0 ;
+        currency = "USD" ;
+        description = "From Coach21, 23 seats bus without seatbelts" ;
+      }
+    in
+    let coach21_56 =
+      {
+        reference = "" ;
+        number_of_seats = 56  ;
+        cost = 1100.0 ;
+        currency = "USD" ;
+        description = "From Coach21, 56 seats bus with seatbelts" ;
+      }
+    in
+    let quotes = [ sfminibus ; coach21_23 ; coach21_56 ] in
     lwt _ =
       context.reply_to
         ~message
-        ~content:[ Unsafe.data (Yojson_quote_reply.to_string quote_reply) ]
+        ~content:[ Unsafe.data (Yojson_quotes.to_string quotes) ]
         ()
     in
     return `None

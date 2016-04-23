@@ -47,6 +47,7 @@ type quote = {
   number_of_seats : int ;
   cost : float ;
   currency : string ;
+  description : string ;
 } with yojson
 
 type quotes = quote list with yojson
