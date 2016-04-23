@@ -28,6 +28,7 @@ open Vault
 type interlocutor = Stage of string | Member of View_member.t | CatchAll | Society of (View_society.t * string)
 
 type action = Pending | RoutedToStage of string
+
 type t =
   {
     uid : uid ;
@@ -93,7 +94,7 @@ let format view =
     div ~a:[ a_class [ "message-destination" ]] (pcdata "To: " :: (format_interlocutor view.destination)) ;
     div ~a:[ a_class [ "message-subject" ]] [ pcdata "Subject: " ;  pcdata view.subject ] ;
     div ~a:[ a_class [ "message-content" ]] [
-      pcdata view.content (* todo: put raw data there, but for some reason Unsafe.data has encoding issues *)
+      Unsafe.data view.content ;
     ]
   ]
 

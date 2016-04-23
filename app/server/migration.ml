@@ -240,7 +240,7 @@ let run () =
   try_lwt
     (* lwt _ = relink_messages_from_followers  () in *)
     (* lwt _ = move_back_to_leveldb () in *)
-    lwt _ = reset_plaintext () in
+    (* lwt _ = reset_plaintext () in *)
     return_unit
   with exn ->
     Lwt_log.ign_error_f ~exn "error caught while running the migrations" ;
