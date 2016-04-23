@@ -249,10 +249,8 @@ let builder_societies shortlink uid = function
 
       let select_playbook = function
           `String name ->
-          Help.warning (Printf.sprintf "setting playbook name %s" name) ;
           update_selection_playbook (`String name)
         | `Elt playbook ->
-          Help.warning "setting a playbook" ;
           update_selection_playbook (`Elt playbook) ;
           (* we would need to reset the society here?? *)
 

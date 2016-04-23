@@ -174,6 +174,62 @@ let count_participants context () =
   in
   return `None
 
+let validate_pricing context () =
+  return `None
+
+let tag_asked_for_pricing = "askedforpricing"
+
+let ask_members_for_their_opinion_on_pricing context message =
+  try
+    lwt content = context.get_message_content ~message in
+    let quotes = Yojson_quotes.from_string content in
+    lwt members = context.search_members (sprintf "-%s" tag_asked_for_pricing) () in
+    context.log_info "asking %d members for their opinion on pricing" (List.length members) ;
+    let quotes =
+      List.map
+        (fun quote ->
+           li [ pcdata quote.description ;
+                pcdata ", ends up costing " ;
+                pcdata (sprintf "$%.2f per seat" (quote.cost /. (float_of_int quote.number_of_seats))) ]
+        )
+        quotes
+    in
+    lwt _ =
+      Lwt_list.iter_s
+        (fun member ->
+           lwt greetings = salutations member in
+           lwt _ =
+             context.message_member
+               ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+               ~member
+               ~subject:"Preschool bus"
+               ~content:[
+                 greetings ; br () ;
+                 br () ;
+                 pcdata "I'm making some progress about the preschool bus; I started to receive quotes for a first trip to the SF Zoo" ; br () ;
+                 br () ;
+                 ul quotes ;
+                 br () ;
+                 pcdata "What are your thoughts? Cost would definitely go down if/once we do these trips on a regular basis, but for a first experiment we don't have much leverage." ; br ()  ;
+                 br () ;
+               ]
+               ()
+           in
+           lwt _ = context.tag_member ~member ~tags:[ tag_asked_for_pricing ] in
+           return_unit
+        )
+        members
+    in
+    return `None
+  with _ ->
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Couldn't understand your message" ]
+        ()
+    in
+    return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -186,6 +242,8 @@ new_member__ ~> `AgreesWithPickupPoint of email ~> mark_agrees_with_pickup_point
 new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_preferred_pickup_point
 
 *count_participants
+
+*validate_pricing<forward> ~> `Message of email ~> ask_members_for_their_opinion_on_pricing
 
 PROPERTIES
   - "Your duties", "None"
