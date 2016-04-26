@@ -281,6 +281,31 @@ let reply_message (society, message, content) =
               ~content:[ pcdata content ]
               ()
           end
+        | Object_message.Member member as origin ->
+          (match_lwt $message(message)->origin with
+           | Object_message.Society (society, stage) as destination ->
+             lwt (reference, subject) = $message(message)->(reference, subject) in
+             lwt uid =
+               match_lwt Object_message.Store.create
+                           ~origin
+                           ~content
+                           ~subject:((* "Re: " ^ *) subject)
+                           ~destination
+                           ~references:[ reference ]
+                           ~reference:(Object_message.create_reference content)
+                           () with
+               | `Object_already_exists (_, uid) -> return uid
+               | `Object_created message -> return message.Object_message.uid in
+             lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
+             lwt playbook = $society(society)->playbook in
+             let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+             (match_lwt Playbook.dispatch_message_automatically uid stage with
+              | None -> return (Some uid)
+              | Some call ->
+                lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
+                lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+                return (Some uid))
+           | _ -> return_none)
         | _ ->
           return_none)
 
