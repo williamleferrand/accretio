@@ -416,7 +416,7 @@ let context_factory society =
       Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
       lwt subject = $message(message)->subject in
-      let subject = "Re: " ^ subject in
+      let subject = (* "Re: " ^ *) subject in
 
       lwt reference = $message(message)->reference in
 

@@ -33,6 +33,8 @@ let description = "This playbook organizes dinners for groups of friends. It ask
 let version = 0
 let tags = ""
 
+(*
+
 (* local parameters *)
 
 let key_run_id = "dinner-with-friends-run-id"
@@ -1075,6 +1077,292 @@ PLAYBOOK
 
 
 CRON remind_all "14 8 * * 2 *"
+
+
+PROPERTIES
+  - "Your duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."
+
+*)
+
+
+(* new implementation 4/24 to take advantage of the new API, keeping the code
+   above commented for now *)
+
+
+(* some types *****************************************************************)
+
+type date =
+  {
+    year : int ;
+    month : int ;
+    day : int ;
+    hour : int ;
+    minutes : int
+  } with yojson
+
+type dinner =
+  {
+    uid : int64 ;
+    date : date ;
+  } with yojson
+
+let dinner_template () =
+  let now = Ys_time.now () in
+  let now = Calendar.from_unixfloat (Int64.to_float now) in
+  {
+    uid = 0L ;
+    date = {
+      year = Calendar.year now ;
+      month = Calendar.Date.int_of_month (Calendar.month now) ;
+      day = Calendar.day_of_month now ;
+      hour = 20 ;
+      minutes = 30 ;
+    } ;
+  }
+
+type dinner_option = dinner option with yojson
+
+(* keys, tags *****************************************************************)
+
+let current_dinner = "current-dinner"
+
+let get_dinner context =
+  match_lwt context.get ~key:current_dinner with
+    None -> return_none
+  | Some json -> return (Yojson_dinner_option.from_string json)
+
+let with_dinner context f =
+  match_lwt context.get ~key:current_dinner with
+    None -> f None
+  | Some json -> f (Yojson_dinner_option.from_string json)
+
+let check_if_is_in_future dinner =
+  let now = Ys_time.now () in
+  let now = Calendar.from_unixfloat (Int64.to_float now) in
+  let date = Calendar.lmake
+      ~year:dinner.date.year
+      ~month:dinner.date.month
+      ~day:dinner.date.day
+      ~hour:dinner.date.hour
+      ~minute:dinner.date.minutes ()
+  in
+  now < date
+
+(* the different stages *******************************************************)
+
+let schedule_dinner context () =
+  with_dinner context
+    (function
+      | None ->
+        let template = dinner_template () in
+        return (`AskSupervisorToFillTemplate template)
+      | Some _ ->
+        lwt _ =
+          context.message_supervisor
+            ~subject:"A dinner is already in progress"
+            ~content:[
+              pcdata "Greetings," ; br () ;
+              br () ;
+              pcdata "There is already a dinner in progress - please close the existing one before scheduling a new event." ; br ()
+            ]
+            ()
+        in
+        return `None)
+
+let ask_supervisor_to_fill_template context dinner =
+  context.log_info "asking supervisor to update the template" ;
+  lwt _ =
+    context.message_supervisor
+      ~subject:"New dinner template"
+      ~content:[ Unsafe.data (Yojson_dinner.to_string dinner) ]
+      ()
+  in
+  return `None
+
+let update_dinner context message =
+  try
+    with_dinner context
+      (function
+          None ->
+          lwt dinner = context.get_message_content ~message in
+          let dinner = Yojson_dinner.from_string dinner in
+          let dinner =
+            {
+              dinner with
+              uid = Ys_time.now ()
+            }
+          in
+          lwt _ = context.set ~key:current_dinner ~value:(Yojson_dinner_option.to_string (Some dinner)) in
+          return (`PickUpOrganizer dinner)
+        | Some _ ->
+          lwt _ =
+            context.reply_to
+              ~message
+              ~content:[ pcdata "Sorry there is already a dinner set up" ]
+              ()
+          in
+          return `None)
+  with _ ->
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[
+          pcdata "Couldn't parse the JSON, please try again" ; br () ;
+        ]
+        ()
+    in
+    return `None
+
+let tag_already_came = "alreadycame"
+let tag_already_asked = sprintf "alreadyasked%Ld"
+let key_reliability = sprintf "reliability-%d"
+
+let get_reliability context uid =
+  match_lwt context.get ~key:(key_reliability uid) with
+    None -> return 5
+  | Some reliability -> return (try int_of_string reliability with _ -> 5)
+
+let pick_up_organizer context dinner =
+  match check_if_is_in_future dinner with
+    false ->
+    lwt _ =
+      context.message_supervisor
+        ~subject:"The dinner is getting very close and there is no candidate yet"
+        ~content:[ pcdata "The dinner is past due .." ]
+        ()
+    in
+    return `None
+  | true ->
+    lwt candidates = context.search_members ~query:(sprintf "%s -%s" tag_already_came (tag_already_asked dinner.uid)) () in
+    lwt candidates =
+      Lwt_list.map_p
+        (fun uid ->
+         lwt reliability = get_reliability context uid in
+         return (uid, reliability))
+        candidates
+    in
+    let candidates = List.filter (fun (_, reliability) -> reliability > 0) candidates in
+    match candidates with
+      [] ->
+      lwt _ =
+        context.message_supervisor
+        ~subject:"I ran out of candidates :/"
+        ~content:[
+          pcdata "Nobody volunteered to organize the next dinner"
+        ]
+        ()
+      in
+      return `None
+    | _ as candidates ->
+      (* let's randomize using reliability as weights *)
+      let total_weight = List.fold_left (fun acc (_, weight) -> acc + weight) 0 candidates in
+      let candidates = List.fast_sort (fun c1 c2 -> compare (snd c2) (snd c1)) candidates in
+      let rec pick n = function
+          [] -> failwith "pick"
+        | (c, w) :: _ when n <= w -> c
+        | (_, w) :: tl -> pick (n - w) tl
+      in
+      let candidate = pick (Random.int total_weight) candidates in
+      context.log_info "asking candidate %d to pick up a place" candidate ;
+      return (`AskCandidate (dinner, candidate))
+
+let tag_timer_organizer = sprintf "timerorganizer%Ld"
+let key_dinner = "dinner"
+
+let ask_candidate context (dinner, member) =
+  lwt salutations = salutations member in
+  let date = Calendar.lmake
+               ~year:dinner.date.year
+               ~month:dinner.date.month
+               ~day:dinner.date.day
+               ~hour:dinner.date.hour
+               ~minute:dinner.date.minutes ()
+  in
+  let date = CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date in
+  match_lwt context.message_member
+          ~member
+          ~data:[ key_dinner, Int64.to_string dinner.uid ]
+          ~subject:"Next daddy dinner"
+          ~content:[
+            salutations ; br () ;
+            br () ;
+            pcdata "What about setting up another dinner on " ; pcdata date ;
+            pcdata "? Would you like to suggest a place?"
+          ]
+          () with
+  | None ->
+    lwt _ = context.tag_member ~member ~tags:[ tag_already_asked dinner.uid ] in
+    return (`PickupOrganizer dinner)
+  | Some uid ->
+    lwt _ = context.tag_member ~member ~tags:[ tag_already_asked dinner.uid ] in
+    lwt _ =
+      context.set_timer
+        ~label:(tag_timer_organizer dinner.uid)
+        ~duration:(Calendar.Period.lmake ~hour:36 ())
+        (`PickupAnotherOrganizer (dinner, member, uid, false))
+    in
+    return `None
+
+let pick_up_another_organizer context (dinner, member, message, has_replied) =
+  context.log_info "member %d hasn't responded, tagging him and moving to someone else" member ;
+  lwt _ = context.cancel_timers ~query:(tag_timer_organizer dinner.uid) in
+  lwt reliability = get_reliability context member in
+  let reliability = max 0 (reliability - 1) in
+  lwt _ = context.set ~key:(key_reliability member) ~value:(string_of_int reliability) in
+  lwt _ =
+    match has_replied with
+    | true ->
+      context.reply_to
+        ~message
+        ~content:[ pcdata "No worries, let me figure out another option!" ]
+        ()
+    | false ->
+      context.reply_to
+        ~message
+        ~content:[ pcdata "I didn't heard back from you and time is running away, so let me figure out another option. Hope to see you there, though!" ]
+        ()
+  in
+  return (`PickupOrganizer dinner)
+
+let candidate_said_no context message =
+  match_lwt context.get_message_data ~message ~key:key_dinner with
+    None ->
+    lwt _ =
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Can't find the dinner uid in that message"
+        ~content:[ pcdata "I wasn't able to get the dinner id from this message" ]
+        ()
+    in
+    return `None
+  | Some dinner_uid ->
+    let dinner_uid = Int64.of_string dinner_uid in
+    match_lwt get_dinner context with
+      Some dinner when dinner.uid = dinner_uid ->
+      lwt member = context.get_message_sender ~message in
+      return (`PickupAnotherOrganizer (dinner, member, message, true))
+    | None ->
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[ pcdata "No worries, thanks for your message" ]
+          ()
+      in
+      return `None
+
+(* the playbook ***************************************************************)
+
+PLAYBOOK
+
+#import core_remind
+
+*schedule_dinner ~> `AskSupervisorToFillTemplate of dinner ~> ask_supervisor_to_fill_template
+
+ask_supervisor_to_fill_template<forward> ~> `Message of email ~> update_dinner ~> `PickUpOrganizer of dinner ~> pick_up_organizer ~> `AskCandidate of (dinner * int) ~> ask_candidate
+
+ask_candidate ~> `PickupOrganizer of dinner ~> pick_up_organizer
+ask_candidate ~> `PickupAnotherOrganizer of (dinner * int * int * bool) ~> pick_up_another_organizer ~> `PickupOrganizer of dinner ~> pick_up_organizer
+ask_candidate ~> `No of email ~> candidate_said_no ~> `PickupAnotherOrganizer of (dinner * int * int * bool) ~> pick_up_another_organizer
 
 
 PROPERTIES
