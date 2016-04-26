@@ -230,6 +230,31 @@ let ask_members_for_their_opinion_on_pricing context message =
     in
     return `None
 
+let tag_too_expensive = "tooexpensive"
+let tag_pricing_ok = "pricingok"
+
+let pricing_too_much context message =
+  lwt member = context.get_message_sender ~message in
+  lwt _ = context.tag_member ~member ~tags:[ tag_too_expensive ] in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[ pcdata "Indeed it is a bit steep. Still looking at different options (even carpooling, maybe!), what would be a decent cost for a day trip to the zoo, in your opinion, including transportation?" ]
+      ()
+  in
+  return `None
+
+let pricing_ok context message =
+  lwt member = context.get_message_sender ~message in
+  lwt _ = context.tag_member ~member ~tags:[ tag_pricing_ok ] in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[ pcdata "Ok thanks for the feedback. Let me try to keep this rolling .." ]
+      ()
+  in
+  return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -243,7 +268,9 @@ new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_prefe
 
 *count_participants
 
-*validate_pricing<forward> ~> `Message of email ~> ask_members_for_their_opinion_on_pricing
+*validate_pricing<forward> ~> `Message of email ~> ask_members_for_their_opinion_on_pricing ~> `PricingTooMuch of email ~> pricing_too_much
+                                                   ask_members_for_their_opinion_on_pricing ~> `PricingOk of email ~> pricing_ok
+
 
 PROPERTIES
   - "Your duties", "None"
