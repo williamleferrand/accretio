@@ -127,20 +127,20 @@ let reset_stack society =
 
 let reset_stack = server_function ~name:"society-leader-reset-stack" Json.t<int> reset_stack
 
-let remove_from_stack (society, created_on, stage) =
+let remove_from_stack (society, created_on, stage, args) =
   lwt stack = $society(society)<-stack %%% (fun stack ->
-      return (List.filter (fun call -> not (call.Ys_executor.created_on = created_on && call.Ys_executor.stage = stage)) stack)
+      return (List.filter (fun call -> not (call.Ys_executor.created_on = created_on && call.Ys_executor.stage = stage && call.Ys_executor.args = args)) stack)
     ) in
   return (Some stack)
 
-let remove_from_stack = server_function ~name:"society-leader-remove-from-stack" Json.t<int * int64 * string> remove_from_stack
+let remove_from_stack = server_function ~name:"society-leader-remove-from-stack" Json.t<int * int64 * string * string> remove_from_stack
 
-let force (society, created_on, stage) =
+let force (society, created_on, stage, args) =
   lwt stack = $society(society)<-stack %%% (fun stack ->
       return
         (List.map
            (function call ->
-             if call.Ys_executor.created_on = created_on && call.Ys_executor.stage = stage then
+             if call.Ys_executor.created_on = created_on && call.Ys_executor.stage = stage && call.Ys_executor.args = args then
                Ys_executor.({ call with schedule = Immediate })
              else
                call
@@ -149,7 +149,7 @@ let force (society, created_on, stage) =
   ignore_result (Executor.step society) ;
   return (Some stack)
 
-let force = server_function ~name:"society-leader-force" Json.t<int * int64 * string> force
+let force = server_function ~name:"society-leader-force" Json.t<int * int64 * string * string> force
 
 (* triggers, todo ACL *)
 
@@ -276,7 +276,7 @@ let reply_message (society, message, content) =
             in
             let module Context = Factory(Specifics) in
             let context = Context.context in
-            context.reply_to
+            context.Api.reply_to
               ~message
               ~content:[ pcdata content ]
               ()
@@ -299,6 +299,7 @@ let reply_message (society, message, content) =
              lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
              lwt playbook = $society(society)->playbook in
              let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+             lwt _ = Executor.cancel_reminders society uid in
              (match_lwt Playbook.dispatch_message_automatically uid stage with
               | None -> return (Some uid)
               | Some call ->
@@ -351,6 +352,7 @@ let dispatch_message_manually (message, destination) =
   protected_connected
     (fun _ ->
        match_lwt $message(message)->destination with
+        | Object_message.Stage _ -> return_none
         | Object_message.Member _ -> return_none
         | Object_message.CatchAll -> return_none
         | Object_message.Society (society, stage) ->
@@ -632,7 +634,7 @@ let dom bundle =
   let format_call call =
     let force _ =
       Authentication.if_connected
-        (fun _ -> rpc %force (view.uid, call.Ys_executor.created_on, call.Ys_executor.stage) (RList.update stack))
+        (fun _ -> rpc %force (view.uid, call.Ys_executor.created_on, call.Ys_executor.stage, call.Ys_executor.args) (RList.update stack))
     in
     let force =
       button
@@ -642,7 +644,7 @@ let dom bundle =
     in
     let remove _ =
       Authentication.if_connected
-        (fun _ -> rpc %remove_from_stack (view.uid, call.Ys_executor.created_on, call.Ys_executor.stage) (RList.update stack))
+        (fun _ -> rpc %remove_from_stack (view.uid, call.Ys_executor.created_on, call.Ys_executor.stage, call.Ys_executor.args) (RList.update stack))
     in
     let remove =
       button

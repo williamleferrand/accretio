@@ -43,6 +43,16 @@ let extract_result result =
          | _ -> raise (InvalidResult "invalid json"))
       | _ -> raise (InvalidResult "invalid json")
 
+
+let extract_formatted_address result =
+    match result with
+      | `Assoc l ->
+        (match List.assoc "formatted_address" l with
+         | `String address -> address
+         | _ -> raise (InvalidResult "invalid json"))
+      | _ -> raise (InvalidResult "invalid json")
+
+
 let rec fetch address =
   let parameters = [ "sensor", "false" ; "address", address ] in
   let url = Printf.sprintf "http://maps.googleapis.com/maps/api/geocode/json?%s" (Netencoding.Url.mk_url_encoded_parameters parameters) in
@@ -65,6 +75,7 @@ let fetch_raw address =
   let url = Printf.sprintf "http://maps.googleapis.com/maps/api/geocode/json?%s" (Netencoding.Url.mk_url_encoded_parameters parameters) in
   try_lwt
     lwt s, _ = Ys_http.get_url url () in
+    Lwt_log.ign_info_f "google maps said: %s" s ;
     match Yojson.Basic.from_string s with
       `Assoc l ->
       (match List.assoc "status" l with

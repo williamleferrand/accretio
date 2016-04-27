@@ -79,6 +79,7 @@ type 'output context =
       uid option Lwt.t ;
 
     reply_to : message:uid ->
+      ?remind_after:Calendar.Period.t ->
       ?preserve_origin:bool ->
       ?data:(string * string) list ->
       content:Html5_types.div_content_fun elt list ->

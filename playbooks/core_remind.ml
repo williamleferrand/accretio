@@ -22,18 +22,10 @@ open Message_parsers
 let remind__ context message =
   context.log_info "time to remind message %d" message ;
   lwt _ =
-    context.message_supervisor
-      ~subject:"Reminder sent"
-      ~content:[
-        pcdata "I had to send a remind to message "; pcdata (string_of_int message) ; br () ;
-      ]
-      ()
-  in
-  lwt _ =
     context.reply_to
       ~message
       ~preserve_origin:true
-      ~content:[ pcdata "Have you seen my previous message? Thanks!" ; br () ]
+      ~content:[ pcdata "I hope all is well. Have you seen my previous message? Thanks!" ; br () ]
       ()
   in
   return `None

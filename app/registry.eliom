@@ -146,5 +146,6 @@ let start () =
   lwt _ = register (module Children_schoolbus_group) in
   lwt _ = register (module Children_schoolbus_transportation) in
   lwt _ = register (module Children_schoolbus_planner) in
+  lwt _ = register (module Bakery) in
   (* lwt _ = register (module Bay_tours) in *)
   return_unit
