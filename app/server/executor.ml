@@ -235,51 +235,25 @@ let context_factory society =
     let rec get_original_message ~message =
       let rec aux message =
         match_lwt $message(message)->references with
-          [] -> return_none
+          [] -> return message
         | references ->
           Lwt_list.fold_left_s
             (fun acc reference ->
                match_lwt Object_message.Store.find_by_reference reference with
                | None -> return acc
-               | Some message ->
-                 match_lwt $message(message)->origin with
-                   Object_message.CatchAll -> aux message
-                 | Object_message.Society _ -> aux message
-                 | Object_message.Member _ ->
-                   match_lwt aux message with
-                     None -> return (Some message)
-                   | Some message -> return (Some message))
-            None
+               | Some message -> aux message)
+            message
             references
       in
-      match_lwt aux message with
-        None -> return message
-      | Some message -> return message
+      aux message
 
    let get_message_data ~message ~key =
-     (* lwt original = get_original_message ~message in *)
-     let original = message in
+     lwt original = get_original_message ~message in
      Lwt_log.ign_info_f "get message data message:%d key:%s original_message:%d" message key original ;
-     (* we need to find the parent of this original message *)
-     lwt references = $message(original)->references in
-     lwt original_outbound_message_reference =
-       Lwt_list.fold_left_s
-         (fun acc reference ->
-            match_lwt Object_message.Store.find_by_reference reference with
-            | None -> return acc
-            | Some _ -> return (Some reference))
-         None
-         references
-     in
-
-     match original_outbound_message_reference with
-     | None ->
-       Lwt_log.ign_info_f "no original outbound reference for message %d, key %s" message key ;
-       return_none
-     | Some reference ->
-       Lwt_log.ign_info_f "original outbound reference for message %d, key %s is %s" message key reference ;
-       let key = reference^"-"^key in
-       get ~key
+     lwt reference = $message(original)->reference in
+     Lwt_log.ign_info_f "original outbound reference for message %d, key %s is %s" message key reference ;
+     let key = reference^"-"^key in
+     get ~key
 
    let add_member ~member =
      log_info "adding member %d" member ;
@@ -411,7 +385,7 @@ let context_factory society =
       let destination = Object_message.Society (society, stage) in
       send_message ?remind_after ?data origin destination subject content
 
-    let reply_to ~message ?(preserve_origin=false) ?data ~content () =
+    let reply_to ~message ?remind_after ?(preserve_origin=false) ?data ~content () =
       let flat_content = ref "" in
       Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
 
@@ -445,9 +419,13 @@ let context_factory society =
           $message(message)->destination
       in
 
-      send_message ?data ~references:[ reference ] origin destination subject !flat_content
+      (* we should preserve the original data?? maybe this has to be revisited *)
+      (* lwt data = $message(message)->data in
+        let data = match data with None -> data | Some d -> d @ data in *)
 
-    let forward_to_supervisor ~message ?(data=[]) ~subject ~content () =
+      send_message ?remind_after ?data ~references:[ reference ] origin destination subject !flat_content
+
+    let forward_to_supervisor ~message ?data ~subject ~content () =
       lwt leader = $society(society)->leader in
       let subject = Printf.sprintf "[Accretio] [%s] %s" society_name subject in
 
@@ -468,7 +446,7 @@ let context_factory society =
                     Unsafe.data original_content
                   ]
       in
-      message_member ~member:leader ~attachments ~subject ~content ()
+      message_member ?data ~member:leader ~attachments ~subject ~content ()
 
     (* payments ***************************************************************)
 
