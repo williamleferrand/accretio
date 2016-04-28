@@ -410,7 +410,7 @@ let context_factory society =
         match preserve_origin with
           false ->
           (match_lwt $message(message)->origin with
-           | Object_message.Society (society', stage') when society' = society && stage' = stage ->
+           | Object_message.Society (society', _) when society' = society ->
              $message(message)->destination
            | _ as origin -> return origin)
         | true ->

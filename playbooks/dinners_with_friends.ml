@@ -1148,6 +1148,8 @@ let check_if_is_in_future dinner =
   in
   now < date
 
+let tag_organizer = sprintf "organizer%Ld"
+
 (* the different stages *******************************************************)
 
 let schedule_dinner context () =
@@ -1324,7 +1326,7 @@ let pick_up_another_organizer context (dinner, member, message, has_replied) =
   in
   return (`PickupOrganizer dinner)
 
-let candidate_said_no context message =
+let with_dinner context message f =
   match_lwt context.get_message_data ~message ~key:key_dinner with
     None ->
     lwt _ =
@@ -1337,18 +1339,59 @@ let candidate_said_no context message =
     return `None
   | Some dinner_uid ->
     let dinner_uid = Int64.of_string dinner_uid in
-    match_lwt get_dinner context with
-      Some dinner when dinner.uid = dinner_uid ->
-      lwt member = context.get_message_sender ~message in
-      return (`PickupAnotherOrganizer (dinner, member, message, true))
-    | None ->
-      lwt _ =
-        context.reply_to
-          ~message
-          ~content:[ pcdata "No worries, thanks for your message" ]
-          ()
-      in
-      return `None
+    f dinner_uid
+
+let candidate_said_no context message =
+  with_dinner context message
+    (fun dinner_uid ->
+       match_lwt get_dinner context with
+         Some dinner when dinner.uid = dinner_uid ->
+         lwt member = context.get_message_sender ~message in
+         return (`PickupAnotherOrganizer (dinner, member, message, true))
+       | None ->
+         lwt _ =
+           context.reply_to
+             ~message
+             ~content:[ pcdata "No worries, thanks for your message" ]
+           ()
+       in
+       return `None)
+
+let yes_and_extract_suggestion context message =
+  (* TODO *)
+  return `None
+
+let yes_and_ask_for_suggestion context message =
+  with_dinner context message
+    (fun dinner_uid ->
+       match_lwt get_dinner context with
+         Some dinner when dinner.uid = dinner_uid ->
+         lwt member = context.get_message_sender ~message in
+         lwt _ = context.tag_member ~member ~tags:[ tag_organizer dinner.uid ] in
+         lwt _ =
+           context.reply_to
+             ~message
+             ~remind_after:(Calendar.Period.lmake ~hour:16 ())
+             ~content:[
+               pcdata "Great! Where could we go? Let's try to find a place affordable and that can easily accomodate people coming late / leaving early." ; br () ;
+               br () ;
+               pcdata "If you can send me a link (either yelp or a website) I'll forward it to the group" ; br () ;
+               br () ;
+               pcdata "Thanks!"
+             ]
+             ()
+         in
+         return `None
+       | _ ->
+         lwt _ =
+           context.forward_to_supervisor
+             ~message
+             ~subject:"Late reply to an older dinner?"
+             ~content:[ pcdata "Is this email relevant?" ]
+             ()
+         in
+         return `None)
+
 
 (* the playbook ***************************************************************)
 
@@ -1363,7 +1406,8 @@ ask_supervisor_to_fill_template<forward> ~> `Message of email ~> update_dinner ~
 ask_candidate ~> `PickupOrganizer of dinner ~> pick_up_organizer
 ask_candidate ~> `PickupAnotherOrganizer of (dinner * int * int * bool) ~> pick_up_another_organizer ~> `PickupOrganizer of dinner ~> pick_up_organizer
 ask_candidate ~> `No of email ~> candidate_said_no ~> `PickupAnotherOrganizer of (dinner * int * int * bool) ~> pick_up_another_organizer
-
+ask_candidate ~> `YesAndExtractSuggestion of email ~> yes_and_extract_suggestion
+ask_candidate ~> `YesAndAskForSuggestion of email ~> yes_and_ask_for_suggestion
 
 PROPERTIES
   - "Your duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."
