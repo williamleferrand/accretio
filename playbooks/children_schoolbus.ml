@@ -25,6 +25,7 @@ open Toolbox
 open Ys_uid
 
 open Children_schoolbus_types
+open Children_schoolbus_tools
 
 let author = "william@accret.io"
 let name = "Children schoolbus"
@@ -38,7 +39,6 @@ let tag_mute = "mute"
 
 (* keys ***********************************************************************)
 
-let key_profile = sprintf "profile-%d"
 let key_last_message = sprintf "last-message-%d"
 
 (* the profile of a member ****************************************************)
@@ -77,13 +77,6 @@ let get_or_create_profile context member =
       return (Yojson_profile.from_string profile)
     with _ -> create_and_return_new_profile ()
 
-let get_profile context member =
-  match_lwt context.get ~key:(key_profile member) with
-    None -> return_none
-  | Some profile ->
-    try
-      return (Some (Yojson_profile.from_string profile))
-    with _ -> return_none
 
 (* the stages *****************************************************************)
 
@@ -383,7 +376,35 @@ let new_member__ context member =
     in
     return `None
 
+(* profile management *)
 
+let send_profiles context () =
+  context.log_info "send profiles" ;
+  lwt members = context.search_members ~query:"active" () in
+  lwt _ =
+    Lwt_list.iter_s
+      (fun member ->
+         match_lwt get_profile context member with
+           None -> return_unit
+         | Some profile ->
+           Lwt_list.iter_s
+             (fun group ->
+                match_lwt context.search_societies ~query:group () with
+                [] -> return_unit
+                | society :: _ ->
+                  lwt _ =
+                    context.message_society
+                      ~society
+                      ~stage:"store_profile"
+                      ~subject:"updated profile"
+                      ~content:(Yojson_profile.to_string profile)
+                      ()
+                  in
+                  return_unit)
+             profile.groups)
+      members
+  in
+  return `None
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -411,6 +432,7 @@ new_member__<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_
 
 *group_all_members
 
+*send_profiles
 
 
 

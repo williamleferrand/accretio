@@ -25,6 +25,7 @@ open Toolbox
 open Ys_uid
 
 open Children_schoolbus_types
+open Children_schoolbus_tools
 
 let author = "william@accret.io"
 let name = "Children schoolbus group"
@@ -41,7 +42,6 @@ let key_pickup_point = "pickup-point"
 (* some tags ******************************************************************)
 
 let tag_asked = "asked"
-let tag_confirmed = "confirmed" (* <- people that have accepted the pickup spot *)
 let tag_agrees_with_pickup_point = "agreeswithpickuppoint"
 
 (* the stages *****************************************************************)
@@ -255,6 +255,135 @@ let pricing_ok context message =
   in
   return `None
 
+(* the activity suggestion stages *********************************************)
+
+let tag_already_suggested = sprintf "alreadysuggested%04d%04d%04d"
+
+let suggest_activity context () =
+  return `None
+
+let suggest_activity_to_members context message =
+  context.log_info "suggesting a new activity to all the members" ;
+  lwt content = context.get_message_content ~message in
+  match_lwt context.get ~key:key_pickup_point with
+    None -> return `None
+  | Some meeting_point ->
+  try_lwt
+    let activity = Yojson_activity.from_string content in
+    let tag_already_suggested = tag_already_suggested activity.activity_date.year activity.activity_date.month activity.activity_date.day in
+    lwt members = context.search_members ~query:(sprintf "%s -%s" tag_agrees_with_pickup_point tag_already_suggested) () in
+    context.log_info "suggesting a new activity to %d members" (List.length members) ;
+
+    let attachments =
+      List.map
+        (fun attachment ->
+           { Object_message.filename = attachment.filename ;
+             Object_message.content_type = attachment.content_type ;
+             Object_message.content = attachment.content ;
+           })
+        activity.activity_attachments
+    in
+
+    let format_date_time date time =
+      let date = Calendar.lmake
+          ~year:date.year
+          ~month:date.month
+          ~day:date.day
+               ~hour:time.hour
+               ~minute:time.minute ()
+      in
+      pcdata (CalendarLib.Printer.Calendar.sprint "%I:%M %p" date)
+    in
+
+    let format_date date =
+      let date = Calendar.lmake
+          ~year:date.year
+          ~month:date.month
+          ~day:date.day
+          ~hour:0
+          ~minute:0 ()
+      in
+      pcdata (CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A)" date)
+    in
+
+    lwt _ =
+      Lwt_list.iter_s
+        (fun member ->
+           match_lwt get_profile context member with
+             None ->
+             context.log_info "skipping member %d, there is no profile" member ;
+             (* here we should pull the profile from the parent society *)
+             return_unit
+           | Some profile ->
+             match List.exists (fun child -> child.age_in_months >= activity.activity_min_age_in_months &&
+                                             child.age_in_months <= activity.activity_max_age_in_months) profile.children with
+             | false -> context.log_info "member %d has no children in the range" member ; return_unit
+             | true ->
+               lwt salutations = salutations member in
+               lwt _ =
+                 context.message_member
+                   ~member
+                   ~remind_after:(Calendar.Period.lmake ~hour:16 ())
+                   ~subject:activity.activity_title
+                   ~attachments
+                   ~content:[
+                     salutations ; br () ;
+                     br () ;
+                     pcdata activity.activity_description ; br () ;
+                     br () ;
+                     pcdata "The meeting point is " ; pcdata meeting_point ; pcdata "." ; br () ;
+                     br () ;
+
+                     pcdata "Here is the proposed schedule for " ; format_date activity.activity_date ; pcdata ":" ; br () ;
+                     ul
+                       (List.map
+                          (fun step ->
+                             li [
+                               b (match step.step_time with
+                                     TimeRange (t1, t2) ->
+                                     [ format_date_time activity.activity_date t1 ;
+                                       pcdata " - " ;
+                                       format_date_time activity.activity_date t2 ;
+                                     ]
+                                   | Time t ->
+                                     [ format_date_time activity.activity_date t ]) ;
+                               pcdata ": " ;
+                               pcdata step.step_description
+                             ])
+                          activity.activity_steps) ;
+                     pcdata activity.activity_price_description ; br () ;
+                     br () ;
+                     pcdata activity.activity_price_remark ; br () ;
+                     br () ;
+                     pcdata "What do you think? Are you in :) ?" ; br () ;
+                   ]
+                   ()
+               in
+               lwt _ = context.tag_member ~member ~tags:[ tag_already_suggested ] in
+               return_unit)
+        members
+    in
+    return `None
+  with _ ->
+    lwt _ = context.reply_to
+        ~message
+        ~content:[ pcdata "Something went wrong" ]
+        ()
+    in
+    return `None
+
+(* profile management *)
+
+let store_profile context () =
+  return `None
+
+let decode_and_store_profile context message =
+  lwt content = context.get_message_content ~message in
+  let profile = Yojson_profile.from_string content in
+  context.log_info "we got a profile for member %s" profile.email ;
+  lwt _ = set_profile context profile in
+  return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -271,6 +400,8 @@ new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_prefe
 *validate_pricing<forward> ~> `Message of email ~> ask_members_for_their_opinion_on_pricing ~> `PricingTooMuch of email ~> pricing_too_much
                                                    ask_members_for_their_opinion_on_pricing ~> `PricingOk of email ~> pricing_ok
 
+*suggest_activity<forward> ~> `Message of email ~> suggest_activity_to_members
+*store_profile<forward> ~> `Message of email ~> decode_and_store_profile
 
 PROPERTIES
   - "Your duties", "None"

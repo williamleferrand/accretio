@@ -69,7 +69,7 @@ let to_view uid =
       destination ;
       reference ;
       subject ;
-      content ;
+      content = (if String.length content > 2048 then String.sub content 0 2040 else content);
       action ;
     }
 }}
