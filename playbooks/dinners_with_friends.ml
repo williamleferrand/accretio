@@ -1358,12 +1358,15 @@ let candidate_said_no context message =
        return `None)
 
 let yes_and_extract_suggestion context message =
-  (* TODO *)
-  return `None
+  with_dinner context message
+    (fun dinner_uid ->
+       lwt _ = context.cancel_timers ~query:(tag_timer_organizer dinner_uid) in
+       return `None)
 
 let yes_and_ask_for_suggestion context message =
   with_dinner context message
     (fun dinner_uid ->
+       lwt _ = context.cancel_timers ~query:(tag_timer_organizer dinner_uid) in
        match_lwt get_dinner context with
          Some dinner when dinner.uid = dinner_uid ->
          lwt member = context.get_message_sender ~message in
