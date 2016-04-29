@@ -316,9 +316,12 @@ let context_factory society =
           match_lwt Playbook.dispatch_message_automatically message stage with
           | None -> return (Some message)
           | Some call ->
+            Lwt_log.ign_info "sidecaring a call to the remote society" ;
             lwt _ =
               $society(this_society)<-sidecar %% (fun stack -> (society, call) :: stack)
             in
+            lwt _ = $message(message)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
+
             return (Some message)
       with Not_found ->
         Lwt_log.ign_info_f "couldn't find playbook for society %d, can't send message %d" society message ;
@@ -326,7 +329,7 @@ let context_factory society =
 
     (* message primitives ****************************************************************)
 
-    let send_message ?remind_after ?(references=[]) ?(data=[]) origin destination subject content =
+    let send_message ?remind_after ?(references=[]) ?(attachments=[]) ?(data=[]) origin destination subject content =
       lwt uid =
         match_lwt Object_message.Store.create
                     ~origin
@@ -334,6 +337,7 @@ let context_factory society =
                     ~raw:content
                     ~subject
                     ~destination
+                    ~attachments
                     ~reference:(Object_message.create_reference subject)
                     ~references
                     () with
@@ -370,7 +374,7 @@ let context_factory society =
      Printer.print_list (fun s -> flat_content := !flat_content ^ s) content ;
      let origin = Object_message.Society (society, stage) in
      let destination = Object_message.Member member in
-     send_message ?remind_after ?data origin destination subject !flat_content
+     send_message ?remind_after ?attachments ?data origin destination subject !flat_content
 
     let message_supervisor ?attachments ?data ~subject ~content () =
       lwt leader = $society(society)->leader in
@@ -410,7 +414,7 @@ let context_factory society =
         match preserve_origin with
           false ->
           (match_lwt $message(message)->origin with
-           | Object_message.Society (society', stage') when society' = society && stage' = stage ->
+           | Object_message.Society (society', _) when society' = society ->
              $message(message)->destination
            | _ as origin -> return origin)
         | true ->

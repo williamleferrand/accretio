@@ -53,3 +53,46 @@ type quote = {
 type quotes = quote list with yojson
 
 type quote_reply = Error of string | Quotes of quote list with yojson
+
+type date =
+  {
+    year : int ;
+    month : int ;
+    day : int ;
+  } with yojson
+
+type time =
+  {
+    hour : int ;
+    minute : int ;
+  } with yojson
+
+type time_or_timerange = Time of time | TimeRange of (time * time) with yojson
+
+type activity_step =
+  {
+    step_time : time_or_timerange ;
+    step_description : string ;
+  } with yojson
+
+type attachment =
+  {
+    filename : string ;
+    content_type : string ;
+    content : string ;
+  } with yojson
+
+type activity =
+  {
+    activity_min_age_in_months : int ;
+    activity_max_age_in_months : int ;
+    activity_date : date ;
+    activity_title : string ;
+    activity_description : string ;
+    activity_steps : activity_step list ;
+    activity_number_of_spots : int ;
+    activity_price_per_spot : int ;
+    activity_price_description : string ;
+    activity_price_remark : string ;
+    activity_attachments : attachment list ;
+  } with yojson

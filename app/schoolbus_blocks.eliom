@@ -168,12 +168,21 @@ let profiles society data =
     in
 
     (* groups *)
-    let groups = Raw.input ~a:[ a_input_type `Text ; a_value (String.concat ", " profile.groups) ] () in
+    let group, update_group = S.create None in
+    let finalize_group, groups =
+      Autocomplete.create_society ~placeholder:"Name" View_society.format_autocomplete (fun i -> i)
+        (function
+          | `Elt group -> update_group (Some group)
+          | _ -> update_group None)
+    in
+
     let update_groups _ =
-      let groups = Ys_dom.get_value groups in
-      let groups = Regexp.split (Regexp.regexp "[\t ' ']*,[\t ' ']*") groups in
-      let profile = { profile with groups } in
-      detach_rpc %update_profile (society, Yojson_profile.to_string profile) (RList.update data)
+      match S.value group with
+        Some group ->
+        let profile = { profile with groups = [ group.View_society.name ] } in
+        detach_rpc %update_profile (society, Yojson_profile.to_string profile) (fun res -> finalize_group ~reset:true () ; RList.update data res)
+      | _ ->
+        ()
     in
     let update_groups =
       button
@@ -198,7 +207,7 @@ let profiles society data =
         div (List.map format_child profile.children)
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
-        h4 [ pcdata "Groups" ];
+        h4 [ pcdata "Group" ];
         groups ; update_groups ;
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-raw" ]] [
