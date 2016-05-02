@@ -257,7 +257,9 @@ let pricing_ok context message =
 
 (* the activity suggestion stages *********************************************)
 
+let activity_uid = sprintf "%04d%04d%04d"
 let tag_already_suggested = sprintf "alreadysuggested%04d%04d%04d"
+let key_activity_uid = "activity-uid"
 
 let suggest_activity context () =
   return `None
@@ -271,6 +273,7 @@ let suggest_activity_to_members context message =
   try_lwt
     let activity = Yojson_activity.from_string content in
     let tag_already_suggested = tag_already_suggested activity.activity_date.year activity.activity_date.month activity.activity_date.day in
+    let activity_uid = activity_uid activity.activity_date.year activity.activity_date.month activity.activity_date.day in
     lwt members = context.search_members ~query:(sprintf "%s -%s" tag_agrees_with_pickup_point tag_already_suggested) () in
     context.log_info "suggesting a new activity to %d members" (List.length members) ;
 
@@ -324,39 +327,72 @@ let suggest_activity_to_members context message =
                  context.message_member
                    ~member
                    ~remind_after:(Calendar.Period.lmake ~hour:16 ())
+                   ~data:[ key_activity_uid, activity_uid ]
                    ~subject:activity.activity_title
                    ~attachments
-                   ~content:[
-                     salutations ; br () ;
-                     br () ;
-                     pcdata activity.activity_description ; br () ;
-                     br () ;
-                     pcdata "The meeting point is " ; pcdata meeting_point ; pcdata "." ; br () ;
-                     br () ;
-
-                     pcdata "Here is the proposed schedule for " ; format_date activity.activity_date ; pcdata ":" ; br () ;
-                     ul
-                       (List.map
-                          (fun step ->
-                             li [
-                               b (match step.step_time with
-                                     TimeRange (t1, t2) ->
-                                     [ format_date_time activity.activity_date t1 ;
-                                       pcdata " - " ;
-                                       format_date_time activity.activity_date t2 ;
-                                     ]
-                                   | Time t ->
-                                     [ format_date_time activity.activity_date t ]) ;
-                               pcdata ": " ;
-                               pcdata step.step_description
-                             ])
+                   ~content:
+                     (match activity.activity_status with
+                        Confirmed activity_confirmed ->
+                        [
+                          salutations ; br () ;
+                          br () ;
+                          pcdata activity.activity_description ; br () ;
+                          br () ;
+                          pcdata "Here is the proposed schedule for " ; format_date activity.activity_date ; pcdata ":" ; br () ;
+                          br () ;
+                          pcdata "The meeting point would be " ; pcdata meeting_point ; pcdata "." ; br () ;
+                          ul
+                            (List.map
+                               (fun step ->
+                                  li [
+                                    b (match step.step_time with
+                                          TimeRange (t1, t2) ->
+                                          [ format_date_time activity.activity_date t1 ;
+                                            pcdata " - " ;
+                                            format_date_time activity.activity_date t2 ;
+                                          ]
+                                        | Time t ->
+                                          [ format_date_time activity.activity_date t ]) ;
+                                    pcdata ": " ;
+                                    pcdata step.step_description
+                                  ])
                           activity.activity_steps) ;
-                     pcdata activity.activity_price_description ; br () ;
-                     br () ;
-                     pcdata activity.activity_price_remark ; br () ;
-                     br () ;
-                     pcdata "What do you think? Are you in :) ?" ; br () ;
-                   ]
+                          pcdata activity_confirmed.activity_price_description ; br () ;
+                          br () ;
+                          pcdata activity_confirmed.activity_price_remark ; br () ;
+                          br () ;
+                          pcdata "What do you think? Are you in :) ?" ; br () ;
+                        ]
+                      | Suggestion activity_suggestion ->
+                          [
+                          salutations ; br () ;
+                          br () ;
+                          pcdata activity.activity_description ; br () ;
+                          br () ;
+                          pcdata "The meeting point would be " ; pcdata meeting_point ; pcdata "." ; br () ;
+                          br () ;
+                          pcdata "Here is the proposed schedule for " ; format_date activity.activity_date ; pcdata ":" ; br () ;
+                          ul
+                            (List.map
+                               (fun step ->
+                                  li [
+                                    b (match step.step_time with
+                                          TimeRange (t1, t2) ->
+                                          [ format_date_time activity.activity_date t1 ;
+                                            pcdata " - " ;
+                                            format_date_time activity.activity_date t2 ;
+                                          ]
+                                        | Time t ->
+                                          [ format_date_time activity.activity_date t ]) ;
+                                    pcdata ": " ;
+                                    pcdata step.step_description
+                                  ])
+                          activity.activity_steps) ;
+                          pcdata activity_suggestion.activity_suggestion ; br () ;
+                          br () ;
+                          pcdata "What do you think? Would you be interested?" ; br () ;
+                        ]
+                     )
                    ()
                in
                lwt _ = context.tag_member ~member ~tags:[ tag_already_suggested ] in
@@ -370,6 +406,24 @@ let suggest_activity_to_members context message =
         ~content:[ pcdata "Something went wrong" ]
         ()
     in
+    return `None
+
+let tag_declined = sprintf "declined%s"
+
+let decline_activity context message =
+  match_lwt context.get_message_data ~message ~key:key_activity_uid with
+  | None ->
+    lwt _ =
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Couldn't find activity_uid"
+        ~content:[ pcdata "Couldn't find activity_uid" ]
+        ()
+    in
+    return `None
+  | Some activity_uid ->
+    lwt member = context.get_message_sender ~message in
+    lwt _ = context.tag_member ~member ~tags:[ tag_declined activity_uid ] in
     return `None
 
 (* profile management *)
@@ -400,7 +454,7 @@ new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_prefe
 *validate_pricing<forward> ~> `Message of email ~> ask_members_for_their_opinion_on_pricing ~> `PricingTooMuch of email ~> pricing_too_much
                                                    ask_members_for_their_opinion_on_pricing ~> `PricingOk of email ~> pricing_ok
 
-*suggest_activity<forward> ~> `Message of email ~> suggest_activity_to_members
+*suggest_activity<forward> ~> `Message of email ~> suggest_activity_to_members ~> `DeclineActivity of email ~> decline_activity
 *store_profile<forward> ~> `Message of email ~> decode_and_store_profile
 
 PROPERTIES

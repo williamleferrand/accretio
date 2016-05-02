@@ -82,6 +82,21 @@ type attachment =
     content : string ;
   } with yojson
 
+type activity_confirmed = {
+  activity_number_of_spots : int ;
+  activity_price_per_spot : int ;
+  activity_price_description : string ;
+  activity_price_remark : string ;
+} with yojson
+
+type activity_suggestion = {
+  activity_suggestion : string ;
+} with yojson
+
+type activity_status =
+    Confirmed of activity_confirmed
+  | Suggestion of activity_suggestion with yojson
+
 type activity =
   {
     activity_min_age_in_months : int ;
@@ -90,9 +105,6 @@ type activity =
     activity_title : string ;
     activity_description : string ;
     activity_steps : activity_step list ;
-    activity_number_of_spots : int ;
-    activity_price_per_spot : int ;
-    activity_price_description : string ;
-    activity_price_remark : string ;
+    activity_status : activity_status  ;
     activity_attachments : attachment list ;
   } with yojson
