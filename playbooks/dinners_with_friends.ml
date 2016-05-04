@@ -1091,6 +1091,22 @@ PROPERTIES
 
 (* some types *****************************************************************)
 
+type suggestion =
+  {
+    suggestion_author : int ;
+    suggestion_name : string ;
+    suggestion_link : string option ;
+    suggestion_remarks : string ;
+  } with yojson
+
+let empty_suggestion suggestion_author =
+  {
+    suggestion_author ;
+    suggestion_name = "" ;
+    suggestion_link = None ;
+    suggestion_remarks = ""
+  }
+
 type date =
   {
     year : int ;
@@ -1104,6 +1120,7 @@ type dinner =
   {
     uid : int64 ;
     date : date ;
+    suggestion : suggestion option ;
   } with yojson
 
 let dinner_template () =
@@ -1118,9 +1135,8 @@ let dinner_template () =
       hour = 20 ;
       minutes = 30 ;
     } ;
+    suggestion = None ;
   }
-
-type dinner_option = dinner option with yojson
 
 (* keys, tags *****************************************************************)
 
@@ -1129,12 +1145,12 @@ let current_dinner = "current-dinner"
 let get_dinner context =
   match_lwt context.get ~key:current_dinner with
     None -> return_none
-  | Some json -> return (Yojson_dinner_option.from_string json)
+  | Some json -> return (Some (Yojson_dinner.from_string ~o:(dinner_template ()) json))
 
 let with_dinner context f =
   match_lwt context.get ~key:current_dinner with
     None -> f None
-  | Some json -> f (Yojson_dinner_option.from_string json)
+  | Some json -> f (Some (Yojson_dinner.from_string ~o:(dinner_template ()) json))
 
 let check_if_is_in_future dinner =
   let now = Ys_time.now () in
@@ -1182,7 +1198,7 @@ let ask_supervisor_to_fill_template context dinner =
   return `None
 
 let update_dinner context message =
-  try
+  try_lwt
     with_dinner context
       (function
           None ->
@@ -1194,7 +1210,7 @@ let update_dinner context message =
               uid = Ys_time.now ()
             }
           in
-          lwt _ = context.set ~key:current_dinner ~value:(Yojson_dinner_option.to_string (Some dinner)) in
+          lwt _ = context.set ~key:current_dinner ~value:(Yojson_dinner.to_string dinner) in
           return (`PickUpOrganizer dinner)
         | Some _ ->
           lwt _ =
@@ -1246,15 +1262,7 @@ let pick_up_organizer context dinner =
     let candidates = List.filter (fun (_, reliability) -> reliability > 0) candidates in
     match candidates with
       [] ->
-      lwt _ =
-        context.message_supervisor
-        ~subject:"I ran out of candidates :/"
-        ~content:[
-          pcdata "Nobody volunteered to organize the next dinner"
-        ]
-        ()
-      in
-      return `None
+      return (`AskCandidate (dinner, context.society_supervisor))
     | _ as candidates ->
       (* let's randomize using reliability as weights *)
       let total_weight = List.fold_left (fun acc (_, weight) -> acc + weight) 0 candidates in
@@ -1348,7 +1356,7 @@ let candidate_said_no context message =
          Some dinner when dinner.uid = dinner_uid ->
          lwt member = context.get_message_sender ~message in
          return (`PickupAnotherOrganizer (dinner, member, message, true))
-       | None ->
+       | _ ->
          lwt _ =
            context.reply_to
              ~message
@@ -1357,11 +1365,11 @@ let candidate_said_no context message =
        in
        return `None)
 
-let yes_and_extract_suggestion context message =
+let yes context message =
   with_dinner context message
     (fun dinner_uid ->
        lwt _ = context.cancel_timers ~query:(tag_timer_organizer dinner_uid) in
-       return `None)
+       return (`ExtractSuggestion message))
 
 let yes_and_ask_for_suggestion context message =
   with_dinner context message
@@ -1374,6 +1382,7 @@ let yes_and_ask_for_suggestion context message =
          lwt _ =
            context.reply_to
              ~message
+             ~data:[ key_dinner, Int64.to_string dinner.uid ]
              ~remind_after:(Calendar.Period.lmake ~hour:16 ())
              ~content:[
                pcdata "Great! Where could we go? Let's try to find a place affordable and that can easily accomodate people coming late / leaving early." ; br () ;
@@ -1395,6 +1404,163 @@ let yes_and_ask_for_suggestion context message =
          in
          return `None)
 
+let key_original_message = "original-message"
+
+let extract_suggestion context message =
+  with_dinner context message
+    (fun dinner_uid ->
+       match_lwt get_dinner context with
+         Some dinner when dinner.uid = dinner_uid ->
+         lwt suggestion_author = context.get_message_sender ~message in
+         lwt _ =
+           context.forward_to_supervisor
+             ~message
+             ~data:[ key_original_message, string_of_int message ]
+             ~subject:"Please extract the suggestion"
+             ~content:[
+               Unsafe.data (Yojson_suggestion.to_string (empty_suggestion suggestion_author)) ;
+               br () ;
+               br () ;
+               pcdata "Could you fill up the json above? Thanks"
+             ]
+             ()
+         in
+         return `None
+       | _ ->
+         lwt _ =
+           context.forward_to_supervisor
+             ~message
+             ~subject:"Late reply to an older dinner?"
+             ~content:[ pcdata "Is this email relevant?" ]
+             ()
+         in
+         return `None)
+
+let store_suggestion context message =
+  lwt content = context.get_message_content ~message in
+  try
+    let suggestion = Yojson_suggestion.from_string content in
+    (match_lwt context.get_message_data ~message ~key:key_original_message with
+      None ->
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[ pcdata "Couldn't find original message" ]
+          ()
+      in
+      return `None
+    | Some original_message ->
+      lwt _ =
+        context.reply_to
+          ~message
+          ~content:[ pcdata "Thanks" ]
+          ()
+      in
+      let message = int_of_string original_message in
+      with_dinner context message
+        (fun dinner_uid ->
+           match_lwt get_dinner context with
+           Some dinner when dinner.uid = dinner_uid ->
+             let dinner = { dinner with suggestion = Some suggestion } in
+             lwt _ = context.set ~key:current_dinner ~value:(Yojson_dinner.to_string dinner) in
+             (* store the suggestion here *)
+             lwt _ =
+               context.reply_to
+                 ~message
+                 ~content:[ pcdata "Thanks, let me share this suggestion with the group and see who is coming." ]
+                 ()
+             in
+             return (`ShareSuggestion dinner)
+           | _ ->
+             lwt _ =
+               context.forward_to_supervisor
+                 ~message
+                 ~subject:"Late reply to an older dinner?"
+                 ~content:[ pcdata "Is this email relevant?" ]
+                 ()
+             in
+             return `None))
+  with _ ->
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "Please try again" ]
+        ()
+    in
+    return `None
+
+let tag_suggestion_already_sent = sprintf "suggestionalreadysent%Ld"
+
+let share_suggestion context dinner =
+  match dinner.suggestion with
+    None -> return `None
+  | Some suggestion ->
+    lwt members = context.search_members ~query:(sprintf "active -%s -%s" (tag_already_asked dinner.uid) (tag_suggestion_already_sent dinner.uid)) () in
+    let date = Calendar.lmake
+        ~year:dinner.date.year
+        ~month:dinner.date.month
+        ~day:dinner.date.day
+        ~hour:dinner.date.hour
+        ~minute:dinner.date.minutes ()
+    in
+    lwt name = $member(suggestion.suggestion_author)->name in
+    lwt _ =
+      Lwt_list.iter_s
+        (fun member ->
+           lwt salutations = salutations member in
+           lwt _ =
+             context.message_member
+               ~member
+               ~data:[ key_dinner, Int64.to_string dinner.uid ]
+               ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+               ~subject:(CalendarLib.Printer.Calendar.sprint "New 'daddies dinner' on %B %d" date)
+               ~content:([
+                 salutations ; br () ;
+                 br () ;
+                 pcdata "I hope that you are having a great week!" ; br ();
+                 br () ;
+                 pcdata name ; pcdata " suggests that we get together again at " ; pcdata suggestion.suggestion_name ; pcdata " on " ;
+                 pcdata (CalendarLib.Printer.Calendar.sprint "%B %d (it's a %A), around %I:%M %p" date) ; br () ;
+                 br () ]
+                   @ (match suggestion.suggestion_link with
+                       | None -> []
+                       | Some link ->
+                         [ pcdata "If you want to check it out, here is the restaurant's website: " ;
+                           Raw.a ~a:[ a_href (uri_of_string (fun () -> link)) ] [ pcdata link ] ;
+                           br () ;
+                           br () ;])
+                     @ [
+                       pcdata "Would you like to join us?"
+                     ])
+               ()
+           in
+           lwt _ = context.tag_member ~member ~tags:[ tag_suggestion_already_sent dinner.uid ] in
+           return_unit)
+        members
+    in
+    return `None
+
+let reset context () =
+  context.log_info "resetting dinner" ;
+  match_lwt context.get ~key:current_dinner with
+    None -> return `None
+  | Some dinner ->
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Archived dinner"
+        ~content:[
+          Unsafe.data dinner
+        ]
+        ()
+    in
+    lwt _ = context.delete ~key:current_dinner in
+    return `None
+
+let share_suggestion_current_dinner context () =
+  match_lwt get_dinner context with
+    None -> return `None
+  | Some dinner -> return (`ShareSuggestion dinner)
+
 
 (* the playbook ***************************************************************)
 
@@ -1405,12 +1571,17 @@ PLAYBOOK
 *schedule_dinner ~> `AskSupervisorToFillTemplate of dinner ~> ask_supervisor_to_fill_template
 
 ask_supervisor_to_fill_template<forward> ~> `Message of email ~> update_dinner ~> `PickUpOrganizer of dinner ~> pick_up_organizer ~> `AskCandidate of (dinner * int) ~> ask_candidate
-
+                                                                 update_dinner ~> `Message of email ~> update_dinner
 ask_candidate ~> `PickupOrganizer of dinner ~> pick_up_organizer
 ask_candidate ~> `PickupAnotherOrganizer of (dinner * int * int * bool) ~> pick_up_another_organizer ~> `PickupOrganizer of dinner ~> pick_up_organizer
 ask_candidate ~> `No of email ~> candidate_said_no ~> `PickupAnotherOrganizer of (dinner * int * int * bool) ~> pick_up_another_organizer
-ask_candidate ~> `YesAndExtractSuggestion of email ~> yes_and_extract_suggestion
-ask_candidate ~> `YesAndAskForSuggestion of email ~> yes_and_ask_for_suggestion
+ask_candidate ~> `YesAndExtractSuggestion of email ~> yes ~> `ExtractSuggestion of int ~> extract_suggestion
+ask_candidate ~> `YesAndAskForSuggestion of email ~> yes_and_ask_for_suggestion<forward> ~> `Message of email ~> extract_suggestion
+
+extract_suggestion<forward> ~> `Message of email ~> store_suggestion<forward> ~> `Message of email ~> store_suggestion ~> `ShareSuggestion of dinner ~> share_suggestion
+
+*reset
+*share_suggestion_current_dinner ~> `ShareSuggestion of dinner ~> share_suggestion
 
 PROPERTIES
   - "Your duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."

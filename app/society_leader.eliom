@@ -289,6 +289,7 @@ let reply_message (society, message, content) =
                match_lwt Object_message.Store.create
                            ~origin
                            ~content
+                           ~raw:content
                            ~subject:((* "Re: " ^ *) subject)
                            ~destination
                            ~references:[ reference ]
