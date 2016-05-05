@@ -107,6 +107,7 @@ let update_mode = server_function ~name:"society-leader-update-mode" Json.t<int 
 (* logs  *)
 
 let get_logs (society, since) =
+  let since = max since (Int64.sub (Ys_time.now ()) 86400L) in
   Lwt_log.ign_info_f "retrieving logs for society %d, since %Ld" society since ;
   Logs.list_all_from_society society since
 
