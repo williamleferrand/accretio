@@ -36,7 +36,8 @@ type manage_step =
   | ManageMailboxes
   | ManageMembers
   | ManageCustom
-  | ManageSocieties deriving (Json)
+  | ManageSocieties
+  | ManageTags deriving (Json)
 
 type service =
   | Uninitialized
@@ -93,6 +94,7 @@ let path_of_service = function
   | Manage (shortlink, _, ManageCustom) -> [ "manage" ; "custom" ; shortlink ]
   | Manage (shortlink, _, ManageCustom) -> [ "manage" ; "custom" ; shortlink ]
   | Manage (shortlink, _, ManageSocieties) -> [ "manage" ; "societies" ; shortlink ]
+  | Manage (shortlink, _, ManageTags) -> [ "manage" ; "tags" ; shortlink ]
   | Payment (shortlink, _) -> [ "payment" ; shortlink ]
   | Search None -> [ "search" ]
   | Search (Some query) -> [ "search" ; query ]

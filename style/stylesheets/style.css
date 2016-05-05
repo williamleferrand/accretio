@@ -91,7 +91,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
  */
 /* line 48, ../sass/_box.scss */
 .box {
-  background-color: #ffae00;
+  background-color: #b5629b;
   position: relative;
   color: white;
   border-radius: 5px;
@@ -140,7 +140,7 @@ article, aside, details, figcaption, figure, footer, header, hgroup, main, menu,
 
 /* line 53, ../sass/_box.scss */
 .box-with-header {
-  background-color: #ffae00;
+  background-color: #b5629b;
   position: relative;
   color: white;
   border-radius: 5px;
@@ -374,7 +374,7 @@ h2 {
   width: 44px;
   display: block;
   margin-right: 10px;
-  background-color: #3d3d3d;
+  background-color: #b5629b;
   cursor: pointer;
 }
 /* line 26, ../sass/_header.scss */
@@ -390,7 +390,7 @@ h2 {
   line-height: 46px;
   border: none;
   padding: 0;
-  background-color: #3d3d3d;
+  background-color: #b5629b;
   color: white;
   margin-right: 10px;
   margin-bottom: 10px;
@@ -410,7 +410,7 @@ h2 {
   font-size: 22px;
   line-height: 44px;
   overflow: hidden;
-  color: #3d3d3d;
+  color: #b5629b;
 }
 /* line 49, ../sass/_header.scss */
 .header .profile-picture img, .header-admin .profile-picture img {
@@ -503,7 +503,7 @@ h2 {
 }
 /* line 84, ../sass/_authentication.scss */
 .connection-box .authentication-box {
-  background-color: #ffae00;
+  background-color: #b5629b;
   position: relative;
   color: white;
   border-radius: 5px;
@@ -652,15 +652,16 @@ h2 {
 
 /* line 3, ../sass/_dashboard.scss */
 .dashboard .societies {
+  margin: auto;
   padding-top: 16px;
 }
 @media screen and (min-width: 800px) {
-  /* line 10, ../sass/_dashboard.scss */
+  /* line 11, ../sass/_dashboard.scss */
   .dashboard .view-society {
     width: 400px;
-    margin: 0 10px 10px 0;
+    margin: 0 20px 20px 0;
   }
-  /* line 14, ../sass/_dashboard.scss */
+  /* line 15, ../sass/_dashboard.scss */
   .dashboard .society-column {
     float: left;
   }
@@ -754,7 +755,7 @@ h2 {
   }
 }
 /* line 85, ../sass/_landing.scss */
-.landing .landing-popular .playbooks {
+.landing .landing-popular .playbooks, .landing .landing-popular .societies {
   padding-top: 0 !important;
 }
 
@@ -773,7 +774,7 @@ h2 {
 }
 /* line 5, ../sass/_profile.scss */
 .profile .profile-header {
-  background-color: #ffae00;
+  background-color: #b5629b;
   position: relative;
   color: white;
   border-radius: 5px;
@@ -926,7 +927,7 @@ h2 {
 /* line 107, ../sass/_profile.scss */
 .profile .profile-panels {
   margin-top: 10px;
-  background-color: #ffae00;
+  background-color: #b5629b;
   position: relative;
   color: white;
   border-radius: 5px;
@@ -1393,65 +1394,70 @@ h2 {
   margin: 0 0 24px 0;
 }
 /* line 30, ../sass/_playbook.scss */
-.playbook .playbook-automata {
+.playbook .graph {
+  margin-top: 24px;
+}
+/* line 32, ../sass/_playbook.scss */
+.playbook .graph .playbook-automata {
   margin-top: 40px;
   margin-bottom: 40px;
 }
-/* line 32, ../sass/_playbook.scss */
-.playbook .playbook-automata svg {
+/* line 34, ../sass/_playbook.scss */
+.playbook .graph .playbook-automata svg {
   width: 100%;
 }
-/* line 38, ../sass/_playbook.scss */
+/* line 41, ../sass/_playbook.scss */
 .playbook .create-society {
   margin-top: 24px;
 }
-/* line 40, ../sass/_playbook.scss */
+/* line 43, ../sass/_playbook.scss */
 .playbook .create-society .create-society-form {
   border-radius: 5px;
   padding: 18px;
   background-color: #3d3d3d;
   color: white;
 }
-/* line 45, ../sass/_playbook.scss */
+/* line 48, ../sass/_playbook.scss */
 .playbook .create-society .create-society-form input {
   margin-bottom: 18px;
 }
-/* line 48, ../sass/_playbook.scss */
+/* line 51, ../sass/_playbook.scss */
 .playbook .create-society .create-society-form textarea {
   margin-bottom: 18px;
 }
-/* line 51, ../sass/_playbook.scss */
+/* line 54, ../sass/_playbook.scss */
 .playbook .create-society .create-society-form button {
   background-color: white;
   color: #3d3d3d;
 }
-/* line 58, ../sass/_playbook.scss */
+/* line 61, ../sass/_playbook.scss */
 .playbook .thread {
   margin-top: 24px;
 }
 
 /* line 3, ../sass/_library.scss */
-.library .playbooks {
+.library .playbooks, .library .societies {
   margin: auto;
+  width: 100%;
   padding-top: 16px;
 }
-/* line 6, ../sass/_library.scss */
-.library .playbooks .view-playbook, .library .playbooks .make-suggestion {
-  margin: 0 0 10px 0;
+/* line 7, ../sass/_library.scss */
+.library .playbooks .view-playbook, .library .playbooks .view-society, .library .playbooks .make-suggestion, .library .societies .view-playbook, .library .societies .view-society, .library .societies .make-suggestion {
+  margin: 0 0 20px 0;
 }
 @media screen and (min-width: 800px) {
-  /* line 11, ../sass/_library.scss */
-  .library .playbooks .view-playbook, .library .playbooks .make-suggestion {
+  /* line 12, ../sass/_library.scss */
+  .library .playbooks .view-playbook, .library .playbooks .view-society, .library .playbooks .make-suggestion, .library .societies .view-playbook, .library .societies .view-society, .library .societies .make-suggestion {
     width: 400px;
-    margin: 0 10px 10px 0;
+    margin: 0 20px 20px 0;
   }
-  /* line 15, ../sass/_library.scss */
-  .library .playbooks .library-column {
+  /* line 16, ../sass/_library.scss */
+  .library .playbooks .library-column, .library .societies .library-column {
     float: left;
   }
 }
 
-/* line 25, ../sass/_library.scss */
+/* line 26, ../sass/_library.scss */
 .make-suggestion .closed {
   text-align: center;
   padding: 30px 0;
@@ -1462,8 +1468,8 @@ h2 {
 
 /* line 6, ../sass/_lambda_thread.scss */
 .lambda-thread .thread-messages .thread-message {
-  line-height: 16px;
-  margin: 18px 0;
+  line-height: 18px;
+  margin: 0 0 10px 0;
 }
 /* line 9, ../sass/_lambda_thread.scss */
 .lambda-thread .thread-messages .thread-message .lambda-member {
@@ -1474,19 +1480,11 @@ h2 {
 .lambda-thread .thread-messages .thread-message .message-time {
   font-style: italic;
 }
-/* line 18, ../sass/_lambda_thread.scss */
-.lambda-thread .thread-messages .thread-message:first-child {
-  margin-top: 0 !important;
-}
-/* line 23, ../sass/_lambda_thread.scss */
-.lambda-thread .add-message {
-  margin-top: 18px;
-}
-/* line 25, ../sass/_lambda_thread.scss */
+/* line 24, ../sass/_lambda_thread.scss */
 .lambda-thread .add-message .thread-input {
   margin-right: 67px;
 }
-/* line 28, ../sass/_lambda_thread.scss */
+/* line 27, ../sass/_lambda_thread.scss */
 .lambda-thread .add-message .right {
   margin-top: 3px;
 }
@@ -1495,7 +1493,7 @@ h2 {
 .view-playbook {
   border-radius: 5px;
   padding: 18px;
-  background-color: #3d3d3d;
+  background-color: #429844;
   color: white;
   cursor: pointer;
 }
@@ -1548,27 +1546,48 @@ h2 {
 .view-playbook .actions .done {
   text-align: center;
 }
+/* line 50, ../sass/_view_playbook.scss */
+.view-playbook .view-details {
+  text-align: center;
+}
+/* line 52, ../sass/_view_playbook.scss */
+.view-playbook .view-details button {
+  background-color: white;
+  color: #3d3d3d;
+}
 
 /* line 1, ../sass/_view_society.scss */
 .view-society {
-  margin: 0 0 10px 0;
   border-radius: 5px;
-  padding: 20px;
-  background-color: #3d3d3d;
+  padding: 18px;
+  background-color: #1c9fad;
   color: white;
   cursor: pointer;
 }
-/* line 8, ../sass/_view_society.scss */
+/* line 7, ../sass/_view_society.scss */
 .view-society .name {
   font-size: 18px;
   border-bottom: 1px solid white;
   padding: 0 0 15px 0;
   margin: 0 0 15px 0;
 }
-/* line 14, ../sass/_view_society.scss */
+/* line 13, ../sass/_view_society.scss */
 .view-society .description {
   font-size: 14px;
   line-height: 16px;
+}
+/* line 18, ../sass/_view_society.scss */
+.view-society .actions > div {
+  margin-top: 20px;
+}
+/* line 21, ../sass/_view_society.scss */
+.view-society .actions .view-details {
+  text-align: center;
+}
+/* line 23, ../sass/_view_society.scss */
+.view-society .actions .view-details button {
+  background-color: white;
+  color: #3d3d3d;
 }
 
 /* line 1, ../sass/_search.scss */

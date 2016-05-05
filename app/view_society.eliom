@@ -36,6 +36,7 @@ type t =
     description : string ;
     mode : mode ;
     playbook: View_playbook.t ;
+    tags : string ;
   }
 
 let uid t = t.uid
@@ -46,7 +47,7 @@ let name t = t.name
 {server{
 
 let to_view uid =
-  lwt supervisor, name, description, mode, playbook, shortlink = $society(uid)->(leader, name, description, mode, playbook, shortlink) in
+  lwt supervisor, name, description, mode, playbook, shortlink, tags = $society(uid)->(leader, name, description, mode, playbook, shortlink, tags) in
   let mode =
     match mode with
     | Object_society.Sandbox -> Sandbox
@@ -63,6 +64,7 @@ let to_view uid =
     description ;
     mode ;
     playbook ;
+    tags ;
   }
 
 }}
@@ -85,6 +87,14 @@ let format view =
            a_onclick (fun _ -> Service.goto (Service.Society (view.shortlink, view.uid))) ] [
     div ~a:[ a_class [ "name" ]] [ pcdata view.name ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;
+    (* div ~a:[ a_class [ "actions" ]] [
+      div ~a:[ a_class [ "view-details" ]] [
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> Service.goto (Service.Society (view.shortlink, view.uid))) ]
+          [ pcdata "Learn more" ]
+      ] ;
+    ] *)
   ]
 
 let format_autocomplete view =

@@ -166,8 +166,8 @@ let builder  = function
       in
       let create =
         button
-
-          ~a:[ a_onclick create ]
+          ~a:[ a_button_type `Button ;
+               a_onclick create ]
           [ pcdata "Create" ]
       in
       div ~a:[ a_class [ "create-society"  ]] [
@@ -224,9 +224,18 @@ let builder  = function
         [] -> pcdata ""
       | _ as societies ->
         div ~a:[ a_class [ "existing-societies" ]] [
-          h2 [ pcdata "Request to join an existing group" ] ;
+          h2 [ pcdata "Existing groups" ] ;
           div (List.map View_society.format societies)
         ]
+    in
+
+    let graph =
+      let viz = div ~a:[ a_class [ "playbook-automata" ]] [] in
+      Ys_viz.render viz view.automata ;
+      div ~a:[ a_class [ "graph" ]] [
+        h2 [ pcdata "Flow chart" ] ;
+        viz ;
+      ]
     in
 
     div ~a:[ a_class [ "playbook" ]] [
@@ -240,8 +249,8 @@ let builder  = function
 
       existing_societies ;
       create_society ;
-
       thread ;
+      graph ;
     ]
 
 let dom = Template.apply %retrieve builder

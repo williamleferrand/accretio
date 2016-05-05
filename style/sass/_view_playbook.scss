@@ -1,7 +1,7 @@
 .view-playbook {
     border-radius: 5px;
     padding: 18px;
-    background-color: $grey ;
+    background-color: $npink ;
     color: white ;
     cursor: pointer ;
     .name  {
@@ -45,5 +45,13 @@
             text-align: center ;
         }
 
+    }
+
+    .view-details {
+        text-align: center ;
+        button {
+            background-color: white ;
+            color: $grey ;
+        }
     }
 }

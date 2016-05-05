@@ -83,6 +83,23 @@ let retrieve_societies uid =
        return (Some societies))
 
 let retrieve_societies = server_function ~name:"manage-retrieve-societies" Json.t<int> retrieve_societies
+
+let retrieve_tags uid =
+  protected_connected
+    (fun _ ->
+       lwt tags = $society(uid)->tags in
+       return (Some tags))
+
+let retrieve_tags = server_function ~name:"manage-retrieve-tags" Json.t<int> retrieve_tags
+
+let update_tags (uid, tags) =
+  protected_connected
+    (fun _ ->
+       lwt _ = $society(uid)<-tags %% (fun _ -> tags) in
+       return (Some tags))
+
+let update_tags = server_function ~name:"manage-update-tags" Json.t<int * string> update_tags
+
 }}
 
 {client{
@@ -108,7 +125,8 @@ let menu shortlink uid =
          Service.ManageMailboxes, "Mailboxes" ;
          Service.ManageMembers, "Members" ;
          Service.ManageCustom, "Custom" ;
-         Service.ManageSocieties, "Societies"
+         Service.ManageSocieties, "Societies" ;
+         Service.ManageTags, "Tags"
        ])
 
 let builder_home shortlink =
@@ -342,6 +360,39 @@ let builder_societies shortlink uid = function
       RList.map_in_div_hd ~a:[ a_class [ "societies" ]] add_society format_society societies
     ]
 
+(* tags management ************************************************************)
+
+let builder_tags shortlink uid = function
+    None -> pcdata ""
+  | Some tags ->
+    let tags, update_tags = S.create tags in
+    let tags =
+      S.map
+        (fun tags ->
+           let input_tags = Raw.input ~a:[ a_input_type `Text ; a_value tags ] () in
+           let update_tags _ =
+             detach_rpc %update_tags (uid, Ys_dom.get_value input_tags) update_tags
+           in
+           let update_tags =
+             button
+               ~a:[ a_button_type `Button ; a_onclick update_tags ]
+               [ pcdata "Update" ]
+           in
+           div ~a:[ a_class [ "box" ]] [
+             div ~a:[ a_class [ "box-section" ]] [
+               input_tags
+             ] ;
+             div ~a:[ a_class [ "box-action" ]] [
+               update_tags
+             ] ;
+           ])
+        tags
+    in
+    div ~a:[ a_class [ "manage" ; "manage-tags" ]] [
+      menu shortlink uid ;
+      R.node tags
+    ]
+
 (* the routing dom ************************************************************)
 
 let dom shortlink uid =
@@ -354,6 +405,8 @@ let dom shortlink uid =
     Template.apply %retrieve_custom (builder_custom shortlink uid) uid
   | Service.ManageSocieties ->
     Template.apply %retrieve_societies (builder_societies shortlink uid) uid
+  | Service.ManageTags ->
+    Template.apply %retrieve_tags (builder_tags shortlink uid) uid
   | _ -> S.const None
 
 }}

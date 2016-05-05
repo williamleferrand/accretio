@@ -62,7 +62,7 @@ let builder = function
       Ys_grid.create
         ~a:[ a_class [ "societies" ; "clearfix" ]]
         ~a_col:[ a_class [ "society-column" ]]
-        ~column_width:410
+        ~column_width:420
         ~content:(S.map (fun societies -> List.map View_society.format societies) (RList.channel societies))
       ()
     in

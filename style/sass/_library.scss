@@ -1,16 +1,17 @@
 .library {
 
-    .playbooks {
+    .playbooks, .societies {
         margin: auto ;
+        width: 100%;
         padding-top: 16px;
-        .view-playbook, .make-suggestion {
-            margin: 0 0 10px 0 ;
+        .view-playbook, .view-society, .make-suggestion {
+            margin: 0 0 20px 0 ;
         }
 
         @media screen and (min-width: 800px) {
-            .view-playbook, .make-suggestion {
+            .view-playbook, .view-society, .make-suggestion {
                 width: 400px ;
-                margin: 0 10px 10px 0 ;
+                margin: 0 20px 20px 0 ;
             }
             .library-column {
                 float: left ;
