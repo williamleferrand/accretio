@@ -407,11 +407,135 @@ let send_profiles context () =
       members
   in
   return `None
+
+(* invites. this could be made generic in a component?? ***********************)
+
+let tag_to_invite = "toinvite"
+
+
+let invite context () =
+  return `None
+
+let extract_emails context message =
+  lwt content = context.get_message_content ~message in
+  let emails = Ys_email.get_all_emails content in
+  context.log_info "got new invite request, there are %d emails to handle" (List.length emails) ;
+  lwt members =
+    Lwt_list.fold_left_s
+      (fun acc email ->
+         lwt member =
+           match_lwt Object_member.Store.find_by_email email with
+           | Some uid -> return uid
+           | None ->
+             match_lwt Object_member.Store.create
+                         ~preferred_email:email
+                         ~emails:[ email ]
+                         () with
+             | `Object_already_exists (_, uid) -> return uid
+             | `Object_created member -> return member.Object_member.uid
+         in
+         match_lwt context.is_member ~member with
+           true -> return acc
+         | false -> return (member :: acc))
+      []
+      emails
+  in
+  lwt _ = Lwt_list.iter_s (fun member -> context.tag_member ~member ~tags:[ tag_to_invite ]) members in
+  match_lwt context.search_societies ~query:"planner" () with
+    [] ->
+    context.log_info "couldn't find a planner, not sending invites" ;
+    return `None
+  | society :: _ ->
+    context.log_info "planner found, ask for an updated pitch" ;
+    lwt _ =
+      context.message_society
+        ~society
+        ~stage:"retrieve_pitch"
+        ~subject:"pitch"
+        ~content:""
+        ()
+    in
+    return `None
+
+let extract_pitch context message =
+  (* for now the pitch is an activity *)
+  try_lwt
+    lwt content = context.get_message_content ~message in
+    let activity = Yojson_activity.from_string content in
+    let now = Calendar.now () in
+    context.log_info "now is %d:%d" (Calendar.hour now) (Calendar.minute now) ;
+    if Calendar.hour now > 8 && Calendar.hour now < 17 then
+      return (`Pitch activity)
+    else
+      begin
+        let date = Calendar.next now (`Day) in
+        let date = Calendar.rem date (Calendar.Period.lmake ~hour:(Calendar.hour now) ()) in
+        let date = Calendar.add date (Calendar.Period.lmake ~hour:8 ()) in
+        let diff = Calendar.sub date now in
+        lwt _ =
+          context.set_timer
+            ~duration:diff
+            (`Pitch activity)
+        in
+        return `None
+      end
+  with _ ->
+    lwt _ =
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Couldn't decode the pitch"
+        ~content:[ pcdata "Couldn't get the pitch from the planner" ]
+        ()
+    in
+    return `None
+
+let send_invites context activity =
+  lwt members = context.search_members ~query:tag_to_invite () in
+  context.log_info "inviting now %d members" (List.length members) ;
+  lwt _ =
+    Lwt_list.iter_s
+      (fun member ->
+         lwt _ =
+           context.message_member
+             ~member
+             ~remind_after:(Calendar.Period.lmake ~hour:16 ())
+             ~subject:"Looking for a flexible preschool option? Get on the preschool bus!"
+             ~content:[
+               pcdata "Good morning," ; br () ;
+               br () ;
+               pcdata "I'm a SF resident, father of two. As many of us do, I've been struggling with preschool options for our children." ; br () ;
+               br () ;
+               pcdata "Despite the preschool situation, there is no shortage of opportunities to play and learn in the city. The SF Zoo, SF Rec Park and many others, public and private, provide high quality classes that our children could benefit from if we had a way to get them there safely, with a consistent group of little friends and considerate caregivers." ; br () ;
+               br () ;
+               pcdata "Along with other parents, we are proposing to set up a preschool bus: a safe, on-demand school bus staffed with professionals that would pick up our children and drive them to activities all through the town." ; br () ;
+               br () ;
+               pcdata "We are doing a first experimental field trip on ";
+               pcdata (sprintf "%d/%d" activity.activity_date.month activity.activity_date.day) ;
+               pcdata " to the SF Zoo. Parents and children will attend a class there, then will spend some time discovering the animals while making new friends along the way." ; br () ;
+               br () ;
+               pcdata "Would you like to learn more about it?" ; br () ;
+               br () ;
+             ]
+             ()
+         in
+         return_unit
+      )
+      members
+  in
+  return `None
+
+let init__ context () =
+  lwt _ = context.set ~key:"core-remind-verbatim" ~value:"Hi, have you seen my previous email about the preschool bus? Would you be interested in learning more about it?" in
+  return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
 
    #import core_join_request
+   #import core_remind
+
+*init__
 
 (* onboarding process *)
 
@@ -426,17 +550,12 @@ PLAYBOOK
 
 new_member__<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
 
-(* organizing a trip *)
-
-
-
-(* some administrative work *)
 
 *group_all_members
 
 *send_profiles
 
-
+*invite<forward> ~> `Message of email ~> extract_emails<forward> ~> `Message of email ~> extract_pitch ~> `Pitch of activity ~> send_invites
 
 PROPERTIES
   - "Your duties", "None! All you have is to show up on time with your child at the pickup spot."
