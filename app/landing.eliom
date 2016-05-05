@@ -29,12 +29,17 @@ open Vault
 
 {server{
 
-let fetch_public_playbooks () =
-  lwt playbooks = Library.get_playbooks_ () in
-  return (Demo.automata, playbooks)
+let fetch_landing () =
 
-let fetch_public_playbooks =
-  server_function ~name:"landing-fetch-popular-playbooks" Json.t<unit> fetch_public_playbooks
+  lwt playbooks = Library.get_playbooks_ () in
+  lwt societies =
+    Object_society.Store.search_tags "landing"
+  in
+  lwt societies = Lwt_list.map_s View_society.to_view societies in
+  return (Demo.automata, societies, playbooks)
+
+let fetch_landing =
+  server_function ~name:"landing-fetch-landing" Json.t<unit> fetch_landing
 
 let ask (email, question) =
   return (Some ())
@@ -51,15 +56,24 @@ open Ys_react
 open Eliom_content.Html5
 open Eliom_content.Html5.D
 
-let builder (demo, playbooks) =
+let builder (demo, societies, playbooks) =
   let graph_demo = div ~a:[ a_class [ "graph-demo" ]] [] in
   Ys_viz.render graph_demo demo ;
 
-  let grid =
+  let grid_societies =
+    Ys_grid.create
+      ~a:[ a_class [ "societies" ; "clearfix" ]]
+      ~a_col:[ a_class [ "library-column" ]]
+      ~column_width:420
+      ~content:(S.const (List.map View_society.format societies))
+      ()
+  in
+
+  let grid_playbooks =
     Ys_grid.create
       ~a:[ a_class [ "playbooks" ; "clearfix" ]]
       ~a_col:[ a_class [ "library-column" ]]
-      ~column_width:410
+      ~column_width:420
       ~content:(S.const (Library.make_suggestion () :: List.map View_playbook.format playbooks))
       ()
   in
@@ -163,13 +177,21 @@ let builder (demo, playbooks) =
       Search.builder []
     ] ; *)
 
+
+    (match societies with
+       [] -> pcdata ""
+     | _ -> div ~a:[ a_class [ "landing-popular" ]] [
+         h2 [ pcdata "Popular groups" ] ;
+         div ~a:[ a_class [ "library" ]] [ grid_societies ]
+       ]) ;
+
     div ~a:[ a_class [ "landing-popular" ]] [
-      h2 [ pcdata "Popular activities" ] ;
-      div ~a:[ a_class [ "library" ]] [ grid ] ;
+      h2 [ pcdata "Popular playbooks" ] ;
+      div ~a:[ a_class [ "library" ]] [ grid_playbooks ] ;
     ]
 
   ]
 
-let dom = Template.apply %fetch_public_playbooks builder
+let dom = Template.apply %fetch_landing builder
 
 }}

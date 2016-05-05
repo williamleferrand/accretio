@@ -257,7 +257,10 @@ let context_factory society =
 
    let add_member ~member =
      log_info "adding member %d" member ;
-     lwt _ = $society(society)<-members +=! (`Member [ "active" ], member) in
+     lwt _ = $society(society)<-members %% (fun members ->
+         match Ys_uid.Edges.mem member members with
+           true -> members
+         | false -> (`Member [ "active" ], member) :: members) in
      return_unit
 
    let remove_member ~member =

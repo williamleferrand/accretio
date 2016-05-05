@@ -95,13 +95,13 @@ type t = {
   followers : [ `Follower ] edges ;
 
   societies : [ `Society of string ] edges ;
-
+  tags : string ;
 } with vertex
   (
     {
       aliases = [ `String shortlink ; `PlainText name ; `PlainText description ; `PlainTextEdge timers timer_to_document ;
                   `PlainTextEdge societies society_to_document ;
-                  `PlainTextEdge members edge_to_document ; `PlainTextEdge data_keys data_key_to_document ] ;
+                  `PlainTextEdge members edge_to_document ; `PlainTextEdge data_keys data_key_to_document ; `PlainText tags ] ;
       required = [ shortlink ; leader ; name ; description ; mode ; playbook ] ;
       uniques = [ shortlink ]
     }

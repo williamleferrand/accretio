@@ -27,12 +27,15 @@
         margin: 0 0 24px 0 ;
     }
 
-    .playbook-automata {
-        margin-top: 40px;
-        svg {
-            width: 100% ;
+    .graph {
+        margin-top: 24px;
+        .playbook-automata {
+            margin-top: 40px;
+            svg {
+                width: 100% ;
+            }
+            margin-bottom: 40px;
         }
-        margin-bottom: 40px;
     }
 
     .create-society {
@@ -58,6 +61,8 @@
     .thread {
         margin-top: 24px ;
     }
+
+
 
 
 

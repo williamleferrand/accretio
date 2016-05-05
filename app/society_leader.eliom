@@ -107,6 +107,7 @@ let update_mode = server_function ~name:"society-leader-update-mode" Json.t<int 
 (* logs  *)
 
 let get_logs (society, since) =
+  let since = max since (Int64.sub (Ys_time.now ()) 86400L) in
   Lwt_log.ign_info_f "retrieving logs for society %d, since %Ld" society since ;
   Logs.list_all_from_society society since
 
@@ -397,7 +398,7 @@ let update_supervisor (society, email) =
          None -> return_none
        | Some uid ->
          lwt _ = $society(society)<-leader = uid in
-         lwt _ = $member(uid)<-societies +=! (`Society, uid) in
+         lwt _ = $member(uid)<-societies +=! (`Society, society) in
          lwt view = View_member.to_view uid in
          return (Some view))
 

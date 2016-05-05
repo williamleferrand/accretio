@@ -142,7 +142,7 @@ let builder playbooks =
     Ys_grid.create
       ~a:[ a_class [ "playbooks" ; "clearfix" ]]
       ~a_col:[ a_class [ "library-column" ]]
-      ~column_width:410
+      ~column_width:420
       ~content:(S.map (fun playbooks -> make_suggestion () :: List.map View_playbook.format playbooks) (RList.channel playbooks))
       ()
   in

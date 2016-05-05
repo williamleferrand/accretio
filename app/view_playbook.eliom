@@ -141,18 +141,18 @@ open Eliom_content.Html5.D
 let format view =
   let state, update_state = S.create `Closed in
   div ~a:[ a_class [ "playbook" ; "view-playbook" ] ;
-          (* a_onclick (fun _ -> Service.goto (Service.Playbook view.uid)) *) ] [
+           a_onclick (fun _ -> Service.goto (Service.Playbook view.uid)) ] [
     div ~a:[ a_class [ "name" ]] [ pcdata view.name ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;
-    (match view.properties with
+    (* (match view.properties with
        [] -> pcdata ""
      | _ as properties ->
        div ~a:[ a_class [ "properties" ]] [
          ul (List.map (fun property -> li [ h3 [ pcdata property.property_name ] ;
                                             pcdata property.property_value ]) properties)
-    ]) ;
-    div ~a:[ a_class [ "actions" ]] [
-      R.node
+    ]) ; *)
+(*    div ~a:[ a_class [ "actions" ]] [
+    (*  R.node
         (S.map
            (function
              | `Closed ->
@@ -217,15 +217,15 @@ let format view =
                ])
 
            state
-        ) ;
+        ) ; *)
 
-      div ~a:[ a_class [ "view-details" ]] [
+      (* div ~a:[ a_class [ "view-details" ]] [
         button
           ~a:[ a_button_type `Button ;
                a_onclick (fun _ -> Service.goto (Service.Playbook view.uid)) ]
-          [ pcdata "View details" ]
-      ] ;
-    ] ;
+          [ pcdata "Discover" ]
+      ] ; *)
+    ] ; *)
   ]
 
 let format_autocomplete view =

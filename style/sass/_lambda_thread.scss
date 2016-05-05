@@ -4,8 +4,8 @@
     .thread-messages {
 
         .thread-message {
-            line-height: 16px ;
-            margin: 18px 0 ;
+            line-height: 18px ;
+            margin: 0 0 10px 0 ;
             .lambda-member {
                 color: $grey ;
                 margin-right: 10px ;
@@ -16,12 +16,11 @@
         }
 
         .thread-message:first-child {
-           margin-top: 0!important ;
+            // margin-bottom: 18px!important ;
         }
     }
 
     .add-message {
-        margin-top: 18px;
         .thread-input {
             margin-right: 67px ;
         }

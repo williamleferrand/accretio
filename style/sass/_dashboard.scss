@@ -1,6 +1,7 @@
 .dashboard {
 
     .societies {
+        margin: auto ;
         padding-top: 16px ;
 
     }
@@ -9,7 +10,7 @@
     @media screen and (min-width: 800px) {
         .view-society {
             width: 400px ;
-            margin: 0 10px 10px 0 ;
+            margin: 0 20px 20px 0 ;
         }
         .society-column {
             float: left ;

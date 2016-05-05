@@ -19,13 +19,13 @@
         width: 44px;
         display: block;
         margin-right: 10px;
-        background-color: $grey ;
+        background-color: $nyellow ;
         cursor: pointer ;
     }
 
     .menu {
         @include round-button-fontello ;
-        background-color: $grey;
+        background-color: $nyellow;
         color: white;
         margin-right: 10px;
         margin-bottom: 10px;
@@ -45,7 +45,7 @@
             font-size: 22px;
             line-height: 44px;
             overflow: hidden ;
-            color: $grey ;
+            color: $nyellow ;
             img {
                 height: 100%;
             }
