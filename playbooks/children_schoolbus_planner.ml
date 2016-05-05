@@ -320,6 +320,37 @@ let plan_activity context () =
   in
   return `None
 
+(* pick up an activity to pitch *)
+
+let retrieve_pitch context () =
+  return `None
+
+let return_pitch context message =
+  let activity = {
+    activity_min_age_in_months = 18 ;
+    activity_max_age_in_months = 60 ;
+    activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
+    activity_title = "first field trip to the Zoo" ;
+    activity_description = "" ;
+    activity_steps = [] ;
+    activity_status =
+      Confirmed {
+        activity_number_of_spots = 8 ;
+        activity_price_per_spot = 80 ;
+        activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
+      } ;
+    activity_attachments = []
+  }
+  in
+  lwt _ =
+    context.reply_to
+      ~message
+      ~content:[ Unsafe.data (Yojson_activity.to_string activity) ]
+      ()
+  in
+  return `None
+
 (* the plumbing ***************************************************************)
 
 PLAYBOOK
@@ -331,6 +362,8 @@ PLAYBOOK
 
 *plan_activity<forward> ~> `Message of email ~> schedule_zoo_trip
 *suggest_earlier_zoo_trip
+
+*retrieve_pitch<forward> ~> `Message of email ~> return_pitch
 
 PROPERTIES
   - "Your duties", "None"
