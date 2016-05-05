@@ -518,6 +518,7 @@ let send_invites context activity =
              ]
              ()
          in
+         lwt _ = context.untag_member ~member ~tags:[ tag_to_invite ] in
          return_unit
       )
       members
