@@ -397,7 +397,7 @@ let update_supervisor (society, email) =
          None -> return_none
        | Some uid ->
          lwt _ = $society(society)<-leader = uid in
-         lwt _ = $member(uid)<-societies +=! (`Society, uid) in
+         lwt _ = $member(uid)<-societies +=! (`Society, society) in
          lwt view = View_member.to_view uid in
          return (Some view))
 
