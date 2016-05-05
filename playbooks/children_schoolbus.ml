@@ -390,7 +390,9 @@ let send_profiles context () =
            Lwt_list.iter_s
              (fun group ->
                 match_lwt context.search_societies ~query:group () with
-                [] -> return_unit
+                  [] ->
+                  context.log_info "skipping profile %d because I couldn't locate society %s" member group ;
+                  return_unit
                 | society :: _ ->
                   lwt _ =
                     context.message_society
