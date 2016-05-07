@@ -97,14 +97,48 @@ type activity_status =
     Confirmed of activity_confirmed
   | Suggestion of activity_suggestion with yojson
 
+type booking =
+  {
+    booking_member : int ;
+    booking_count : int ;
+    booking_date : int64 ;
+    booking_payment : int ;
+  } with yojson
+
 type activity =
   {
+    activity_uid : int ;
+    activity_reference : string ;
     activity_min_age_in_months : int ;
     activity_max_age_in_months : int ;
     activity_date : date ;
     activity_title : string ;
     activity_description : string ;
+    activity_summary : string ;
     activity_steps : activity_step list ;
     activity_status : activity_status  ;
     activity_attachments : attachment list ;
+    activity_bookings : booking list ;
+  } with yojson
+
+type request_lock_spots =
+  {
+    request_lock_spots_activity_uid : int ;
+    request_lock_spots_count : int ;
+  } with yojson
+
+type lock_spots =
+  {
+    lock_spots_activity_uid : int ;
+    lock_spots_count : int ;
+    lock_attachments : attachment list ;
+    lock_until : int64 ;
+  } with yojson
+
+type reply_lock_spots = EventFull | EventLock of lock_spots with yojson
+
+type request_confirm_booking =
+  {
+    request_confirm_booking_activity : int ;
+    request_confirm_booking_payment : int ;
   } with yojson

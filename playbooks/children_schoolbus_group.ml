@@ -259,7 +259,7 @@ let pricing_ok context message =
 
 let activity_uid = sprintf "%04d%04d%04d"
 let tag_already_suggested = sprintf "alreadysuggested%04d%04d%04d"
-let key_activity_uid = "activity-uid"
+let key_activity_reference = "activity-uid"
 
 let suggest_activity context () =
   return `None
@@ -273,7 +273,7 @@ let suggest_activity_to_members context message =
   try_lwt
     let activity = Yojson_activity.from_string content in
     let tag_already_suggested = tag_already_suggested activity.activity_date.year activity.activity_date.month activity.activity_date.day in
-    let activity_uid = activity_uid activity.activity_date.year activity.activity_date.month activity.activity_date.day in
+    lwt _ = context.set ~key:(activity.activity_reference) ~value:(Yojson_activity.to_string activity) in
     lwt members = context.search_members ~query:(sprintf "%s -%s" tag_agrees_with_pickup_point tag_already_suggested) () in
     context.log_info "suggesting a new activity to %d members" (List.length members) ;
 
@@ -327,7 +327,7 @@ let suggest_activity_to_members context message =
                  context.message_member
                    ~member
                    ~remind_after:(Calendar.Period.lmake ~hour:16 ())
-                   ~data:[ key_activity_uid, activity_uid ]
+                   ~data:[ key_activity_reference, activity.activity_reference ]
                    ~subject:activity.activity_title
                    ~attachments
                    ~content:
@@ -410,8 +410,8 @@ let suggest_activity_to_members context message =
 
 let tag_declined = sprintf "declined%s"
 
-let decline_activity context message =
-  match_lwt context.get_message_data ~message ~key:key_activity_uid with
+let with_activity context message f =
+  match_lwt context.get_message_data ~message ~key:key_activity_reference with
   | None ->
     lwt _ =
       context.forward_to_supervisor
@@ -421,10 +421,196 @@ let decline_activity context message =
         ()
     in
     return `None
-  | Some activity_uid ->
-    lwt member = context.get_message_sender ~message in
-    lwt _ = context.tag_member ~member ~tags:[ tag_declined activity_uid ] in
+  | Some activity_reference ->
+    match_lwt context.get ~key:activity_reference with
+      None ->
+      lwt _ =
+        context.forward_to_supervisor
+          ~message
+          ~subject:"The activity doesn't exist in this group"
+          ~content:[ pcdata "Couldn't figure out the activity" ]
+          ()
+      in
+      return `None
+    | Some activity ->
+      let activity = Yojson_activity.from_string activity in
+      f activity
+
+let decline_activity_and_stay context message =
+  with_activity context message
+    (fun activity ->
+       lwt member = context.get_message_sender ~message in
+       lwt _ = context.tag_member ~member ~tags:[ tag_declined activity.activity_reference ] in
+       lwt _ = context.reply_to
+                 ~message
+                 ~content:[
+                   pcdata "Ok, no problem, thanks for responding. I will keep you posted about future events!"
+                 ]
+                 ()
+       in
+       return `None)
+
+let decline_activity_and_leave context message =
+  with_activity context message
+    (fun activity ->
+       lwt member = context.get_message_sender ~message in
+       lwt _ = context.tag_member ~member ~tags:[ tag_declined activity.activity_reference ] in
+       lwt _ =
+         context.reply_to
+           ~message
+           ~content:[
+             pcdata "Ok, no problem, thanks for responding. I am removing you from this list"
+           ]
+           ()
+       in
+       context.log_info "removing member %d from the list" member ;
+       lwt _ = context.remove_member ~member in
+       return `None)
+
+let label_remind_activity = sprintf "remindactivity%d%s"
+
+let remind_in_one_week context message =
+  with_activity context message
+    (fun activity ->
+       lwt _ =
+         context.reply_to
+           ~message
+           ~content:[
+             pcdata "Ok, no problem, thanks for responding. I will get back in touch in a week!"
+           ]
+           ()
+       in
+       lwt member = context.get_message_sender ~message in
+       lwt _ =
+         context.set_timer
+           ~duration:(Calendar.Period.lmake ~day:7 ())
+           ~label:(label_remind_activity member activity.activity_reference)
+           (`RemindActivity message)
+       in
+       return `None)
+
+let remind_activity context message =
+  with_activity context message
+    (fun activity ->
+       lwt member = context.get_message_sender ~message in
+       lwt salutations = salutations member in
+       lwt _ =
+         context.reply_to
+           ~message
+           ~content:[
+             salutations ; br () ;
+             br () ;
+             pcdata "We are still planning to go to " ; pcdata activity.activity_summary ; br () ;
+             br () ;
+             pcdata "Would you like to join us?" ; br ()
+           ]
+           ()
+       in
+       return `None)
+
+let with_planner context f =
+  match_lwt context.search_societies ~query:"planner" () with
+    [] ->
+    lwt _ =
+      context.message_supervisor
+        ~subject:"Missing planner"
+        ~content:[ pcdata "couldn't locate planner" ]
+        ()
+    in
     return `None
+  | planner :: _ ->
+    f planner
+
+let key_original_message = "original-message"
+
+let join_activity context message =
+  with_activity context message
+    (fun activity ->
+       with_planner context
+         (fun planner ->
+            lwt _ =
+              context.message_society
+                ~society:planner
+                ~data:[ key_original_message, string_of_int message ;
+                        key_activity_reference, activity.activity_reference ]
+                ~stage:"request_lock_spot"
+                ~subject:"block spot"
+                ~content:(Yojson_request_lock_spots.to_string {
+                    request_lock_spots_activity_uid = activity.activity_uid ;
+                    request_lock_spots_count = 1
+                  })
+                ()
+            in
+            return `None))
+
+let with_original_message context message f =
+  match_lwt context.get_message_data ~message ~key:key_original_message with
+    None ->
+    lwt _ = context.forward_to_supervisor
+              ~message
+              ~subject:"Message doesn't have original message"
+              ~content:[]
+              ()
+    in
+    return `None
+  | Some original_message -> f (int_of_string original_message)
+
+let ask_payment context message =
+  with_activity context message
+    (fun activity ->
+       with_original_message context message
+         (fun original_message ->
+            lwt content = context.get_message_content ~message in
+            match Yojson_reply_lock_spots.from_string content with
+              EventFull ->
+              lwt _ =
+                context.reply_to
+                  ~message:original_message
+                  ~content:[ pcdata "Sorry, the event is currently full .. let me see if can extend the number of spots" ]
+                  ()
+              in
+              return `None
+            | EventLock lock ->
+              (* let's hardcode the cost for now *)
+              lwt member = context.get_message_sender ~message:original_message in
+              let evidence =
+                List.map
+                  (fun attachment ->
+                     { Object_message.filename = attachment.filename ;
+                       Object_message.content_type = attachment.content_type ;
+                       Object_message.content = attachment.content ;
+                     })
+                  lock.lock_attachments
+              in
+
+              match_lwt context.request_payment
+                          ~member
+                          ~label:"One spot for the SF Zoo class"
+                          ~evidence
+                          ~amount:30.0
+                          ~on_success:(fun uid -> `PaymentSuccess (uid, activity.activity_uid, original_message))
+                          ~on_failure:(fun uid -> `PaymentFailure uid) with
+              None ->
+                lwt _ =
+                  context.forward_to_supervisor
+                    ~message
+                    ~subject:"Payment creation failed"
+                    ~content:[ pcdata "Couldn't create the payment object" ]
+                    ()
+                in
+                return `None
+              | Some payment ->
+                lwt link = context.payment_direct_link ~payment in
+                lwt _ =
+                  context.reply_to
+                    ~message:original_message
+                    ~content:[
+                      pcdata link
+                    ]
+                    ()
+                in
+                return `None))
+
 
 (* profile management *)
 
@@ -437,6 +623,52 @@ let decode_and_store_profile context message =
   context.log_info "we got a profile for member %s" profile.email ;
   lwt _ = set_profile context profile in
   return `None
+
+let payment_success context (payment, activity, original_message) =
+  with_planner context
+    (fun planner ->
+       context.log_info "payment success for payment %d" payment ;
+       lwt _ =
+         context.message_supervisor
+           ~subject:"Payment success"
+           ~content:[ pcdata "Investigate payment success" ]
+           ()
+       in
+       lwt _ =
+         context.message_society
+           ~society:planner
+           ~stage:"request_confirm_booking"
+           ~data:[ key_original_message, string_of_int original_message ]
+           ~subject:"confirm booking"
+           ~content:(Yojson_request_confirm_booking.to_string
+                       {
+                         request_confirm_booking_activity = activity ;
+                         request_confirm_booking_payment = payment ;
+                       })
+           ()
+       in
+       return `None)
+
+let payment_failure context payment =
+  context.log_info "payment failure for payment %d" payment ;
+  lwt _ =
+    context.message_supervisor
+      ~subject:"Payment failure"
+      ~content:[ pcdata "Investigate payment failure" ]
+      ()
+  in
+  return `None
+
+let send_confirmation context message =
+  with_original_message context message
+    (fun message ->
+       lwt _ =
+         context.reply_to
+           ~message
+           ~content:[ pcdata "Thanks for your payment, you're in!" ]
+           ()
+       in
+       return `None)
 
 (* the playbook ***************************************************************)
 
@@ -454,7 +686,14 @@ new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_prefe
 *validate_pricing<forward> ~> `Message of email ~> ask_members_for_their_opinion_on_pricing ~> `PricingTooMuch of email ~> pricing_too_much
                                                    ask_members_for_their_opinion_on_pricing ~> `PricingOk of email ~> pricing_ok
 
-*suggest_activity<forward> ~> `Message of email ~> suggest_activity_to_members ~> `DeclineActivity of email ~> decline_activity
+*suggest_activity<forward> ~> `Message of email ~> suggest_activity_to_members ~> `DeclineActivityAndStay of email ~> decline_activity_and_stay
+                                                   suggest_activity_to_members ~> `DeclineActivityAndLeave of email ~> decline_activity_and_leave
+                                                   suggest_activity_to_members ~> `RemindInOneWeek of email ~> remind_in_one_week ~> `RemindActivity of int ~> remind_activity
+                                                   suggest_activity_to_members ~> `JoinActivity of email ~> join_activity<forward> ~> `Message of email ~> ask_payment
+
+ask_payment ~> `PaymentSuccess of (int * int * int) ~> payment_success<forward> ~> `Message of email ~> send_confirmation
+ask_payment ~> `PaymentFailure of int ~> payment_failure
+
 *store_profile<forward> ~> `Message of email ~> decode_and_store_profile
 
 PROPERTIES
