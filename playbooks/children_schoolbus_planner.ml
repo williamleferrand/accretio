@@ -152,17 +152,21 @@ let suggest_earlier_zoo_trip context () =
     ] in
 
   let activity activity_steps = {
+    activity_uid = 1 ;
+    activity_reference = sprintf "%04d%04d%04d" 2016 5 27 ;
     activity_min_age_in_months = 18 ;
     activity_max_age_in_months = 42 ;
     activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
     activity_title = "Field trip proposal - SF Zoo on 5/27 - 'Cuddly Koalas' - $80 all included" ;
     activity_description = "I'm making some progress! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27. The class itself is targetting children 3 to 4, but there is another class earlier at 9:00am for younger kids. If there is enough interest for the earlier class, I could do an additional trip with the rented van and bring a group to the Zoo in time for the early class." ;
+    activity_summary = "SF zoo on 5/27" ;
     activity_steps ;
     activity_status =
       Suggestion {
         activity_suggestion = "The cost would be $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
       } ;
     activity_attachments = [] ;
+    activity_bookings = []
   }
   in
 
@@ -254,10 +258,13 @@ let schedule_zoo_trip context message =
     ] in
 
   let activity activity_steps = {
+    activity_uid = 1 ;
+    activity_reference = sprintf "%04d%04d%04d" 2016 5 27 ;
     activity_min_age_in_months = 30 ;
     activity_max_age_in_months = 60 ;
     activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
     activity_title = "First field trip, SF Zoo on 5/27 - Lemur class! $80 all included, please RSVP" ;
+    activity_summary = "zoo on 5/27" ;
     activity_description = "I have very exciting news! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27! Regarding transporation, bus chartering was a bit on the expensive side so for this first trip I will rent a large passenger van and drive people around to keep cost under control." ;
     activity_steps ;
     activity_status =
@@ -268,6 +275,7 @@ let schedule_zoo_trip context message =
         activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
       } ;
     activity_attachments ;
+    activity_bookings = []
   }
   in
 
@@ -327,11 +335,14 @@ let retrieve_pitch context () =
 
 let return_pitch context message =
   let activity = {
+    activity_uid = 0 ;
+    activity_reference = "pitch" ;
     activity_min_age_in_months = 18 ;
     activity_max_age_in_months = 60 ;
     activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
     activity_title = "first field trip to the Zoo" ;
     activity_description = "" ;
+    activity_summary = "" ;
     activity_steps = [] ;
     activity_status =
       Confirmed {
@@ -340,7 +351,8 @@ let return_pitch context message =
         activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
         activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
       } ;
-    activity_attachments = []
+    activity_attachments = [] ;
+    activity_bookings = [] ;
   }
   in
   lwt _ =
@@ -350,6 +362,180 @@ let return_pitch context message =
       ()
   in
   return `None
+
+(* locking slots **************************************************************)
+
+let request_lock_spot context () =
+  return `None
+
+(* we have the executor lock around this call, we're good *)
+let lock_spot context message =
+  lwt content = context.get_message_content ~message in
+  let request = Yojson_request_lock_spots.from_string content in
+
+  let now = Ys_time.now () in
+  lwt number_of_spots, bookings = $activity(request.request_lock_spots_activity_uid)->(number_of_spots, bookings) in
+  lwt number_of_spots =
+    Lwt_list.fold_left_s
+      (fun acc (`Booking, uid) ->
+         match_lwt $booking(uid)->(status, count) with
+           | Confirmed _, count -> return (acc - count)
+           | Pending, count -> return (acc - count) (* todo, expire there *))
+      number_of_spots
+      bookings
+  in
+
+  if number_of_spots < 1 then
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ Unsafe.data (Yojson_reply_lock_spots.to_string EventFull) ]
+        ()
+    in
+    return `None
+  else
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[
+          Unsafe.data
+            (Yojson_reply_lock_spots.to_string
+               (EventLock {
+                   lock_spots_activity_uid = request.request_lock_spots_activity_uid ;
+                   lock_spots_count = number_of_spots ;
+                   lock_attachments = [] ;
+                   lock_until = now ;
+                 }))
+        ]
+        ()
+    in
+    return `None
+
+
+(* the curriculum *************************************************************)
+(* lots and lots of todo here .. *)
+
+let persist activity =
+  match_lwt Object_activity.Store.find_by_reference activity.activity_reference with
+  | Some uid -> return uid
+  | None ->
+    match_lwt
+      Object_activity.Store.create
+        ~reference:activity.activity_reference
+        ~min_age_in_months:activity.activity_min_age_in_months
+        ~max_age_in_months:activity.activity_max_age_in_months
+        ~title:activity.activity_title
+        ~description:activity.activity_description
+        ~summary:activity.activity_summary
+        ~number_of_spots:8
+        () with
+    | `Object_already_exists (_, uid) -> return uid
+    | `Object_created activity -> return activity.Object_activity.uid
+
+
+ let zoo_5_27_16_3_4 =
+   {
+     activity_uid = 1 ;
+     activity_reference = sprintf "%04d%04d%04d" 2016 5 27 ;
+     activity_min_age_in_months = 30 ;
+     activity_max_age_in_months = 60 ;
+     activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
+     activity_title = "First field trip, SF Zoo on 5/27 - Lemur class! $80 all included, please RSVP" ;
+     activity_summary = "zoo on 5/27" ;
+     activity_description = "I have very exciting news! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27! Regarding transporation, bus chartering was a bit on the expensive side so for this first trip I will rent a large passenger van and drive people around to keep cost under control." ;
+     activity_steps = [] ;
+     activity_status =
+      Confirmed {
+        activity_number_of_spots = 8 ;
+        activity_price_per_spot = 80 ;
+        activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
+      } ;
+    activity_attachments = [] ;
+    activity_bookings = []
+   }
+
+ let zoo_5_27_16_2_3 =
+   {
+     activity_uid = 2 ;
+     activity_reference = sprintf "2to3on%04d%04d%04d" 2016 5 27 ;
+     activity_min_age_in_months = 30 ;
+     activity_max_age_in_months = 60 ;
+     activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
+     activity_title = "First field trip, SF Zoo on 5/27 - Lemur class! $80 all included, please RSVP" ;
+     activity_summary = "zoo on 5/27" ;
+     activity_description = "I have very exciting news! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27! Regarding transporation, bus chartering was a bit on the expensive side so for this first trip I will rent a large passenger van and drive people around to keep cost under control." ;
+     activity_steps = [] ;
+     activity_status =
+      Confirmed {
+        activity_number_of_spots = 8 ;
+        activity_price_per_spot = 80 ;
+        activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
+      } ;
+    activity_attachments = [] ;
+    activity_bookings = []
+   }
+
+let _ =
+  ignore_result
+    (Lwt_list.map_s
+       persist
+       [
+         zoo_5_27_16_3_4 ;
+         zoo_5_27_16_2_3
+       ])
+
+(* confirm the booking ********************************************************)
+
+let request_confirm_booking context message =
+  return `None
+
+let confirm_booking context message =
+  lwt content = context.get_message_content ~message in
+  let request_confirm_booking = Yojson_request_confirm_booking.from_string content in
+  context.log_info "confirming booking for activity %d"
+    request_confirm_booking.request_confirm_booking_activity ;
+  (* let's try to make it idempotent *)
+  lwt bookings = $activity(request_confirm_booking.request_confirm_booking_activity)->bookings in
+  lwt already_exists =
+    Lwt_list.exists_s
+      (fun (`Booking, uid) ->
+         match_lwt $booking(uid)->status with
+          | Object_booking.Confirmed payment when payment = request_confirm_booking.request_confirm_booking_payment -> return_true
+          | _ -> return_false)
+       bookings
+  in
+  match already_exists with
+    true ->
+    context.log_info "booking already exists .." ;
+    return `None
+  | false ->
+    lwt member = $payment(request_confirm_booking.request_confirm_booking_payment)->member in
+    lwt booking =
+      match_lwt Object_booking.Store.create
+                  ~member
+                  ~count:1
+                  ~status:(Object_booking.Confirmed request_confirm_booking.request_confirm_booking_payment)
+                  ()
+      with
+      | `Object_created booking -> return booking.Object_booking.uid
+    in
+    lwt _ = $activity(request_confirm_booking.request_confirm_booking_activity)<-bookings += (`Booking, booking) in
+    lwt _ =
+      context.message_supervisor
+        ~subject:"New booking"
+        ~content:[ pcdata "A new booking was collected" ]
+        ()
+    in
+    lwt _ =
+      context.reply_to
+        ~message
+        ~content:[ pcdata "success" ]
+        ()
+    in
+    return `None
+
 
 (* the plumbing ***************************************************************)
 
@@ -361,9 +547,14 @@ PLAYBOOK
  validate_transporation ~> `Message of email ~> extract_quote
 
 *plan_activity<forward> ~> `Message of email ~> schedule_zoo_trip
+
 *suggest_earlier_zoo_trip
 
 *retrieve_pitch<forward> ~> `Message of email ~> return_pitch
+
+*request_lock_spot<forward> ~> `Message of email ~> lock_spot
+
+*request_confirm_booking<forward> ~> `Message of email ~> confirm_booking
 
 PROPERTIES
   - "Your duties", "None"

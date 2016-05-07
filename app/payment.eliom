@@ -297,7 +297,7 @@ let builder = function
       payment_amount ;
       R.node payment_method ;
       div ~a:[ a_class [ "payment-footnote" ]] [
-        pcdata "Payments are secured by Stripe. Accretio doesn't store your payment information"
+        pcdata "Payments are secured by Stripe. Accretio doesn't store your payment information. The price displayed includes the Stripe service fee."
       ]
     ]
 
