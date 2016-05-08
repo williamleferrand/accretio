@@ -547,9 +547,9 @@ let with_original_message context message f =
   match_lwt context.get_message_data ~message ~key:key_original_message with
     None ->
     lwt _ = context.forward_to_supervisor
-              ~message
-              ~subject:"Message doesn't have original message"
-              ~content:[]
+        ~message
+        ~subject:"Message doesn't have original message"
+        ~content:[]
               ()
     in
     return `None
