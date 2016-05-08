@@ -37,7 +37,7 @@ let tags = ""
 
 let tag_mute = "mute"
 let tag_to_invite = "toinvite"
-let tag_interested_in_general = "interestedingeneral"
+let tag_interested_in_general = "interested"
 
 (* keys ***********************************************************************)
 
