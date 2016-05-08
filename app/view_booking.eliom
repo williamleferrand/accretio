@@ -25,46 +25,35 @@ open Sessions
 open Ys_uid
 open Vault
 
-type state = Pending | Failed of string | Paid
-
-type currency = USD
+type status = Pending | Confirmed of View_payment.t
 
 type t =
   {
     uid : uid ;
-    label : string ;
-    society : View_society.t ;
-    state : state ;
-    amount : float ;
-    currency : currency ;
+    member : View_member.t ;
+    count : int ;
+    status : status ;
   }
 
 }}
 
 {server{
 
-let to_state =
-  function
-    Object_payment.Pending -> Pending
-  | Object_payment.Failed reason -> Failed reason
-  | Object_payment.Paid -> Paid
-
-let to_currency =
-  function
-    Object_payment.USD -> USD
-
 let to_view uid =
-  lwt label, society, state, amount, currency = $payment(uid)->(label, society, state, amount, currency) in
-  lwt society = View_society.to_view society in
-  let state = to_state state in
-  let currency = to_currency currency in
+  lwt member, count, status = $booking(uid)->(member, count, status) in
+  lwt member = View_member.to_view member in
+  lwt status =
+    match status with
+      Object_booking.Pending -> return Pending
+    | Object_booking.Confirmed uid ->
+      lwt payment = View_payment.to_view uid in
+      return (Confirmed payment)
+  in
   return {
     uid ;
-    label ;
-    society ;
-    state ;
-    amount ;
-    currency ;
+    member ;
+    count ;
+    status ;
   }
 
 }}
@@ -77,16 +66,20 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 let format view =
-  let state =
-    match view.state with
+  let status =
+    match view.status with
     | Pending -> [ pcdata "Pending" ]
-    | Failed msg -> [ pcdata "Failed: " ; pcdata msg ]
-    | Paid -> [ pcdata "Paid" ]
+    | Confirmed payment -> [ pcdata "Confirmed" ;
+                             View_payment.format payment ]
   in
-  div ~a:[ a_class [ "view-payment" ]] [
-    div ~a:[ a_class [ "label" ]] [ pcdata view.label ] ;
-    div ~a:[ a_class [ "amount" ]] [ pcdata (Printf.sprintf "$%.2f" view.amount) ] ;
-    div ~a:[ a_class [ "state" ]] state ;
+  div ~a:[ a_class [ "view-booking" ]] [
+    div ~a:[ a_class [ "member" ]] [
+      View_member.format view.member
+    ] ;
+    div ~a:[ a_class [ "count" ]] [
+      pcdata (string_of_int view.count)
+    ] ;
+    div ~a:[ a_class [ "status" ]] status
   ]
 
 }}

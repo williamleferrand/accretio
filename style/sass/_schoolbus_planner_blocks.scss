@@ -1,0 +1,29 @@
+.schoolbus-planner-activities {
+
+    .view-activity {
+        @include box-common ;
+        margin-bottom: 20px;
+        padding: 18px;
+    }
+
+    .view-booking {
+        @include box-common ;
+        background-color: $nblue ;
+        margin-bottom: 20px;
+        padding: 18px;
+    }
+
+    .view-member {
+        @include box-common ;
+        background-color: $nblue ;
+        margin-bottom: 20px;
+        padding: 18px;
+    }
+
+    .view-payment {
+        @include box-common ;
+        background-color: $npink ;
+        padding: 18px;
+    }
+
+}

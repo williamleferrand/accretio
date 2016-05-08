@@ -415,22 +415,31 @@ let lock_spot context message =
 (* the curriculum *************************************************************)
 (* lots and lots of todo here .. *)
 
-let persist activity =
-  match_lwt Object_activity.Store.find_by_reference activity.activity_reference with
-  | Some uid -> return uid
-  | None ->
-    match_lwt
-      Object_activity.Store.create
-        ~reference:activity.activity_reference
-        ~min_age_in_months:activity.activity_min_age_in_months
-        ~max_age_in_months:activity.activity_max_age_in_months
-        ~title:activity.activity_title
-        ~description:activity.activity_description
-        ~summary:activity.activity_summary
-        ~number_of_spots:8
-        () with
-    | `Object_already_exists (_, uid) -> return uid
-    | `Object_created activity -> return activity.Object_activity.uid
+let persist context activity =
+  lwt uid =
+    match_lwt Object_activity.Store.find_by_reference activity.activity_reference with
+    | Some uid ->
+      lwt _ = $activity(uid)<-society = context.society in
+      return uid
+    | None ->
+      match_lwt
+        Object_activity.Store.create
+          ~society:context.society
+          ~reference:activity.activity_reference
+          ~min_age_in_months:activity.activity_min_age_in_months
+          ~max_age_in_months:activity.activity_max_age_in_months
+          ~title:activity.activity_title
+          ~description:activity.activity_description
+          ~summary:activity.activity_summary
+          ~number_of_spots:8
+          () with
+      | `Object_already_exists (_, uid) -> return uid
+      | `Object_created activity -> return activity.Object_activity.uid
+  in
+  (* WARN: this is super dangerous at it will erase other edges with
+    the same target uid but different label (to be fixed one day in pa_vertex *)
+  lwt _ = $society(context.society)<-objects +=! (`Activity, uid) in
+  return_unit
 
 
  let zoo_5_27_16_3_4 =
@@ -477,14 +486,17 @@ let persist activity =
     activity_bookings = []
    }
 
-let _ =
-  ignore_result
-    (Lwt_list.map_s
-       persist
-       [
+let persist context () =
+  lwt _ =
+    Lwt_list.iter_s
+      (persist context)
+      [
          zoo_5_27_16_3_4 ;
          zoo_5_27_16_2_3
-       ])
+      ]
+  in
+  context.log_info "activity was persisted" ;
+  return `None
 
 (* confirm the booking ********************************************************)
 
@@ -555,6 +567,8 @@ PLAYBOOK
 *request_lock_spot<forward> ~> `Message of email ~> lock_spot
 
 *request_confirm_booking<forward> ~> `Message of email ~> confirm_booking
+
+*persist
 
 PROPERTIES
   - "Your duties", "None"

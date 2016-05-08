@@ -32,6 +32,7 @@ type t = {
   uid : uid ;
 
   created_on : timestamp ;
+  society: uid ;
 
   reference : string ;
   min_age_in_months : int ;
@@ -51,7 +52,7 @@ type t = {
   (
     {
       aliases = [ `String reference ] ;
-      required = [ reference ; min_age_in_months ; max_age_in_months ; number_of_spots ; title ; description ] ;
+      required = [ society ; reference ; min_age_in_months ; max_age_in_months ; number_of_spots ; title ; description ] ;
       uniques = [ reference ] ;
     }
   )

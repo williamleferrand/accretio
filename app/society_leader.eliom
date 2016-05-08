@@ -548,6 +548,14 @@ let dom bundle =
                options)
         with Not_found -> pcdata ""
       in
+      let classs =
+        R.a_class
+          (S.map
+             (function
+               | View_message.Pending -> [ "message-box" ; "message-pending" ]
+               | View_message.RoutedToStage _ -> [ "message-box" ])
+             action)
+      in
       let action =
         R.node
           (S.map
@@ -576,7 +584,7 @@ let dom bundle =
           ~a:[ a_button_type `Button ; a_onclick reply ]
           [ pcdata "Reply" ]
       in
-      div ~a:[ a_class [ "message-box" ]] [
+      div ~a:[ classs ] [
         View_message.format message ;
         action ;
         tagger ;
