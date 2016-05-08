@@ -655,13 +655,17 @@ h2 {
   margin: auto;
   padding-top: 16px;
 }
+/* line 6, ../sass/_dashboard.scss */
+.dashboard .societies .view-society {
+  margin: 0 0 20px 0;
+}
 @media screen and (min-width: 800px) {
-  /* line 11, ../sass/_dashboard.scss */
+  /* line 12, ../sass/_dashboard.scss */
   .dashboard .view-society {
     width: 400px;
-    margin: 0 20px 20px 0;
+    margin: 0 20px 20px 0 !important;
   }
-  /* line 15, ../sass/_dashboard.scss */
+  /* line 16, ../sass/_dashboard.scss */
   .dashboard .society-column {
     float: left;
   }
@@ -1214,31 +1218,35 @@ h2 {
   margin-bottom: 10px;
   padding-bottom: 10px;
 }
-/* line 78, ../sass/_society_leader.scss */
+/* line 77, ../sass/_society_leader.scss */
+.society-leader .society-leader-lower .mailboxes .inbox .message-pending, .society-leader .society-leader-lower .mailboxes .outbox .message-pending {
+  background-color: red !important;
+}
+/* line 81, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .mailboxes .inbox {
   background-color: black;
   color: white;
 }
-/* line 82, ../sass/_society_leader.scss */
+/* line 85, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .mailboxes .inbox .tagger button {
   margin-right: 10px;
 }
-/* line 89, ../sass/_society_leader.scss */
+/* line 92, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .mailboxes .outbox {
   background-color: pink;
 }
-/* line 95, ../sass/_society_leader.scss */
+/* line 98, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .triggers {
   background-color: orange;
 }
-/* line 97, ../sass/_society_leader.scss */
+/* line 100, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .triggers .trigger {
   width: 550px;
   padding-bottom: 10px;
   padding-right: 10px;
   float: left;
 }
-/* line 103, ../sass/_society_leader.scss */
+/* line 106, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .triggers input[type="number"], .society-leader .society-leader-lower .triggers input[type="text"] {
   padding: 10px;
   font-size: 14px;
@@ -1251,35 +1259,35 @@ h2 {
   margin-right: 10px;
   display: inline;
 }
-/* line 117, ../sass/_society_leader.scss */
+/* line 120, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members {
   background-color: #CECECE;
 }
-/* line 124, ../sass/_society_leader.scss */
+/* line 127, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .members .member {
   margin-top: 10px;
 }
-/* line 130, ../sass/_society_leader.scss */
+/* line 133, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger {
   background-color: yellow;
 }
-/* line 132, ../sass/_society_leader.scss */
+/* line 135, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger button {
   margin-left: 10px;
 }
-/* line 135, ../sass/_society_leader.scss */
+/* line 138, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .messenger .messenger-controls {
   margin-top: 10px;
 }
-/* line 140, ../sass/_society_leader.scss */
+/* line 143, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .data {
   background-color: #f9d5f9;
 }
-/* line 142, ../sass/_society_leader.scss */
+/* line 145, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .data .data-item {
   margin-top: 10px;
 }
-/* line 148, ../sass/_society_leader.scss */
+/* line 151, ../sass/_society_leader.scss */
 .society-leader .society-leader-lower .supervisor input[type="text"] {
   width: 100%;
 }
@@ -1680,6 +1688,10 @@ h2 {
   line-height: 18px;
   margin-bottom: 16px;
 }
+/* line 86, ../sass/_schoolbus.scss */
+.society-leader .profile-not-assigned, .manage .profile-not-assigned {
+  background-color: #ff5454 !important;
+}
 
 /* line 3, ../sass/_manage.scss */
 .manage .manage-menu {
@@ -1699,4 +1711,203 @@ h2 {
 /* line 25, ../sass/_manage.scss */
 .manage-societies .societies > div {
   margin-bottom: 20px;
+}
+
+/* line 3, ../sass/_schoolbus_planner_blocks.scss */
+.schoolbus-planner-activities .view-activity {
+  background-color: #b5629b;
+  position: relative;
+  color: white;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  padding: 18px;
+}
+/* line 8, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity h2, .schoolbus-planner-activities .view-activity h3 {
+  margin-bottom: 18px;
+}
+/* line 12, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity h2 {
+  font-size: 18px;
+}
+/* line 16, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity h3 {
+  font-size: 18px;
+}
+/* line 21, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .box-section {
+  margin-bottom: 18px;
+}
+/* line 25, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .box-action button {
+  margin-left: 18px;
+}
+/* line 36, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.schoolbus-planner-activities .view-activity .join-before button {
+  padding-right: 10px;
+}
+/* line 9, ../sass/_schoolbus_planner_blocks.scss */
+.schoolbus-planner-activities .view-booking {
+  background-color: #b5629b;
+  position: relative;
+  color: white;
+  border-radius: 5px;
+  background-color: #1c9fad;
+  margin-bottom: 20px;
+  padding: 18px;
+}
+/* line 8, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking h2, .schoolbus-planner-activities .view-booking h3 {
+  margin-bottom: 18px;
+}
+/* line 12, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking h2 {
+  font-size: 18px;
+}
+/* line 16, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking h3 {
+  font-size: 18px;
+}
+/* line 21, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .box-section {
+  margin-bottom: 18px;
+}
+/* line 25, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .box-action button {
+  margin-left: 18px;
+}
+/* line 36, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.schoolbus-planner-activities .view-booking .join-before button {
+  padding-right: 10px;
+}
+/* line 16, ../sass/_schoolbus_planner_blocks.scss */
+.schoolbus-planner-activities .view-member {
+  background-color: #b5629b;
+  position: relative;
+  color: white;
+  border-radius: 5px;
+  background-color: #1c9fad;
+  margin-bottom: 20px;
+  padding: 18px;
+}
+/* line 8, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member h2, .schoolbus-planner-activities .view-member h3 {
+  margin-bottom: 18px;
+}
+/* line 12, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member h2 {
+  font-size: 18px;
+}
+/* line 16, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member h3 {
+  font-size: 18px;
+}
+/* line 21, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .box-section {
+  margin-bottom: 18px;
+}
+/* line 25, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .box-action button {
+  margin-left: 18px;
+}
+/* line 36, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.schoolbus-planner-activities .view-member .join-before button {
+  padding-right: 10px;
+}
+/* line 23, ../sass/_schoolbus_planner_blocks.scss */
+.schoolbus-planner-activities .view-payment {
+  background-color: #b5629b;
+  position: relative;
+  color: white;
+  border-radius: 5px;
+  background-color: #429844;
+  padding: 18px;
+}
+/* line 8, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment h2, .schoolbus-planner-activities .view-payment h3 {
+  margin-bottom: 18px;
+}
+/* line 12, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment h2 {
+  font-size: 18px;
+}
+/* line 16, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment h3 {
+  font-size: 18px;
+}
+/* line 21, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .box-section {
+  margin-bottom: 18px;
+}
+/* line 25, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .box-section:last-child {
+  margin-bottom: 0px;
+}
+/* line 29, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .box-action {
+  text-align: right;
+}
+/* line 31, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .box-action button {
+  margin-left: 18px;
+}
+/* line 36, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .pitch {
+  text-align: center;
+}
+/* line 40, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .join-before {
+  text-align: center;
+}
+/* line 42, ../sass/_box.scss */
+.schoolbus-planner-activities .view-payment .join-before button {
+  padding-right: 10px;
 }

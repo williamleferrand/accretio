@@ -36,6 +36,8 @@ let tags = ""
 (* tags ***********************************************************************)
 
 let tag_mute = "mute"
+let tag_to_invite = "toinvite"
+let tag_interested_in_general = "interested"
 
 (* keys ***********************************************************************)
 
@@ -99,6 +101,7 @@ let noop context () =
 
 let ask_supervisor_to_extract_information context message =
   lwt sender = context.get_message_sender ~message in
+
   lwt profile = get_or_create_profile context sender in
   let stringified = Yojson_profile.to_string profile in
   lwt email = $member(sender)->preferred_email in
@@ -113,7 +116,7 @@ let ask_supervisor_to_extract_information context message =
         br () ;
         pcdata "Could you fill up the Json below? (and return only the json)" ; br () ;
         br () ;
-        pcdata stringified ; br () ;
+        Unsafe.data stringified ; br () ;
       ]
       ()
   in
@@ -127,11 +130,7 @@ let store_profile_and_ask_for_missing_elements context message =
     lwt _ = context.set ~key:(key_profile profile.uid) ~value:stringified in
     Lwt_log.ign_info_f "storing profile %s (neighborhood was %s, original was %s)" stringified profile.neighborhood content ;
 
-    lwt fields =
-      match_lwt context.get ~key:(key_last_message profile.uid) with
-        Some _ -> return [ Name ; Children ; Neighborhood ; Schedule ]
-      | None -> return [ Children ; Neighborhood ; Schedule ]
-    in
+    let fields = [ Children ; Neighborhood ; Schedule ] in
 
     let missing_fields =
       List.filter
@@ -151,7 +150,16 @@ let store_profile_and_ask_for_missing_elements context message =
     in
 
     match missing_fields with
-      [] -> return (`ThankMember profile.uid)
+      [] ->
+      lwt _ =
+        context.message_supervisor
+          ~subject:"new full profile, need assignment"
+          ~content:[
+            pcdata "there is a new full profile waiting for an assignment" ; br () ;
+          ]
+          ()
+      in
+      return (`ThankMember profile.uid)
     | _ as fields -> return (`AskMemberForMissingFields (profile.uid, fields))
 
   with exn ->
@@ -180,7 +188,7 @@ let thank_member context member =
            ~content:[
              salutations ; br () ;
              br () ;
-             pcdata "Thanks for your note. I'll follow up shortly with more details but we would need a little more participants to fill up the first bus, do you know people who would be interested in joining us?"
+             pcdata "Thanks for your note. I'll follow up shortly with some suggestions of upcoming trips."
            ]
            () in
        return `None)
@@ -190,7 +198,7 @@ let thank_member context member =
       context.reply_to
         ~message
         ~content:[
-          pcdata "Thanks, that's great. I'll follow up shortly with more details but we would need a little more participants to fill up the first bus, do you know people who would be interested in joining us?"
+          pcdata "Thanks, that's great. I'll follow up shortly with some suggestions of upcoming trips."
         ]
         ()
     in
@@ -232,39 +240,63 @@ let ask_member_for_missing_fields context (member, fields) =
       span (List.map (fun question -> span [ pcdata question ; pcdata " " ]) questions)
     in
 
-  match_lwt context.get ~key:(key_last_message member) with
-  | None ->
-    let _ =
-      context.message_member
-        ~member
-        ~subject:"Preschool on wheels"
-        ~content:[
-          salutations ; br () ;
-          br () ;
-          pcdata "Thanks for your note! I'm very excited by the feedback that we had so far, let's see if we can get enough people to set up a first field trip." ; br () ;
-          br () ;
-          (match List.length fields with 1 -> pcdata "I've one more question. " | _ -> pcdata "I've a few more questions :) ") ; questions ; br () ;
-          br () ;
-          pcdata "Thanks," ; br () ;
-          pcdata signature ;
-      ]
-      () in
-    return `None
-  | Some message ->
-    let message = int_of_string message in
-    let _ =
-      context.reply_to
-        ~message
-        ~content:[
-          (match List.length fields with 1 -> pcdata "Thanks, I've one more question :) " | _ -> pcdata "Thanks. I've a few more questions :) ") ; br () ;
-          br () ;
-          questions ; br () ;
-          br () ;
-          pcdata "Thanks," ; br () ;
-          pcdata signature ;
-        ]
-        () in
-    return `None
+    match_lwt context.check_tag_member ~member ~tag:tag_mute with
+      true -> return `None
+    | false ->
+      match_lwt context.get ~key:(key_last_message member) with
+      | None ->
+        let _ =
+          context.message_member
+            ~member
+            ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+            ~subject:"Preschool on wheels"
+            ~content:[
+              salutations ; br () ;
+              br () ;
+              pcdata "Thanks for your note! Before making relevant field trip suggestions," ; br () ;
+              br () ;
+              (match List.length fields with 1 -> pcdata "I've one more question for you. " | _ -> pcdata "I've a few more questions for you :) ") ; questions ; br () ;
+              br () ;
+              pcdata "Thanks," ; br () ;
+              pcdata signature ;
+            ]
+            () in
+        return `None
+      | Some message ->
+        let message = int_of_string message in
+        match_lwt context.check_tag_member ~member ~tag:tag_interested_in_general with
+          true ->
+          lwt _ = context.untag_member ~member ~tags:[ tag_interested_in_general ] in
+          let _ =
+            context.reply_to
+              ~message
+              ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+              ~content:[
+                pcdata "Great! I will keep you posted about future trips, but " ;
+                (match List.length fields with 1 -> pcdata "I've one more question first :) " | _ -> pcdata "I've a few more questions first :) ") ; br () ;
+                br () ;
+                questions ; br () ;
+                br () ;
+                pcdata "Thanks," ; br () ;
+                pcdata signature ;
+              ]
+              () in
+          return `None
+        | false ->
+          let _ =
+            context.reply_to
+              ~message
+              ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+              ~content:[
+                (match List.length fields with 1 -> pcdata "Thanks, I've one more question :) " | _ -> pcdata "Thanks. I've a few more questions :) ") ; br () ;
+                br () ;
+                questions ; br () ;
+                br () ;
+                pcdata "Thanks," ; br () ;
+                pcdata signature ;
+              ]
+              () in
+          return `None
 
 let store_reply context message =
   lwt sender = context.get_message_sender ~message in
@@ -355,26 +387,8 @@ let new_member__ context member =
   match_lwt get_profile context member with
     Some _ -> return `None
   | None ->
-    context.log_info "new member, asking supervisor for a hint about this member" ;
-    lwt _ = context.tag_member ~member ~tags:[ tag_mute ] in
-    lwt profile = get_or_create_profile context member in
-    let stringified = Yojson_profile.to_string profile in
-    lwt email = $member(member)->preferred_email in
-    lwt _ =
-      context.message_supervisor
-        ~subject:"Your input is needed"
-        ~content:[
-          pcdata "Greetings," ; br () ;
-          br () ;
-          pcdata "You just added " ; pcdata email ; pcdata " to the group, do you want to prefill the profile?" ; br () ;
-          br () ;
-          pcdata "Could you fill up the Json below? (and return only the json)" ; br () ;
-          br () ;
-          pcdata stringified ; br () ;
-        ]
-        ()
-    in
-    return `None
+    lwt _ = context.tag_member ~member ~tags:[ tag_to_invite ] in
+    return `ExecutePendingInvites
 
 (* profile management *)
 
@@ -410,9 +424,6 @@ let send_profiles context () =
 
 (* invites. this could be made generic in a component?? ***********************)
 
-let tag_to_invite = "toinvite"
-
-
 let invite context () =
   return `None
 
@@ -441,6 +452,9 @@ let extract_emails context message =
       emails
   in
   lwt _ = Lwt_list.iter_s (fun member -> context.tag_member ~member ~tags:[ tag_to_invite ]) members in
+  return `ExecutePendingInvites
+
+let execute_pending_invites context () =
   match_lwt context.search_societies ~query:"planner" () with
     [] ->
     context.log_info "couldn't find a planner, not sending invites" ;
@@ -525,6 +539,16 @@ let send_invites context activity =
   in
   return `None
 
+
+let mark_interested_in_general context message =
+  lwt member = context.get_message_sender ~message in
+  lwt _ = context.tag_member ~member ~tags:[ tag_interested_in_general ] in
+  lwt _ = context.set ~key:(key_last_message member) ~value:(string_of_int message) in
+  return (`Message message)
+
+let process_join_request context () =
+  return `None
+
 let init__ context () =
   lwt _ = context.set ~key:"core-remind-verbatim" ~value:"Hi, have you seen my previous email about the preschool bus? Would you be interested in learning more about it?" in
   return `None
@@ -533,30 +557,30 @@ let init__ context () =
 
 PLAYBOOK
 
-   #import core_join_request
    #import core_remind
 
 *init__
 
+*process_join_request<forward> ~> `Message of email ~> check_if_member_already_exists
+
 (* onboarding process *)
 
-   process_join_request<forward> ~> `Message of email ~> check_if_member_already_exists
+ check_if_member_already_exists ~> `Yes ~> noop
+ check_if_member_already_exists ~> `No of int ~> ask_supervisor_to_extract_information<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
 
-      check_if_member_already_exists ~> `Yes ~> noop
-      check_if_member_already_exists ~> `No of int ~> ask_supervisor_to_extract_information<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
+ store_profile_and_ask_for_missing_elements<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
+ store_profile_and_ask_for_missing_elements ~> `ThankMember of int ~> thank_member
+ store_profile_and_ask_for_missing_elements ~> `AskMemberForMissingFields of (int * profile_fields) ~> ask_member_for_missing_fields<forward> ~> `Message of email ~> store_reply ~> `Message of email ~> ask_supervisor_to_extract_information
 
-        store_profile_and_ask_for_missing_elements<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
-        store_profile_and_ask_for_missing_elements ~> `ThankMember of int ~> thank_member
-        store_profile_and_ask_for_missing_elements ~> `AskMemberForMissingFields of (int * profile_fields) ~> ask_member_for_missing_fields<forward> ~> `Message of email ~> store_reply ~> `Message of email ~> ask_supervisor_to_extract_information
-
-new_member__<forward> ~> `Message of email ~> store_profile_and_ask_for_missing_elements
-
+ new_member__ ~> `ExecutePendingInvites ~> execute_pending_invites
 
 *group_all_members
 
 *send_profiles
 
-*invite<forward> ~> `Message of email ~> extract_emails<forward> ~> `Message of email ~> extract_pitch ~> `Pitch of activity ~> send_invites
+*invite<forward> ~> `Message of email ~> extract_emails ~> `ExecutePendingInvites ~> execute_pending_invites<forward> ~> `Message of email ~> extract_pitch ~> `Pitch of activity ~> send_invites
+
+send_invites ~> `InterestedInGeneral of email ~> mark_interested_in_general ~> `Message of int ~> ask_supervisor_to_extract_information
 
 PROPERTIES
   - "Your duties", "None! All you have is to show up on time with your child at the pickup spot."

@@ -96,6 +96,9 @@ type t = {
 
   societies : [ `Society of string ] edges ;
   tags : string ;
+
+  objects : [ `Activity ] edges ;
+
 } with vertex
   (
     {

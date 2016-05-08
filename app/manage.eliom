@@ -100,6 +100,36 @@ let update_tags (uid, tags) =
 
 let update_tags = server_function ~name:"manage-update-tags" Json.t<int * string> update_tags
 
+let invite (society, emails) =
+  protected_connected
+    (fun session ->
+       (* let's just pass the emails to the playbook and let it deal from here *)
+       (* here we simply have an untyped api *)
+       let stage = "invite" in
+       lwt uid =
+         match_lwt Object_message.Store.create
+                     ~origin:(Object_message.Member session.member_uid)
+                     ~content:emails
+                     ~raw:emails
+                     ~subject:"new people to invite"
+                     ~destination:(Object_message.Society (society, stage))
+                     ~references:[]
+                     ~reference:(Object_message.create_reference emails)
+                     () with
+               | `Object_already_exists (_, uid) -> return uid
+               | `Object_created message -> return message.Object_message.uid in
+       lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
+       lwt playbook = $society(society)->playbook in
+       let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
+       match_lwt Playbook.dispatch_message_automatically uid stage with
+         | None -> return (Some ())
+         | Some call ->
+           lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
+           lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
+           return (Some ()))
+
+let invite = server_function ~name:"manage-invite" Json.t<int * string> invite
+
 }}
 
 {client{
@@ -126,7 +156,8 @@ let menu shortlink uid =
          Service.ManageMembers, "Members" ;
          Service.ManageCustom, "Custom" ;
          Service.ManageSocieties, "Societies" ;
-         Service.ManageTags, "Tags"
+         Service.ManageTags, "Tags" ;
+         Service.ManageInvite, "Invite"
        ])
 
 let builder_home shortlink =
@@ -249,6 +280,12 @@ let builder_custom shortlink uid = function
     div ~a:[ a_class [ "manage"; "manage-custom" ]] [
       menu shortlink uid ;
       div (Schoolbus_blocks.doms uid data ())
+    ]
+  | Some ("Children schoolbus planner", data) ->
+    let data = RList.init data in
+    div ~a:[ a_class [ "manage"; "manage-custom" ]] [
+      menu shortlink uid ;
+      div (Schoolbus_planner_blocks.doms uid data ())
     ]
   | _ -> pcdata "no custom blocks"
 
@@ -393,6 +430,36 @@ let builder_tags shortlink uid = function
       R.node tags
     ]
 
+(* the inbox ******************************************************************)
+
+(* the invite *****************************************************************)
+
+let builder_invite shortlink uid =
+  let emails = Raw.textarea ~a:[ a_placeholder "insert emails here" ] (pcdata "") in
+
+  let invite _ =
+    detach_rpc %invite (uid, Ys_dom.get_value_textarea emails) (fun _ -> Ys_dom.set_value_textarea emails "")
+  in
+
+  let invite =
+    button
+      ~a:[ a_button_type `Button ;
+           a_onclick invite ]
+      [ pcdata "Invite" ]
+  in
+
+  div ~a:[ a_class [ "manage" ; "manage-invite" ]] [
+    menu shortlink uid ;
+    div ~a:[ a_class [ "box" ]] [
+      div ~a:[ a_class [ "box-section" ]] [
+        emails ;
+      ] ;
+      div ~a:[ a_class [ "box-action" ]] [
+        invite ;
+      ] ;
+    ]
+  ]
+
 (* the routing dom ************************************************************)
 
 let dom shortlink uid =
@@ -407,6 +474,8 @@ let dom shortlink uid =
     Template.apply %retrieve_societies (builder_societies shortlink uid) uid
   | Service.ManageTags ->
     Template.apply %retrieve_tags (builder_tags shortlink uid) uid
+  | Service.ManageInvite ->
+    S.const (Some (builder_invite shortlink uid))
   | _ -> S.const None
 
 }}

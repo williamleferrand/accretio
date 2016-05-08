@@ -69,36 +69,6 @@ let update_profile (society, profile) =
 
 let update_profile = server_function ~name:"schoolbus-block-update-profile" Json.t<int * string> update_profile
 
-let invite (society, emails) =
-  protected_connected
-    (fun session ->
-       (* let's just pass the emails to the playbook and let it deal from here *)
-       (* here we simply have an untyped api *)
-       let stage = "invite" in
-       lwt uid =
-         match_lwt Object_message.Store.create
-                     ~origin:(Object_message.Member session.member_uid)
-                     ~content:emails
-                     ~raw:emails
-                     ~subject:"new people to invite"
-                     ~destination:(Object_message.Society (society, stage))
-                     ~references:[]
-                     ~reference:(Object_message.create_reference emails)
-                     () with
-               | `Object_already_exists (_, uid) -> return uid
-               | `Object_created message -> return message.Object_message.uid in
-       lwt _ = $society(society)<-inbox += (`Message (Object_society.{ received_on = Ys_time.now () ; read = false }), uid) in
-       lwt playbook = $society(society)->playbook in
-       let module Playbook = (val (Registry.get playbook) : Api.PLAYBOOK) in
-       match_lwt Playbook.dispatch_message_automatically uid stage with
-         | None -> return (Some ())
-         | Some call ->
-           lwt _ = $message(uid)<-action = Object_message.RoutedToStage call.Ys_executor.stage in
-           lwt _ = $society(society)<-stack %% (fun stack -> call :: stack) in
-           return (Some ()))
-
-let invite = server_function ~name:"schoolbus-invite" Json.t<int * string> invite
-
 }}
 
 {client{
@@ -199,6 +169,7 @@ let profiles society data =
 
     (* groups *)
     let group, update_group = S.create None in
+
     let finalize_group, groups =
       Autocomplete.create_society ~placeholder:"Name" View_society.format_autocomplete (fun i -> i)
         (function
@@ -214,6 +185,7 @@ let profiles society data =
       | _ ->
         ()
     in
+
     let update_groups =
       button
         ~a:[ a_button_type `Button ;
@@ -221,8 +193,14 @@ let profiles society data =
         [ pcdata "Update" ]
     in
 
+    let status =
+      match profile.groups with
+        [] -> "profile-not-assigned"
+      | _ -> "profile-assigned"
+    in
+
     (* the form *)
-    div ~a:[ a_class [ "box" ; "schoolbus-profile" ]] [
+    div ~a:[ a_class [ "box" ; "schoolbus-profile" ; status  ]] [
       h3 [ pcdata profile.name ; pcdata " (" ; pcdata (string_of_int profile.uid) ; pcdata ")" ] ;
       div ~a:[ a_class [ "box-section" ; "profile-name" ]] [
         h4 [ pcdata "Name" ] ;
@@ -238,6 +216,9 @@ let profiles society data =
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
         h4 [ pcdata "Group" ];
+        div [
+          ul (List.map (fun group -> li [ pcdata group ]) profile.groups) ;
+        ] ;
         groups ; update_groups ;
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-raw" ]] [
@@ -263,40 +244,11 @@ let profiles society data =
       data
   ]
 
-(* inviting new members *****************************************************************)
-
-let invite society =
-  let emails = Raw.textarea ~a:[ a_placeholder "insert emails here" ] (pcdata "") in
-
-  let invite _ =
-    detach_rpc %invite (society, Ys_dom.get_value_textarea emails) (fun _ -> Ys_dom.set_value_textarea emails "")
-  in
-
-  let invite =
-    button
-      ~a:[ a_button_type `Button ;
-           a_onclick invite ]
-      [ pcdata "Invite" ]
-  in
-
-  div ~a:[ a_class [ "schoolbus-invite" ]] [
-    h2 [ pcdata "Invite" ] ;
-    div ~a:[ a_class [ "box" ]] [
-      div ~a:[ a_class [ "box-section" ]] [
-        emails ;
-      ] ;
-      div ~a:[ a_class [ "box-action" ]] [
-        invite ;
-      ] ;
-    ]
-  ]
-
 (* the doms *****************************************************************************)
 
 let doms society data () =
   [
     profiles society data ;
-    invite society ;
   ]
 
 }}
