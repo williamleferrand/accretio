@@ -92,7 +92,7 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 open View_society
 
-let dom view =
+let dom view societies =
 
   let join =
     let email_input = input  ~a:[ a_input_type `Text ; a_placeholder "Email" ] () in
@@ -149,6 +149,23 @@ let dom view =
     ]
   in
 
+  let societies =
+    match societies with
+      [] -> pcdata ""
+    | societies ->
+      let grid =
+        Ys_grid.create
+          ~a:[ a_class [ "societies" ; "clearfix" ]]
+          ~a_col:[ a_class [ "society-column" ]]
+          ~column_width:420
+          ~content:(S.map (fun societies -> List.map View_society.format societies) (S.const societies))
+          ()
+      in
+      div ~a:[ a_class [ "society-public-societies" ; "dashboard" ]] [
+        h2 [ pcdata "Groups" ] ;
+        grid ;
+      ]
+  in
   div ~a:[ a_class [ "society-public" ]] [
 
     h1 [ pcdata view.name ] ;
@@ -162,6 +179,7 @@ let dom view =
 
     join ;
     details ;
+    societies ;
   ]
 
 }}
