@@ -474,8 +474,6 @@ let dom shortlink uid =
     Template.apply %retrieve_societies (builder_societies shortlink uid) uid
   | Service.ManageTags ->
     Template.apply %retrieve_tags (builder_tags shortlink uid) uid
-  | Service.ManageTags ->
-    Template.apply %retrieve_tags (builder_tags shortlink uid) uid
   | Service.ManageInvite ->
     S.const (Some (builder_invite shortlink uid))
   | _ -> S.const None

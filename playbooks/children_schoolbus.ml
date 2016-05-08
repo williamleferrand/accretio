@@ -240,60 +240,63 @@ let ask_member_for_missing_fields context (member, fields) =
       span (List.map (fun question -> span [ pcdata question ; pcdata " " ]) questions)
     in
 
-  match_lwt context.get ~key:(key_last_message member) with
-  | None ->
-    let _ =
-      context.message_member
-        ~member
-        ~remind_after:(Calendar.Period.lmake ~hour:36 ())
-        ~subject:"Preschool on wheels"
-        ~content:[
-          salutations ; br () ;
-          br () ;
-          pcdata "Thanks for your note! Before making relevant field trip suggestions," ; br () ;
-          br () ;
-          (match List.length fields with 1 -> pcdata "I've one more question for you. " | _ -> pcdata "I've a few more questions for you :) ") ; questions ; br () ;
-          br () ;
-          pcdata "Thanks," ; br () ;
-          pcdata signature ;
-      ]
-      () in
-    return `None
-  | Some message ->
-    let message = int_of_string message in
-    match_lwt context.check_tag_member ~member ~tag:tag_interested_in_general with
-      true ->
-      lwt _ = context.untag_member ~member ~tags:[ tag_interested_in_general ] in
-      let _ =
-        context.reply_to
-          ~message
-          ~remind_after:(Calendar.Period.lmake ~hour:36 ())
-          ~content:[
-            pcdata "Great! I will keep you posted about future trips, but " ;
-            (match List.length fields with 1 -> pcdata "I've one more question first :) " | _ -> pcdata "I've a few more questions first :) ") ; br () ;
-            br () ;
-            questions ; br () ;
-            br () ;
-            pcdata "Thanks," ; br () ;
-            pcdata signature ;
-          ]
-          () in
-      return `None
+    match_lwt context.check_tag_member ~member ~tag:tag_mute with
+      true -> return `None
     | false ->
-      let _ =
-        context.reply_to
-          ~message
-          ~remind_after:(Calendar.Period.lmake ~hour:36 ())
-          ~content:[
-            (match List.length fields with 1 -> pcdata "Thanks, I've one more question :) " | _ -> pcdata "Thanks. I've a few more questions :) ") ; br () ;
-            br () ;
-            questions ; br () ;
-            br () ;
-            pcdata "Thanks," ; br () ;
-            pcdata signature ;
-          ]
-          () in
-    return `None
+      match_lwt context.get ~key:(key_last_message member) with
+      | None ->
+        let _ =
+          context.message_member
+            ~member
+            ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+            ~subject:"Preschool on wheels"
+            ~content:[
+              salutations ; br () ;
+              br () ;
+              pcdata "Thanks for your note! Before making relevant field trip suggestions," ; br () ;
+              br () ;
+              (match List.length fields with 1 -> pcdata "I've one more question for you. " | _ -> pcdata "I've a few more questions for you :) ") ; questions ; br () ;
+              br () ;
+              pcdata "Thanks," ; br () ;
+              pcdata signature ;
+            ]
+            () in
+        return `None
+      | Some message ->
+        let message = int_of_string message in
+        match_lwt context.check_tag_member ~member ~tag:tag_interested_in_general with
+          true ->
+          lwt _ = context.untag_member ~member ~tags:[ tag_interested_in_general ] in
+          let _ =
+            context.reply_to
+              ~message
+              ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+              ~content:[
+                pcdata "Great! I will keep you posted about future trips, but " ;
+                (match List.length fields with 1 -> pcdata "I've one more question first :) " | _ -> pcdata "I've a few more questions first :) ") ; br () ;
+                br () ;
+                questions ; br () ;
+                br () ;
+                pcdata "Thanks," ; br () ;
+                pcdata signature ;
+              ]
+              () in
+          return `None
+        | false ->
+          let _ =
+            context.reply_to
+              ~message
+              ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+              ~content:[
+                (match List.length fields with 1 -> pcdata "Thanks, I've one more question :) " | _ -> pcdata "Thanks. I've a few more questions :) ") ; br () ;
+                br () ;
+                questions ; br () ;
+                br () ;
+                pcdata "Thanks," ; br () ;
+                pcdata signature ;
+              ]
+              () in
+          return `None
 
 let store_reply context message =
   lwt sender = context.get_message_sender ~message in
