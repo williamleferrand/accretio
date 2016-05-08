@@ -199,6 +199,7 @@ let profiles society data =
 
     (* groups *)
     let group, update_group = S.create None in
+
     let finalize_group, groups =
       Autocomplete.create_society ~placeholder:"Name" View_society.format_autocomplete (fun i -> i)
         (function
@@ -214,6 +215,7 @@ let profiles society data =
       | _ ->
         ()
     in
+
     let update_groups =
       button
         ~a:[ a_button_type `Button ;
@@ -221,8 +223,14 @@ let profiles society data =
         [ pcdata "Update" ]
     in
 
+    let status =
+      match profile.groups with
+        [] -> "profile-not-assigned"
+      | _ -> "profile-assigned"
+    in
+
     (* the form *)
-    div ~a:[ a_class [ "box" ; "schoolbus-profile" ]] [
+    div ~a:[ a_class [ "box" ; "schoolbus-profile" ; status  ]] [
       h3 [ pcdata profile.name ; pcdata " (" ; pcdata (string_of_int profile.uid) ; pcdata ")" ] ;
       div ~a:[ a_class [ "box-section" ; "profile-name" ]] [
         h4 [ pcdata "Name" ] ;
@@ -238,6 +246,9 @@ let profiles society data =
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-children" ]] [
         h4 [ pcdata "Group" ];
+        div [
+          ul (List.map (fun group -> li [ pcdata group ]) profile.groups) ;
+        ] ;
         groups ; update_groups ;
       ] ;
       div ~a:[ a_class [ "box-section" ; "profile-raw" ]] [

@@ -1688,6 +1688,10 @@ h2 {
   line-height: 18px;
   margin-bottom: 16px;
 }
+/* line 86, ../sass/_schoolbus.scss */
+.society-leader .profile-not-assigned, .manage .profile-not-assigned {
+  background-color: #ff5454 !important;
+}
 
 /* line 3, ../sass/_manage.scss */
 .manage .manage-menu {
