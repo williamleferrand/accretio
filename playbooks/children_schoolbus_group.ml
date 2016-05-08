@@ -670,11 +670,28 @@ let send_confirmation context message =
        in
        return `None)
 
+(* the join requests **********************************************************)
+
+let process_join_request context () =
+  return `None
+
+let forward_to_supervisor context message =
+  lwt _ =
+    context.forward_to_supervisor
+      ~message
+      ~subject:"New join request"
+      ~content:[ pcdata "not sure what to do here" ]
+      ()
+  in
+  return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
 
 #import core_remind
+
+*process_join_request ~> `Message of email ~> forward_to_supervisor
 
 *init__<forward> ~> `Message of email ~> extract_pickup_point
 
