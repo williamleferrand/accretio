@@ -140,7 +140,7 @@ let generic_suggest context () =
         activity_number_of_spots = 8 ;
         activity_price_per_spot = 80 ;
         activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
-        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for)." ;
       } ;
     activity_attachments = [] ;
     activity_bookings = []
@@ -161,7 +161,7 @@ let generic_suggest context () =
         activity_number_of_spots = 8 ;
         activity_price_per_spot = 80 ;
         activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
-        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for, receipt is attached)." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for)." ;
       } ;
     activity_attachments = [] ;
     activity_bookings = []
