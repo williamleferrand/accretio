@@ -32,49 +32,20 @@ open Vault
 (* this is not the usual society creation flow, but for the purpose of the
    experiment we can bend the rules a little bit *)
 
-let name = "first-schoolbus-sf2"
+let name = "first-schoolbus-sf3"
 
-let retrieve_or_create_society () =
+let retrieve_society () =
   Lwt_log.ign_info_f "pulling the schoolbus society" ;
-  match_lwt Object_society.Store.search_name name with
+  match_lwt Object_society.Store.search_tags name with
     uid :: _ -> return (Some uid)
-  | [] ->
-    Lwt_log.ign_info_f "the society doesn't exist yet, creating it" ;
-    match_lwt Ys_shortlink.create () with
-      None ->
-      Lwt_log.ign_error_f "couldn't create shortlink" ;
-      return_none
-    | Some shortlink ->
-      match_lwt Object_member.Store.find_by_email "william@accret.io" with
-        None ->
-        Lwt_log.ign_info_f "root doesn't exist" ;
-        return_none
-      | Some leader ->
-        match_lwt Object_playbook.Store.search_name Children_schoolbus.name with
-          [] ->
-          Lwt_log.ign_info_f "schoolbus playbook isn't registered" ;
-          return_none
-        | playbook :: _ ->
-          match_lwt Object_society.Store.create
-                      ~shortlink
-                      ~leader
-                      ~name
-                      ~description:"The first schoolbus experiment"
-                      ~playbook
-                      ~mode:Object_society.Public
-                      ~data:[]
-                    () with
-          | `Object_already_exists (_, uid) -> return (Some uid)
-          | `Object_created obj ->
-            lwt _ = $member(leader)<-societies += (`Society, obj.Object_society.uid) in
-            return (Some obj.Object_society.uid)
+  | [] -> return_none
 
 let request_more_info (email, notes) =
-  match_lwt retrieve_or_create_society () with
+  match_lwt retrieve_society () with
     Some society ->
     Society_public.request_to_join_ (society, email, notes)
   | None ->
-    Lwt_log.ign_error_f "panic: someone wanted to join the schoolbus activity with email %s, but we couldn't locate the society" email ;
+    Lwt_log.ign_error_f "panic: someone wanted to join the schoolbus activity with email %s, but we couldn't locate the society %s" email name ;
     return_none
 
 let request_more_info = server_function ~name:"schoolbus-request-more-info" Json.t<string * string> request_more_info

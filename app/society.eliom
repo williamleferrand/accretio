@@ -47,7 +47,12 @@ let retrieve uid =
     return (`SocietyLeader view)
   | false ->
     lwt view = View_society.to_view uid in
-    return (`SocietyPublic view)
+    (* let's get the public societies as well *)
+    lwt societies = $society(uid)->societies in
+    let societies = List.map snd societies in
+    lwt societies = Lwt_list.filter_s (fun uid -> match_lwt $society(uid)->mode with Object_society.Public -> return_true | _ -> return_false) societies in
+    lwt societies = Lwt_list.map_s View_society.to_view societies in
+    return (`SocietyPublic (view, societies))
 
 let retrieve = server_function ~name:"society-retrieve" Json.t<int> retrieve
 
@@ -57,7 +62,7 @@ let retrieve = server_function ~name:"society-retrieve" Json.t<int> retrieve
 
 let builder = function
   | `SocietyLeader view -> Society_leader.dom view
-  | `SocietyPublic view -> Society_public.dom view
+  | `SocietyPublic (view, societies) -> Society_public.dom view societies
 
 let dom = Template.apply %retrieve builder
 

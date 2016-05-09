@@ -58,8 +58,8 @@ let update_profile (society, profile) =
                            true -> return_unit
                          | false ->
                        lwt _ = $society(society)<-members += (`Member [ "active" ], profile.uid) in
-                       Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
-                       Executor.stack_int society Api.Stages.new_member profile.uid)
+                       (* Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
+                       Executor.stack_int society Api.Stages.new_member profile.uid *) return_unit)
                    societies)
                  profile.groups in
            return ((key, Yojson_profile.to_string profile) :: List.remove_assoc key data))
@@ -228,8 +228,41 @@ let profiles society data =
     ]
   in
 
+  (* add a profile *)
+
+  let add_profile =
+
+    let profile = Raw.textarea (pcdata (Yojson_profile.to_string (default_profile 0 "" ""))) in
+    let add_profile _ =
+      let profile = Ys_dom.get_value_textarea profile in
+      try
+        let profile = Yojson_profile.from_string profile in
+        let profile = Yojson_profile.to_string profile in
+        detach_rpc %update_profile (society, profile) (RList.update data)
+      with _ ->
+        Help.warning "Please provide a valid JSON"
+    in
+
+    let add_profile =
+      button
+        ~a:[ a_button_type `Button ;
+             a_onclick add_profile ]
+        [ pcdata "Add" ]
+    in
+    div ~a:[ a_class [ "schoolbus-profiles-add" ; "box" ]] [
+      div ~a:[ a_class [ "box-section" ]] [
+        profile ;
+      ] ;
+      div ~a:[ a_class [ "box-action" ]] [
+        add_profile
+      ] ;
+
+    ]
+  in
+
   div ~a:[ a_class [ "schoolbus-profiles" ]] [
     h2 [ pcdata "Profiles" ] ;
+    add_profile ;
     RList.map_in_div_ordered
       (function (key, value) ->
         match Regexp.string_match regex key 0 with
