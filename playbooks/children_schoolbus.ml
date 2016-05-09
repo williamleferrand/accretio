@@ -373,37 +373,37 @@ let new_member__ context member =
 
 (* profile management *)
 
+let send_profile context member =
+  match_lwt get_profile context member with
+    None -> return `None
+  | Some profile ->
+    lwt _ =
+      Lwt_list.iter_s
+        (fun group ->
+           match_lwt context.search_societies ~query:group () with
+             [] ->
+             context.log_info "skipping profile %d because I couldn't locate society %s" member group ;
+             return_unit
+           | society :: _ ->
+             lwt _ =
+               context.message_society
+                 ~society
+                 ~stage:"store_profile"
+                 ~subject:"updated profile"
+                 ~content:(Yojson_profile.to_string profile)
+                 ()
+             in
+             return_unit)
+        profile.groups in
+    return `None
+
 let send_profiles context () =
   context.log_info "send profiles" ;
   lwt members = context.search_members ~query:"active" () in
   context.log_info "found %d members" (List.length members) ;
-  lwt _ =
-    Lwt_list.iter_s
-      (fun member ->
-         context.log_info "inspecting profile for member %d" member ;
-         match_lwt get_profile context member with
-           None -> return_unit
-         | Some profile ->
-           Lwt_list.iter_s
-             (fun group ->
-                match_lwt context.search_societies ~query:group () with
-                  [] ->
-                  context.log_info "skipping profile %d because I couldn't locate society %s" member group ;
-                  return_unit
-                | society :: _ ->
-                  lwt _ =
-                    context.message_society
-                      ~society
-                      ~stage:"store_profile"
-                      ~subject:"updated profile"
-                      ~content:(Yojson_profile.to_string profile)
-                      ()
-                  in
-                  return_unit)
-             profile.groups)
-      members
-  in
+  lwt _ = Lwt_list.map_s (send_profile context) members in
   return `None
+
 
 (* invites. this could be made generic in a component?? ***********************)
 
@@ -522,7 +522,6 @@ let send_invites context activity =
   in
   return `None
 
-
 let mark_interested_in_general context message =
   lwt member = context.get_message_sender ~message in
   lwt _ = context.tag_member ~member ~tags:[ tag_interested_in_general ] in
@@ -559,7 +558,7 @@ PLAYBOOK
 
 *group_all_members
 
-*send_profiles
+*send_profiles ~> `SendProfile of int ~> send_profile
 
 *invite<forward> ~> `Message of email ~> extract_emails ~> `ExecutePendingInvites ~> execute_pending_invites<forward> ~> `Message of email ~> extract_pitch ~> `Pitch of activity ~> send_invites
 

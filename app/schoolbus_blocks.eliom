@@ -59,9 +59,12 @@ let update_profile (society, profile) =
                          | false ->
                        lwt _ = $society(society)<-members += (`Member [ "active" ], profile.uid) in
                        (* Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
-                       Executor.stack_int society Api.Stages.new_member profile.uid *) return_unit)
+                          Executor.stack_int society Api.Stages.new_member profile.uid ; *)
+                       (* we would need to send the profiles *)
+                       return_unit)
                    societies)
                  profile.groups in
+           lwt _ = Executor.stack_int society "send_profile" profile.uid in
            return ((key, Yojson_profile.to_string profile) :: List.remove_assoc key data))
        in
        lwt data = $society(society)->data in
