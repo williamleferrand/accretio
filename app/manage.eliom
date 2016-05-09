@@ -287,6 +287,12 @@ let builder_custom shortlink uid = function
       menu shortlink uid ;
       div (Schoolbus_planner_blocks.doms uid data ())
     ]
+  | Some ("Children schoolbus group", data) ->
+    let data = RList.init data in
+    div ~a:[ a_class [ "manage"; "manage-custom" ]] [
+      menu shortlink uid ;
+      div (Schoolbus_group_blocks.doms uid data ())
+    ]
   | _ -> pcdata "no custom blocks"
 
 (* societies ******************************************************************)
