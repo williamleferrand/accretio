@@ -77,7 +77,7 @@ struct
     Lwt_pool.use sphinx_pool
       (fun dbd ->
          let req =
-           Printf.sprintf "SELECT id FROM %s WHERE MATCH('%s') ORDER BY created_ts DESC"
+           Printf.sprintf "SELECT id FROM %s WHERE MATCH('%s') ORDER BY created_ts DESC LIMIT 0, 1000 option max_matches=1000"
              table
              (real_escape dbd query) in
          lwt result = Lwt_preemptive.detach (exec dbd) req in
