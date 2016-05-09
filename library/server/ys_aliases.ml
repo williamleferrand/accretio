@@ -141,7 +141,7 @@ struct
     Lwt_pool.use sphinx_pool
       (fun dbd ->
          let req =
-           Printf.sprintf "SELECT edge FROM %s WHERE MATCH('%s') AND host = %d"
+           Printf.sprintf "SELECT edge FROM %s WHERE MATCH('%s') AND host = %d LIMIT 0, 1000 option max_matches=1000"
              table
              (real_escape dbd query)
              host
