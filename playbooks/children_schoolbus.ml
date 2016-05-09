@@ -253,7 +253,7 @@ let ask_member_for_missing_fields context (member, fields) =
               ~message
               ~remind_after:(Calendar.Period.lmake ~hour:36 ())
               ~content:[
-                pcdata "Great! I will keep you posted about future trips, but " ;
+                pcdata "Great! I will send you more information about upcoming trips, but " ;
                 (match List.length fields with 1 -> pcdata "I've one more question first :) " | _ -> pcdata "I've a few more questions first :) ") ; br () ;
                 br () ;
                 questions ; br () ;
