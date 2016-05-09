@@ -109,9 +109,9 @@ let new_member__ context member =
           ~content:[
             salutations ; br () ;
             br () ;
-            pcdata "I'm making progress on a proposal for a first trip. No date yet, but the destination would very likely be the SF Zoo. I am working on getting firm quotes from various charter companies." ; br () ;
+            pcdata "I'm working on the first trip to the zoo on 5/27." ; br () ;
             br () ;
-            pcdata "To make things easier for them what would you think of doing the pickup from " ; pcdata pickup_point ; pcdata " sometime around 8:30am? We could go doorstep to doorstep later." ; br () ;
+            pcdata "Does " ; pcdata pickup_point ; pcdata " work for you as a pickup point?" ; br () ;
           ]
           ()
       in

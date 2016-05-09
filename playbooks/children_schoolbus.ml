@@ -376,9 +376,11 @@ let new_member__ context member =
 let send_profiles context () =
   context.log_info "send profiles" ;
   lwt members = context.search_members ~query:"active" () in
+  context.log_info "found %d members" (List.length members) ;
   lwt _ =
     Lwt_list.iter_s
       (fun member ->
+         context.log_info "inspecting profile for member %d" member ;
          match_lwt get_profile context member with
            None -> return_unit
          | Some profile ->
