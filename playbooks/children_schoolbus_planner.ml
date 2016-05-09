@@ -149,8 +149,8 @@ let generic_suggest context () =
   let activity_younger_kids = {
     activity_uid = 1 ;
     activity_reference = sprintf "2to3on%04d%04d%04d" 2016 5 27 ;
-    activity_min_age_in_months = 36 ;
-    activity_max_age_in_months = 60 ;
+    activity_min_age_in_months = 18 ;
+    activity_max_age_in_months = 30 ;
     activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
     activity_title = "Field trip proposal - SF Zoo on 5/27 - $80 all included" ;
     activity_description = "I'm making some progress! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27. We would go together to the Zoo, attend the class and spend some time wandering among the animals, before heading back home." ;
