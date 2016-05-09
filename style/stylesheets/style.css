@@ -670,6 +670,16 @@ h2 {
     float: left;
   }
 }
+@media screen and (max-width: 800px) {
+  /* line 22, ../sass/_dashboard.scss */
+  .dashboard .societies {
+    width: auto !important;
+  }
+  /* line 25, ../sass/_dashboard.scss */
+  .dashboard .library-column {
+    width: auto !important;
+  }
+}
 
 /* line 3, ../sass/_landing.scss */
 .landing .landing-title {
@@ -1464,8 +1474,18 @@ h2 {
     float: left;
   }
 }
+@media screen and (max-width: 800px) {
+  /* line 25, ../sass/_library.scss */
+  .library .playbooks, .library .societies {
+    width: auto !important;
+  }
+  /* line 28, ../sass/_library.scss */
+  .library .library-column {
+    width: auto !important;
+  }
+}
 
-/* line 26, ../sass/_library.scss */
+/* line 38, ../sass/_library.scss */
 .make-suggestion .closed {
   text-align: center;
   padding: 30px 0;

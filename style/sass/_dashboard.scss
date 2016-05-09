@@ -17,4 +17,14 @@
             float: left ;
         }
     }
+
+      @media screen and (max-width: 800px) {
+        .societies {
+            width: auto!important ;
+        }
+        .library-column {
+            width: auto!important ;
+        }
+    }
+
 }
