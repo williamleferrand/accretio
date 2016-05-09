@@ -33,6 +33,24 @@ type profile = {
   groups : string list ;
 } with yojson
 
+
+let default_child =
+  {
+    name = "";
+    age_string = "" ;
+    age_in_months = 0  ;
+  }
+
+let default_profile uid name email = {
+  uid ;
+  email ;
+  name ;
+  children = [ default_child ] ;
+  neighborhood = "" ;
+  schedule = "";
+  groups = [] ;
+}
+
 type profile_field = Name | Children | Neighborhood | Schedule with yojson
 type profile_fields = profile_field list with yojson
 

@@ -43,25 +43,6 @@ let tag_interested_in_general = "interested"
 
 let key_last_message = sprintf "last-message-%d"
 
-(* the profile of a member ****************************************************)
-
-let default_child =
-  {
-    name = "";
-    age_string = "" ;
-    age_in_months = 0  ;
-  }
-
-let default_profile uid name email = {
-  uid ;
-  email ;
-  name ;
-  children = [ default_child ] ;
-  neighborhood = "" ;
-  schedule = "";
-  groups = [] ;
-}
-
 (* some helpers ***************************************************************)
 
 let get_or_create_profile context member =
