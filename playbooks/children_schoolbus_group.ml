@@ -601,11 +601,29 @@ let ask_payment context message =
                 return `None
               | Some payment ->
                 lwt link = context.payment_direct_link ~payment in
+                lwt salutations = salutations member in
                 lwt _ =
                   context.reply_to
                     ~message:original_message
+                    ~remind_after:(Calendar.Period.lmake ~hour:36 ())
                     ~content:[
-                      pcdata link
+                      salutations ; br () ;
+                      br () ;
+                      pcdata "Great news, the event is filling up!" ; br () ;
+                      br () ;
+                      pcdata "I still haven't finalized the transporation solution (I apologize for the sloppiness, all this is very experimental) but the final cost will definitely be at or below $80 total as promised (and it will likely be less than that)." ; br () ;
+                      br () ;
+                      pcdata "However, I booked the class at the Zoo and they are now asking for the children's real names. The cost is $30 and it includes the zoo entrance for one adult and one children, as well as the class itself (see " ; Raw.a ~a:[ a_href (uri_of_string (fun () -> "http://www.sfzoo.org/learn/childrens-programs.htm")) ] [ pcdata "here" ]; pcdata ")" ; br () ;
+                      br () ;
+                      pcdata "If you wish to join us for this first trip, please send me the payment for the class, ideally using the link below. Once I receive your payment I'll do the name update and send you the ticket for the class, so that at least that part is set." ; br () ;
+                      br () ;
+                      Raw.a ~a:[ a_href (uri_of_string (fun () -> link)) ] [ pcdata link ] ; br () ;
+                      br () ;
+                      pcdata "If you have any questions or if you prefer doing Paypal, please let me know." ; br () ;
+                      br () ;
+                      pcdata "Thanks" ; br () ;
+                      br () ;
+                      pcdata "William"
                     ]
                     ()
                 in
