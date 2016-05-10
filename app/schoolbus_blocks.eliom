@@ -59,15 +59,45 @@ let update_profile (society, profile) =
                          | false ->
                        lwt _ = $society(society)<-members += (`Member [ "active" ], profile.uid) in
                        (* Lwt_log.ign_info_f "calling new member in society %d for member %d" society profile.uid ;
-                       Executor.stack_int society Api.Stages.new_member profile.uid *) return_unit)
+                          Executor.stack_int society Api.Stages.new_member profile.uid ; *)
+                       (* we would need to send the profiles *)
+                       return_unit)
                    societies)
                  profile.groups in
+           lwt _ = Executor.stack_int society "send_profile" profile.uid in
            return ((key, Yojson_profile.to_string profile) :: List.remove_assoc key data))
        in
        lwt data = $society(society)->data in
        return (Some data))
 
+let create_profile (society, profile) =
+  protected_connected
+    (fun _ ->
+       let profile = Yojson_profile.from_string profile in
+       match profile.email with
+         "" -> return_none
+       | _ as email ->
+         lwt uid =
+           match_lwt Object_member.Store.find_by_email email with
+           | Some uid -> return uid
+           | None ->
+             match_lwt Object_member.Store.create
+                         ~preferred_email:email
+                         ~emails:[ email ]
+                         ~name:profile.name
+                         () with
+             | `Object_already_exists (_, uid) -> return uid
+             | `Object_created member -> return member.Object_member.uid
+         in
+         let profile = { profile with uid } in
+         let key = Printf.sprintf "profile-%d" profile.uid in
+         lwt data = $society(society)->data in
+         match List.exists (fun data -> fst data = key) data with
+           | true -> return_none
+           | false -> update_profile (society, Yojson_profile.to_string profile))
+
 let update_profile = server_function ~name:"schoolbus-block-update-profile" Json.t<int * string> update_profile
+let create_profile = server_function ~name:"schoolbus-block-create-profile" Json.t<int * string> create_profile
 
 }}
 
@@ -238,7 +268,7 @@ let profiles society data =
       try
         let profile = Yojson_profile.from_string profile in
         let profile = Yojson_profile.to_string profile in
-        detach_rpc %update_profile (society, profile) (RList.update data)
+        detach_rpc %create_profile (society, profile) (RList.update data)
       with _ ->
         Help.warning "Please provide a valid JSON"
     in

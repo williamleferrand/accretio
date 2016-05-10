@@ -393,14 +393,9 @@ let builder_societies shortlink uid = function
         div ~a:[ a_class [ "box-action" ]] [ create ] ;
       ]
     in
-    let format_society society =
-      div ~a:[ a_class [ "box" ]] [
-        pcdata society.View_society.name
-      ]
-    in
     div ~a:[ a_class [ "manage" ; "manage-societies" ]] [
       menu shortlink uid ;
-      RList.map_in_div_hd ~a:[ a_class [ "societies" ]] add_society format_society societies
+      RList.map_in_div_hd ~a:[ a_class [ "societies" ]] add_society View_society.format societies
     ]
 
 (* tags management ************************************************************)

@@ -109,9 +109,9 @@ let new_member__ context member =
           ~content:[
             salutations ; br () ;
             br () ;
-            pcdata "I'm making progress on a proposal for a first trip. No date yet, but the destination would very likely be the SF Zoo. I am working on getting firm quotes from various charter companies." ; br () ;
+            pcdata "I'm working on the first trip to the zoo on 5/27." ; br () ;
             br () ;
-            pcdata "To make things easier for them what would you think of doing the pickup from " ; pcdata pickup_point ; pcdata " sometime around 8:30am? We could go doorstep to doorstep later." ; br () ;
+            pcdata "Does " ; pcdata pickup_point ; pcdata " work for you as a pickup point?" ; br () ;
           ]
           ()
       in
@@ -611,7 +611,7 @@ let ask_payment context message =
                       br () ;
                       pcdata "Great news, the event is filling up!" ; br () ;
                       br () ;
-                      pcdata "I still haven't finalized the transporation solution (I apologize for the sloppiness, all this is very experimental) but the final cost will definitely be at or below $80 total as promised (and it will likely be less than that)." ; br () ;
+                      pcdata "I still haven't finalized the transportation solution (I apologize for the sloppiness, all this is very experimental) but the final cost will definitely be at or below $80 total as promised (and it will likely be less than that)." ; br () ;
                       br () ;
                       pcdata "However, I booked the class at the Zoo and they are now asking for the children's real names. The cost is $30 and it includes the zoo entrance for one adult and one children, as well as the class itself (see " ; Raw.a ~a:[ a_href (uri_of_string (fun () -> "http://www.sfzoo.org/learn/childrens-programs.htm")) ] [ pcdata "here" ]; pcdata ")" ; br () ;
                       br () ;

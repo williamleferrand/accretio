@@ -8,6 +8,8 @@
  *
  *)
 
+(* this entier playbook should be rewritten at some point, there are millions of
+   hardcoded things here *)
 
 open Lwt
 
@@ -118,6 +120,77 @@ let extract_quote context message =
     in
     return `None
 
+
+
+(* more generic suggestion for the zoo trip, youngest children *)
+
+let generic_suggest context () =
+  let activity_older_kids = {
+    activity_uid = 1 ;
+    activity_reference = sprintf "%04d%04d%04d" 2016 5 27 ;
+    activity_min_age_in_months = 36 ;
+    activity_max_age_in_months = 60 ;
+    activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
+    activity_title = "Field trip proposal - SF Zoo on 5/27 - $80 all included" ;
+    activity_description = "I'm making some progress! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27. We would go together to the Zoo, attend the class and spend some time wandering among the animals, before heading back home." ;
+    activity_summary = "SF zoo on 5/27" ;
+    activity_steps = [] ;
+    activity_status =
+      Confirmed {
+        activity_number_of_spots = 8 ;
+        activity_price_per_spot = 80 ;
+        activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for)." ;
+      } ;
+    activity_attachments = [] ;
+    activity_bookings = []
+  }
+  in
+  let activity_younger_kids = {
+    activity_uid = 1 ;
+    activity_reference = sprintf "2to3on%04d%04d%04d" 2016 5 27 ;
+    activity_min_age_in_months = 18 ;
+    activity_max_age_in_months = 30 ;
+    activity_date = { year = 2016 ; month = 5 ; day = 27 } ;
+    activity_title = "Field trip proposal - SF Zoo on 5/27 - $80 all included" ;
+    activity_description = "I'm making some progress! I was able to secure 8 spots for the SF Zoo Animal Adventure Class on 5/27. We would go together to the Zoo, attend the class and spend some time wandering among the animals, before heading back home." ;
+    activity_summary = "SF zoo on 5/27" ;
+    activity_steps = [] ;
+    activity_status =
+      Confirmed {
+        activity_number_of_spots = 8 ;
+        activity_price_per_spot = 80 ;
+        activity_price_description = "The cost is $80. It includes the class fee, the Zoo admission and the transportation for 1 child and 1 parent, as well as one lunchbox per child." ;
+        activity_price_remark = "This trip is done 'at cost' so that our children can benefit from the SF Zoo's amazing class. If you decide to join and once I receive your payment I will send your contact info to the SF Zoo so that they put your name on the reservation for the class (it is already paid for)." ;
+      } ;
+    activity_attachments = [] ;
+    activity_bookings = []
+  }
+  in
+  lwt groups = context.search_societies ~query:"group" () in
+  lwt _ =
+    Lwt_list.iter_s
+      (fun society ->
+         lwt _ =
+           context.message_society
+             ~society
+             ~stage:"suggest_activity"
+             ~subject:""
+             ~content:(Yojson_activity.to_string activity_older_kids)
+             ()
+         in
+         lwt _ =
+           context.message_society
+             ~society
+             ~stage:"suggest_activity"
+             ~subject:""
+             ~content:(Yojson_activity.to_string activity_younger_kids)
+             ()
+         in
+         return_unit)
+      groups
+  in
+  return `None
 
 (* the activity scheduler - still pretty hardcoded ********************************)
 
@@ -569,6 +642,7 @@ PLAYBOOK
 *request_confirm_booking<forward> ~> `Message of email ~> confirm_booking
 
 *persist
+*generic_suggest
 
 PROPERTIES
   - "Your duties", "None"
