@@ -611,7 +611,7 @@ let ask_payment context message =
                       br () ;
                       pcdata "Great news, the event is filling up!" ; br () ;
                       br () ;
-                      pcdata "I still haven't finalized the transporation solution (I apologize for the sloppiness, all this is very experimental) but the final cost will definitely be at or below $80 total as promised (and it will likely be less than that)." ; br () ;
+                      pcdata "I still haven't finalized the transportation solution (I apologize for the sloppiness, all this is very experimental) but the final cost will definitely be at or below $80 total as promised (and it will likely be less than that)." ; br () ;
                       br () ;
                       pcdata "However, I booked the class at the Zoo and they are now asking for the children's real names. The cost is $30 and it includes the zoo entrance for one adult and one children, as well as the class itself (see " ; Raw.a ~a:[ a_href (uri_of_string (fun () -> "http://www.sfzoo.org/learn/childrens-programs.htm")) ] [ pcdata "here" ]; pcdata ")" ; br () ;
                       br () ;
