@@ -947,7 +947,7 @@ let dom bundle =
 
       div ~a:[ a_class [ "data-item" ; "box" ]] [
         div ~a:[ a_class [ "box-section" ]] [
-          pcdata key ; pcdata " -> " ; pcdata value ;
+          pcdata key ; pcdata " -> " ; pcdata (if String.length value > 1024 then String.sub value 0 1024 else value);
         ] ;
         div ~a:[ a_class [ "box-action" ]] [
           edit ;
