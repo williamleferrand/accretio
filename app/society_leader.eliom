@@ -1076,15 +1076,6 @@ let dom bundle =
 
   in
 
-  (* the custom blocks - TODO: try to do something less ugly there ***********)
-
-  let custom_blocks =
-    match bundle.view.View_society.playbook.View_playbook.name with
-    | "Children schoolbus" ->
-      Schoolbus_blocks.doms bundle.view.View_society.uid data ()
-    | _ -> []
-  in
-
   (* the societies *)
 
   let societies =
@@ -1135,9 +1126,10 @@ let dom bundle =
     ] ;
     div ~a:[ a_class [ "society-leader-lower" ]]
 
-      (((div ~a:[ a_class [ "mailboxes" ]] [
-           h2 [ pcdata "Mailboxes" ] ;
-           div ~a:[ a_class [ "clearfix" ]] [
+      [
+        div ~a:[ a_class [ "mailboxes" ]] [
+          h2 [ pcdata "Mailboxes" ] ;
+          div ~a:[ a_class [ "clearfix" ]] [
              div ~a:[ a_class [ "inbox-outer" ; "left" ]] [
                h3 [ pcdata "Inbox" ] ;
                inbox ;
@@ -1147,24 +1139,23 @@ let dom bundle =
                outbox
              ] ;
            ] ;
-         ]) ;
+        ] ;
 
-         :: custom_blocks) @
+        div ~a:[ a_class [ "triggers" ]] [
+          h2 [ pcdata "Triggers" ] ;
+          div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
+        ] ;
 
-         [
-           div ~a:[ a_class [ "triggers" ]] [
-             h2 [ pcdata "Triggers" ] ;
-             div ~a:[ a_class [ "triggers-controls"; "clearfix" ]] triggers
-           ] ;
-           members ;
-           societies ;
-           messenger ;
-           data_dom ;
-           parameters ;
-           name ;
-           description ;
-           supervisor])
-    ]
+        members ;
+        societies ;
+        messenger ;
+        data_dom ;
+        parameters ;
+        name ;
+        description ;
+        supervisor
+      ]
+  ]
 
 
 }}
