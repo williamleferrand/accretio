@@ -83,10 +83,17 @@ let format view =
     | Failed msg -> [ pcdata "Failed: " ; pcdata msg ]
     | Paid -> [ pcdata "Paid" ]
   in
+  let edit =
+    button
+      ~a:[ a_button_type `Button ;
+           a_onclick (fun _ -> Service.goto (Service.AdminGraphPayment (Some view.uid))) ]
+      [ pcdata "Edit" ]
+  in
   div ~a:[ a_class [ "view-payment" ]] [
     div ~a:[ a_class [ "label" ]] [ pcdata view.label ] ;
     div ~a:[ a_class [ "amount" ]] [ pcdata (Printf.sprintf "$%.2f" view.amount) ] ;
     div ~a:[ a_class [ "state" ]] state ;
+    div ~a:[ a_class [ "edit" ]] [ pcdata "Edit" ] ;
   ]
 
 }}

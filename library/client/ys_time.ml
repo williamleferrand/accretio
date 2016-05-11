@@ -52,6 +52,9 @@ let date_picker () =
 
    dom, get
 
+let now () =
+  let t = jsnew Js.date_now () in
+  Int64.of_int (t##getUTCSeconds())
 
 let date_picker_react ?default () =
   let datetime = input

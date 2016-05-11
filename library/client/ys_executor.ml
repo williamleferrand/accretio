@@ -31,3 +31,5 @@ type call =
     schedule : schedule ;
     created_on : timestamp ;
   }
+
+type call_option = call option

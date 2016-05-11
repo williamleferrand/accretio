@@ -52,6 +52,20 @@ type thread_op =
   | ThreadUpdateMessage
   | ThreadMessagesReset deriving (Json)
 
+type booking_op =
+  | BookingUpdateCount of int
+  | BookingUpdateCost of float deriving (Json)
+
+type payment_op =
+  | PaymentUpdateStatePaid
+  | PaymentUpdateStateFailed of string
+  | PaymentUpdateStatePending deriving (Json)
+
+type activity_op =
+  | ActivityUpdateTitle of string
+  | ActivityUpdateBookings of int list
+  | ActivityUpdateNumberOfSpots of int deriving(Json)
+
 }}
 
 {server{
@@ -79,6 +93,21 @@ let fetch_thread =
     "thread"
     (Object_thread.Store.Unsafe.get : (int -> Object_thread.t Lwt.t))
 
+let fetch_booking =
+  fetch
+    "booking"
+    (Object_booking.Store.Unsafe.get : (int -> Object_booking.t Lwt.t))
+
+let fetch_payment =
+  fetch
+    "payment"
+    (Object_payment.Store.Unsafe.get : (int -> Object_payment.t Lwt.t))
+
+let fetch_activity =
+  fetch
+    "activity"
+    (Object_activity.Store.Unsafe.get : (int -> Object_activity.t Lwt.t))
+
 let query_member query =
   Lwt_log.ign_info_f "searching for member using query %s" query ;
   let open Ys_uid in
@@ -100,6 +129,21 @@ let query_thread query =
   return_none
 
 let query_thread = server_function ~name:"query-admin-thread" Json.t<string> query_thread
+
+let query_booking query =
+  return_none
+
+let query_booking = server_function ~name:"query-admin-booking" Json.t<string> query_booking
+
+let query_payment query =
+  return_none
+
+let query_payment = server_function ~name:"query-admin-payment" Json.t<string> query_payment
+
+let query_activity query =
+  Object_activity.Store.find_by_reference query
+
+let query_activity = server_function ~name:"query-admin-activity" Json.t<string> query_activity
 
 (* setters ********************************************************************)
 
@@ -169,6 +213,57 @@ let apply_thread_op =
           | _ -> return_true)
   )
 
+let apply_booking_op =
+  server_function ~name:"apply-admin-booking" Json.t<int * booking_op>
+  (fun (uid, op) ->
+     Vault.protected_admin_bool
+        (fun session ->
+          match op with
+          | BookingUpdateCount count ->
+            lwt _ = $booking(uid)<-count = count in
+            return_true
+          | BookingUpdateCost cost ->
+            lwt _ = $booking(uid)<-cost = cost in
+            return_true
+          | _ -> return_true)
+  )
+
+let apply_payment_op =
+  server_function ~name:"apply-admin-payment" Json.t<int * payment_op>
+  (fun (uid, op) ->
+     Vault.protected_admin_bool
+        (fun session ->
+          match op with
+          | PaymentUpdateStatePending ->
+            lwt _ = $payment(uid)<-state = Object_payment.Pending in
+            return_true
+          | PaymentUpdateStateFailed cause ->
+            lwt _ = $payment(uid)<-state = (Object_payment.Failed cause) in
+            return_true
+          | PaymentUpdateStatePaid ->
+            lwt _ = $payment(uid)<-state = Object_payment.Paid in
+            return_true
+          | _ -> return_true)
+  )
+
+let apply_activity_op =
+  server_function ~name:"apply-admin-activity" Json.t<int * activity_op>
+  (fun (uid, op) ->
+     Vault.protected_admin_bool
+        (fun session ->
+          match op with
+          | ActivityUpdateTitle title ->
+            lwt _ = $activity(uid)<-title = title in
+            return_true
+          | ActivityUpdateBookings bookings ->
+            lwt _ = $activity(uid)<-bookings = (List.map (fun uid -> (`Booking, uid)) bookings) in
+            return_true
+          | ActivityUpdateNumberOfSpots number_of_spots ->
+            lwt _ = $activity(uid)<-number_of_spots = number_of_spots in
+            return_true
+          | _ -> return_true)
+  )
+
 }}
 
 {client{
@@ -185,6 +280,9 @@ let wrap_apply f =
 
 let apply_member_op = wrap_apply %apply_member_op
 let apply_thread_op = wrap_apply %apply_thread_op
+let apply_booking_op = wrap_apply %apply_booking_op
+let apply_payment_op = wrap_apply %apply_payment_op
+let apply_activity_op = wrap_apply %apply_activity_op
 
 let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_types.div_content_fun elt React.signal =
   S.map
@@ -316,6 +414,16 @@ module Helpers =
         button
           ~a:[ a_button_type `Button ;
                a_onclick (fun _ -> ignore_result (update (int_of_string (Ys_dom.get_value input)))) ]
+          [ pcdata "Update" ]
+      ]
+
+    let edit_float value update =
+      let input = input ~a:[ a_input_type `Text ; a_value (string_of_float value) ] () in
+      [
+        input ;
+        button
+          ~a:[ a_button_type `Button ;
+               a_onclick (fun _ -> ignore_result (update (float_of_string (Ys_dom.get_value input)))) ]
           [ pcdata "Update" ]
       ]
 
@@ -668,6 +776,85 @@ let builder_thread uid v =
   ]
 
 
+let builder_booking uid v =
+
+  div ~a:[ a_class [ "box" ]] [
+
+    view uid ;
+
+    field "count"
+      (edit_int
+         v.Object_booking.count
+         (fun s -> apply_booking_op (uid, BookingUpdateCount s))) ;
+
+    field "cost"
+      (edit_float
+         v.Object_booking.cost
+         (fun s -> apply_booking_op (uid, (BookingUpdateCost s)))) ;
+
+  ]
+
+
+let builder_payment uid v =
+
+ let edit_state state =
+   let button label op =
+     button
+       ~a:[ a_button_type `Button ;
+            a_onclick (fun _ -> ignore_result (apply_payment_op (uid, op))) ]
+        [ pcdata label ]
+    in
+    [
+      (match state with
+         Object_payment.Paid -> h3 [ pcdata "Paid" ]
+       | Object_payment.Pending -> h3 [ pcdata "Pending" ]
+       | Object_payment.Failed cause -> h3 [ pcdata "Failed: " ; pcdata cause ]) ;
+
+      div [ button "Paid" PaymentUpdateStatePaid ;
+            button "Fail" (PaymentUpdateStateFailed "failed") ;
+            button "Pending" PaymentUpdateStatePending; ]
+    ]
+ in
+
+  div ~a:[ a_class [ "box" ]] [
+
+    view uid ;
+
+    field "state"
+      (edit_state v.Object_payment.state)
+
+  ]
+
+
+let builder_activity uid v =
+
+  div ~a:[ a_class [ "box" ]] [
+
+    view uid ;
+
+    field "title"
+      (edit_string
+         v.Object_activity.title
+         (fun s -> apply_activity_op (uid, (ActivityUpdateTitle s)))) ;
+
+    field "number of spots"
+      (edit_int
+         v.Object_activity.number_of_spots
+         (fun s -> apply_activity_op (uid, (ActivityUpdateNumberOfSpots s)))) ;
+
+    field "bookings"
+      (edit_edges
+         (fun `Booking -> "booking")
+         (fun _ -> `Booking)
+         (fun _ -> ())
+         (fun bookings ->
+            let bookings = List.map snd bookings in
+            apply_activity_op (uid, (ActivityUpdateBookings bookings)))
+         v.Object_activity.bookings)
+
+  ]
+
+
 let dom_graph_member =
   dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
   %fetch_member
@@ -683,6 +870,26 @@ let dom_graph_thread =
       builder_thread
       (fun uid_option -> Service.goto (Service.AdminGraphThread uid_option))
 
+let dom_graph_booking =
+  dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
+  %fetch_booking
+  %query_booking
+      builder_booking
+      (fun uid_option -> Service.goto (Service.AdminGraphBooking uid_option))
+
+let dom_graph_payment =
+  dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
+  %fetch_payment
+  %query_payment
+      builder_payment
+      (fun uid_option -> Service.goto (Service.AdminGraphPayment uid_option))
+
+let dom_graph_activity =
+  dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
+  %fetch_activity
+  %query_activity
+      builder_activity
+      (fun uid_option -> Service.goto (Service.AdminGraphActivity uid_option))
 
 let dom_stats () =
   S.map
