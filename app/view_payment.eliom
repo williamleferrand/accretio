@@ -93,7 +93,7 @@ let format view =
     div ~a:[ a_class [ "label" ]] [ pcdata view.label ] ;
     div ~a:[ a_class [ "amount" ]] [ pcdata (Printf.sprintf "$%.2f" view.amount) ] ;
     div ~a:[ a_class [ "state" ]] state ;
-    div ~a:[ a_class [ "edit" ]] [ pcdata "Edit" ] ;
+    div ~a:[ a_class [ "edit" ]] [ edit ] ;
   ]
 
 }}
