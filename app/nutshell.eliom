@@ -93,6 +93,7 @@ let dispatch service : 'a option React.signal =
   | AdminGraphThread uid_option -> wrap (Admin.dom_graph_thread uid_option)
   | AdminGraphBooking uid_option -> wrap (Admin.dom_graph_booking uid_option)
   | AdminGraphPayment uid_option -> wrap (Admin.dom_graph_payment uid_option)
+  | AdminGraphActivity uid_option -> wrap (Admin.dom_graph_activity uid_option)
   | AdminI18n -> wrap (Admin.dom_i18n ())
   | Playbook uid -> Playbook.dom uid
   | Dashboard -> Dashboard.dom ()

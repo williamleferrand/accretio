@@ -83,6 +83,11 @@ let dom () =
                    [
                      pcdata "Bookings"
                    ] ;
+                 div ~a:[ a_onclick (fun _ -> Service.goto (Service.AdminGraphActivity None)) ;
+                          a_class [ "left"; "menu"; "menu-admin" ]]
+                   [
+                     pcdata "Activities"
+                   ] ;
                  div ~a:[ a_onclick (fun _ -> Service.goto Service.AdminI18n) ;
                           a_class [ "left"; "menu"; "menu-admin" ]]
                    [

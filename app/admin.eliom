@@ -61,6 +61,11 @@ type payment_op =
   | PaymentUpdateStateFailed of string
   | PaymentUpdateStatePending deriving (Json)
 
+type activity_op =
+  | ActivityUpdateTitle of string
+  | ActivityUpdateBookings of int list
+  | ActivityUpdateNumberOfSpots of int deriving(Json)
+
 }}
 
 {server{
@@ -98,6 +103,11 @@ let fetch_payment =
     "payment"
     (Object_payment.Store.Unsafe.get : (int -> Object_payment.t Lwt.t))
 
+let fetch_activity =
+  fetch
+    "activity"
+    (Object_activity.Store.Unsafe.get : (int -> Object_activity.t Lwt.t))
+
 let query_member query =
   Lwt_log.ign_info_f "searching for member using query %s" query ;
   let open Ys_uid in
@@ -129,6 +139,11 @@ let query_payment query =
   return_none
 
 let query_payment = server_function ~name:"query-admin-payment" Json.t<string> query_payment
+
+let query_activity query =
+  Object_activity.Store.find_by_reference query
+
+let query_activity = server_function ~name:"query-admin-activity" Json.t<string> query_activity
 
 (* setters ********************************************************************)
 
@@ -231,6 +246,24 @@ let apply_payment_op =
           | _ -> return_true)
   )
 
+let apply_activity_op =
+  server_function ~name:"apply-admin-activity" Json.t<int * activity_op>
+  (fun (uid, op) ->
+     Vault.protected_admin_bool
+        (fun session ->
+          match op with
+          | ActivityUpdateTitle title ->
+            lwt _ = $activity(uid)<-title = title in
+            return_true
+          | ActivityUpdateBookings bookings ->
+            lwt _ = $activity(uid)<-bookings = (List.map (fun uid -> (`Booking, uid)) bookings) in
+            return_true
+          | ActivityUpdateNumberOfSpots number_of_spots ->
+            lwt _ = $activity(uid)<-number_of_spots = number_of_spots in
+            return_true
+          | _ -> return_true)
+  )
+
 }}
 
 {client{
@@ -249,6 +282,7 @@ let apply_member_op = wrap_apply %apply_member_op
 let apply_thread_op = wrap_apply %apply_thread_op
 let apply_booking_op = wrap_apply %apply_booking_op
 let apply_payment_op = wrap_apply %apply_payment_op
+let apply_activity_op = wrap_apply %apply_activity_op
 
 let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_types.div_content_fun elt React.signal =
   S.map
@@ -792,6 +826,35 @@ let builder_payment uid v =
   ]
 
 
+let builder_activity uid v =
+
+  div ~a:[ a_class [ "box" ]] [
+
+    view uid ;
+
+    field "title"
+      (edit_string
+         v.Object_activity.title
+         (fun s -> apply_activity_op (uid, (ActivityUpdateTitle s)))) ;
+
+    field "number of spots"
+      (edit_int
+         v.Object_activity.number_of_spots
+         (fun s -> apply_activity_op (uid, (ActivityUpdateNumberOfSpots s)))) ;
+
+    field "bookings"
+      (edit_edges
+         (fun `Booking -> "booking")
+         (fun _ -> `Booking)
+         (fun _ -> ())
+         (fun bookings ->
+            let bookings = List.map snd bookings in
+            apply_activity_op (uid, (ActivityUpdateBookings bookings)))
+         v.Object_activity.bookings)
+
+  ]
+
+
 let dom_graph_member =
   dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
   %fetch_member
@@ -820,6 +883,13 @@ let dom_graph_payment =
   %query_payment
       builder_payment
       (fun uid_option -> Service.goto (Service.AdminGraphPayment uid_option))
+
+let dom_graph_activity =
+  dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
+  %fetch_activity
+  %query_activity
+      builder_activity
+      (fun uid_option -> Service.goto (Service.AdminGraphActivity uid_option))
 
 let dom_stats () =
   S.map

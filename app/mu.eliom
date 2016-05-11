@@ -150,6 +150,11 @@ let _ =
     ~get_params:(opt (int "uid"))
     ~extract_service:(fun _ uid_option -> return (Service.AdminGraphPayment uid_option))
     () ;
+  register_page
+    ~path:[ "admin" ; "graph" ; "activity"]
+    ~get_params:(opt (int "uid"))
+    ~extract_service:(fun _ uid_option -> return (Service.AdminGraphActivity uid_option))
+    () ;
   register_page_no_param
     ~path:[ "admin" ; "stats" ]
     ~extract_service:(fun _ -> return Service.AdminStats)

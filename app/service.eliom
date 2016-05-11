@@ -47,6 +47,7 @@ type service =
   | AdminGraphThread of int option
   | AdminGraphBooking of int option
   | AdminGraphPayment of int option
+  | AdminGraphActivity of int option
   | AdminStats
   | AdminI18n
   | Settings
@@ -81,6 +82,7 @@ let path_of_service = function
   | AdminGraphThread uid_option -> admin "thread" uid_option
   | AdminGraphBooking uid_option -> admin "booking" uid_option
   | AdminGraphPayment uid_option -> admin "payment" uid_option
+  | AdminGraphActivity uid_option -> admin "activity" uid_option
   | AdminStats -> [ "admin" ; "stats" ]
   | AdminI18n -> [ "admin" ; "i18n" ]
   | Settings -> [ "settings" ]
