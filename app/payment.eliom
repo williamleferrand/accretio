@@ -297,6 +297,11 @@ let builder = function
       payment_amount ;
       R.node payment_method ;
       div ~a:[ a_class [ "payment-footnote" ]] [
+        div ~a:[ a_class [ "payment-stripe" ]] [
+          Raw.img
+            ~src:("/img/stripe.png")
+            ~alt:"" ()
+        ] ;
         pcdata "Payments are secured by Stripe. Accretio doesn't store your payment information. The price includes the 2.9% Stripe service fee."
       ]
     ]
