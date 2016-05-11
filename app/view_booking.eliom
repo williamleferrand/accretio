@@ -32,6 +32,7 @@ type t =
     uid : uid ;
     member : View_member.t ;
     count : int ;
+    cost : float ;
     status : status ;
   }
 
@@ -40,7 +41,7 @@ type t =
 {server{
 
 let to_view uid =
-  lwt member, count, status = $booking(uid)->(member, count, status) in
+  lwt member, count, status, cost = $booking(uid)->(member, count, status, cost) in
   lwt member = View_member.to_view member in
   lwt status =
     match status with
@@ -53,6 +54,7 @@ let to_view uid =
     uid ;
     member ;
     count ;
+    cost ;
     status ;
   }
 
@@ -60,6 +62,7 @@ let to_view uid =
 
 {client{
 
+open Printf
 open React
 open Ys_react
 open Eliom_content.Html5
@@ -78,6 +81,9 @@ let format view =
     ] ;
     div ~a:[ a_class [ "count" ]] [
       pcdata (string_of_int view.count)
+    ] ;
+    div ~a:[ a_class [ "cost" ]] [
+      pcdata (sprintf "%.2f" view.cost)
     ] ;
     div ~a:[ a_class [ "status" ]] status
   ]

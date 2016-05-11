@@ -36,6 +36,7 @@ type t = {
   count : int ;
 
   status : status ;
+  cost : float ;
 
 } with vertex
   (

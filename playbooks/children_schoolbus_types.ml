@@ -141,6 +141,7 @@ type activity =
 
 type request_lock_spots =
   {
+    request_lock_spots_member : int ;
     request_lock_spots_activity_uid : int ;
     request_lock_spots_count : int ;
   } with yojson
@@ -159,4 +160,11 @@ type request_confirm_booking =
   {
     request_confirm_booking_activity : int ;
     request_confirm_booking_payment : int ;
+  } with yojson
+
+
+type reply_confirm_booking =
+  {
+    reply_confirm_booking_activity : activity ;
+    reply_confirm_booking_count : int ;
   } with yojson

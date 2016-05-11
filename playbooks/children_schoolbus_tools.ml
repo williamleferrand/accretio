@@ -36,3 +36,32 @@ let get_profile context member =
 
 let set_profile context profile =
   context.set ~key:(key_profile profile.uid) ~value:(Yojson_profile.to_string profile)
+
+
+let to_date_json date =
+  {
+    year = 2016 ;
+    month = 5 ;
+    day = 27 ;
+  }
+
+let to_activity_json activity_uid =
+  lwt activity_reference, activity_min_age_in_months, activity_max_age_in_months,
+      activity_title, activity_description, activity_summary, date = $activity(activity_uid)->(reference, min_age_in_months, max_age_in_months, title, description, summary, date)
+  in
+  let activity_date = to_date_json date in
+  return
+    {
+      activity_uid ;
+      activity_reference ;
+      activity_min_age_in_months ;
+      activity_max_age_in_months ;
+      activity_date ;
+      activity_title ;
+      activity_description ;
+      activity_summary ;
+      activity_steps = [] ;
+      activity_status = Suggestion { activity_suggestion = "" } ;
+      activity_attachments = [] ;
+      activity_bookings = [] ;
+    }
