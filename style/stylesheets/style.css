@@ -1368,6 +1368,11 @@ h2 {
   font-size: 12px;
   text-align: center;
 }
+/* line 60, ../sass/_payment.scss */
+.payment .payment-stripe {
+  margin: auto;
+  margin-bottom: 10px;
+}
 
 /* line 2, ../sass/_footer.scss */
 .footer {
