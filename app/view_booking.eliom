@@ -75,6 +75,12 @@ let format view =
     | Confirmed payment -> [ pcdata "Confirmed" ;
                              View_payment.format payment ]
   in
+  let edit =
+    button
+      ~a:[ a_button_type `Button ;
+           a_onclick (fun _ -> Service.goto (Service.AdminGraphBooking (Some view.uid))) ]
+      [ pcdata "Edit" ]
+  in
   div ~a:[ a_class [ "view-booking" ]] [
     div ~a:[ a_class [ "member" ]] [
       View_member.format view.member
@@ -85,7 +91,8 @@ let format view =
     div ~a:[ a_class [ "cost" ]] [
       pcdata (sprintf "%.2f" view.cost)
     ] ;
-    div ~a:[ a_class [ "status" ]] status
+    div ~a:[ a_class [ "status" ]] status ;
+    div ~a:[ a_class [ "edit" ]] [ edit ]
   ]
 
 }}
