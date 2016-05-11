@@ -154,7 +154,7 @@ type lock_spots =
     lock_until : int64 ;
   } with yojson
 
-type reply_lock_spots = EventFull | EventLock of lock_spots with yojson
+type reply_lock_spots = EventFull of int | EventLock of lock_spots with yojson
 
 type request_confirm_booking =
   {

@@ -564,11 +564,11 @@ let ask_payment context message =
          (fun original_message ->
             lwt content = context.get_message_content ~message in
             match Yojson_reply_lock_spots.from_string content with
-              EventFull ->
+              EventFull remaining ->
               lwt _ =
                 context.reply_to
                   ~message:original_message
-                  ~content:[ pcdata "Sorry, the event is currently full .. let me see if can extend the number of spots" ]
+                  ~content:[ pcdata "Sorry, there are only " ; pcdata (string_of_int remaining) ; pcdata " spots left ;(" ]
                   ()
               in
               return `None

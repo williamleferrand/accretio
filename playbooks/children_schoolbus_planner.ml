@@ -487,32 +487,45 @@ let lock_spot context message =
     Lwt_list.fold_left_s
       (fun acc (`Booking, uid) ->
          match_lwt $booking(uid)->(status, count) with
-           | Confirmed _, count -> return (acc - count)
-           | Pending, count -> return (acc - count) (* todo, expire there *))
+           | Object_booking.Confirmed _, count -> return (acc - count)
+           | Object_booking.Pending, count -> return (acc - count) (* todo, expire there *))
       number_of_spots
       bookings
   in
 
-  if number_of_spots < 1 then
+  if number_of_spots < request.request_lock_spots_count then
     lwt _ =
       context.reply_to
         ~message
-        ~content:[ Unsafe.data (Yojson_reply_lock_spots.to_string EventFull) ]
+        ~content:[ Unsafe.data (Yojson_reply_lock_spots.to_string (EventFull number_of_spots)) ]
         ()
     in
     return `None
   else
     begin
 
-    lwt _ =
-      context.reply_to
+      lwt booking =
+        match_lwt Object_booking.Store.create
+                    ~member:request.request_lock_spots_member
+                    ~count:request.request_lock_spots_count
+                    ~cost:32.0 (* TODO: change that asap *)
+                    ~status:Object_booking.Pending
+                    ()
+        with
+        | `Object_created booking -> return booking.Object_booking.uid
+      in
+
+      lwt _ = $activity(request.request_lock_spots_activity_uid)<-bookings += (`Booking, booking) in
+
+      lwt _ =
+        context.reply_to
         ~message
         ~content:[
           Unsafe.data
             (Yojson_reply_lock_spots.to_string
                (EventLock {
                    lock_spots_activity_uid = request.request_lock_spots_activity_uid ;
-                   lock_spots_count = number_of_spots ;
+                   lock_spots_count = request.request_lock_spots_count ;
                    lock_attachments = [] ;
                    lock_until = now ;
                  }))
@@ -692,7 +705,7 @@ let confirm_booking context message =
                    return credit
                  else
                    lwt _ =
-                     $booking(uid)<-status = Confirmed request_confirm_booking.request_confirm_booking_payment
+                     $booking(uid)<-status = Object_booking.Confirmed request_confirm_booking.request_confirm_booking_payment
                    in
                    return (credit -. count))
               amount
