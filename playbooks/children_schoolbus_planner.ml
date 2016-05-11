@@ -28,6 +28,7 @@ open Ys_uid
 open Ys_googlemaps_types
 
 open Children_schoolbus_types
+open Children_schoolbus_tools
 
 let author = "william@accret.io"
 let name = "Children schoolbus planner"
@@ -441,41 +442,90 @@ let return_pitch context message =
 let request_lock_spot context () =
   return `None
 
+
+let is_booking_final_and_mark_non_final_payments booking =
+  match_lwt $booking(booking)->status with
+    Object_booking.Pending -> return_false
+  | Object_booking.Confirmed payment ->
+    match_lwt $payment(payment)->state with
+      Object_payment.Paid -> return_true
+    | Object_payment.Pending ->
+      lwt _ = $payment(payment)<-state = Object_payment.Failed "invalidated" in
+      return_false
+    | Object_payment.Failed _ -> return_false
+
+let remove_all_non_final_bookings_from_member member activity =
+  lwt _ =
+    $activity(activity)<-bookings %%% (fun bookings ->
+        Lwt_list.filter_s
+          (fun (`Booking, uid) ->
+             lwt owner = $booking(uid)->member in
+             if owner <> member then
+               return_true
+             else
+               is_booking_final_and_mark_non_final_payments uid)
+          bookings)
+  in
+  return_unit
+
 (* we have the executor lock around this call, we're good *)
 let lock_spot context message =
   lwt content = context.get_message_content ~message in
   let request = Yojson_request_lock_spots.from_string content in
 
   let now = Ys_time.now () in
+
+  lwt _ =
+    remove_all_non_final_bookings_from_member
+      request.request_lock_spots_member
+      request.request_lock_spots_activity_uid
+  in
+
   lwt number_of_spots, bookings = $activity(request.request_lock_spots_activity_uid)->(number_of_spots, bookings) in
+
   lwt number_of_spots =
     Lwt_list.fold_left_s
       (fun acc (`Booking, uid) ->
          match_lwt $booking(uid)->(status, count) with
-           | Confirmed _, count -> return (acc - count)
-           | Pending, count -> return (acc - count) (* todo, expire there *))
+           | Object_booking.Confirmed _, count -> return (acc - count)
+           | Object_booking.Pending, count -> return (acc - count) (* todo, expire there *))
       number_of_spots
       bookings
   in
 
-  if number_of_spots < 1 then
+  if number_of_spots < request.request_lock_spots_count then
     lwt _ =
       context.reply_to
         ~message
-        ~content:[ Unsafe.data (Yojson_reply_lock_spots.to_string EventFull) ]
+        ~content:[ Unsafe.data (Yojson_reply_lock_spots.to_string (EventFull number_of_spots)) ]
         ()
     in
     return `None
   else
-    lwt _ =
-      context.reply_to
+    begin
+
+      lwt booking =
+        match_lwt Object_booking.Store.create
+                    ~member:request.request_lock_spots_member
+                    ~count:request.request_lock_spots_count
+                    ~cost:32.0 (* TODO: change that asap *)
+                    ~status:Object_booking.Pending
+                    ()
+        with
+        | `Object_created booking -> return booking.Object_booking.uid
+      in
+
+      lwt _ = $activity(request.request_lock_spots_activity_uid)<-bookings += (`Booking, booking) in
+
+      lwt _ =
+        context.reply_to
         ~message
         ~content:[
           Unsafe.data
             (Yojson_reply_lock_spots.to_string
                (EventLock {
                    lock_spots_activity_uid = request.request_lock_spots_activity_uid ;
-                   lock_spots_count = number_of_spots ;
+                   lock_spots_count = request.request_lock_spots_count ;
                    lock_attachments = [] ;
                    lock_until = now ;
                  }))
@@ -483,7 +533,7 @@ let lock_spot context message =
         ()
     in
     return `None
-
+    end
 
 (* the curriculum *************************************************************)
 (* lots and lots of todo here .. *)
@@ -578,45 +628,156 @@ let request_confirm_booking context message =
 
 let confirm_booking context message =
   lwt content = context.get_message_content ~message in
-  let request_confirm_booking = Yojson_request_confirm_booking.from_string content in
+
+  let request_confirm_booking =
+    Yojson_request_confirm_booking.from_string
+      content in
+
   context.log_info "confirming booking for activity %d"
     request_confirm_booking.request_confirm_booking_activity ;
-  (* let's try to make it idempotent *)
-  lwt bookings = $activity(request_confirm_booking.request_confirm_booking_activity)->bookings in
-  lwt already_exists =
-    Lwt_list.exists_s
-      (fun (`Booking, uid) ->
-         match_lwt $booking(uid)->status with
-          | Object_booking.Confirmed payment when payment = request_confirm_booking.request_confirm_booking_payment -> return_true
-          | _ -> return_false)
-       bookings
-  in
-  match already_exists with
-    true ->
-    context.log_info "booking already exists .." ;
-    return `None
-  | false ->
-    lwt member = $payment(request_confirm_booking.request_confirm_booking_payment)->member in
-    lwt booking =
-      match_lwt Object_booking.Store.create
-                  ~member
-                  ~count:1
-                  ~status:(Object_booking.Confirmed request_confirm_booking.request_confirm_booking_payment)
-                  ()
-      with
-      | `Object_created booking -> return booking.Object_booking.uid
-    in
-    lwt _ = $activity(request_confirm_booking.request_confirm_booking_activity)<-bookings += (`Booking, booking) in
+
+  lwt member = $payment(request_confirm_booking.request_confirm_booking_payment)->member in
+  lwt amount = $payment(request_confirm_booking.request_confirm_booking_payment)->amount in
+
+  let cost = 32.0 in
+
+  (* let's check that the payment is valid *)
+
+  match_lwt $payment(request_confirm_booking.request_confirm_booking_payment)->state with
+    Object_payment.Failed _
+  | Object_payment.Pending ->
     lwt _ =
-      context.message_supervisor
-        ~subject:"New booking"
-        ~content:[ pcdata "A new booking was collected" ]
+      context.forward_to_supervisor
+        ~message
+        ~subject:"Payment is invalid"
+        ~content:[ pcdata "The payment isn't successful. Please step in" ]
         ()
     in
+    return `None
+  | Object_payment.Paid ->
+
+    (* let's run the calculations inside the booking lock *)
+
+    lwt _ =
+      $activity(request_confirm_booking.request_confirm_booking_activity)<-bookings %%% (fun bookings ->
+
+        (* first we check if the payment has already been stored  *)
+
+        lwt already_exists =
+          Lwt_list.exists_s
+            (fun (`Booking, uid) ->
+               match_lwt $booking(uid)->status with
+                 | Object_booking.Confirmed payment when payment = request_confirm_booking.request_confirm_booking_payment -> return_true
+                 | _ -> return_false)
+             bookings
+        in
+
+        match already_exists with
+          true ->
+          context.log_info
+            "payment %d has already been stored in activity %d"
+            request_confirm_booking.request_confirm_booking_payment
+            request_confirm_booking.request_confirm_booking_activity ;
+          return bookings
+        | false ->
+
+          (* now we need to look for in-flight, non confirmed bookings for this member *)
+
+          lwt pending =
+            Lwt_list.filter_s
+              (fun (`Booking, uid) ->
+                 lwt owner, status = $booking(uid)->(member, status) in
+                  if owner <> member then
+                    return_false
+                  else
+                    match status with
+                      Object_booking.Confirmed _ -> return_false
+                    | Object_booking.Pending -> return_true)
+              bookings in
+
+          (* mark the bookings as paid as we go *)
+
+          lwt credit =
+            Lwt_list.fold_left_s
+              (fun credit (`Booking, uid) ->
+                 lwt count = $booking(uid)->cost in
+                 if credit < cost then
+                   return credit
+                 else
+                   lwt _ =
+                     $booking(uid)<-status = Object_booking.Confirmed request_confirm_booking.request_confirm_booking_payment
+                   in
+                   return (credit -. count))
+              amount
+              bookings
+          in
+
+          (* and we finally create new bookings if the credit is still positive and there are enough spots *)
+          (* TODO: deal with the case where the event is filling up *)
+
+          if credit > cost then
+            begin
+              lwt booking =
+                match_lwt Object_booking.Store.create
+                            ~member
+                            ~count:(int_of_float (credit /. cost))
+                            ~cost
+                            ~status:(Object_booking.Confirmed request_confirm_booking.request_confirm_booking_payment)
+                            ()
+                with
+                | `Object_created booking -> return booking.Object_booking.uid
+              in
+              return ((`Booking, booking) :: bookings)
+            end
+          else
+            return bookings)
+  in
+
+  (* let's remove all bookings from that user that haven't been fulfilled *)
+
+  lwt _ =
+    remove_all_non_final_bookings_from_member
+      member
+      request_confirm_booking.request_confirm_booking_activity
+  in
+
+  (* now we have to make a reply to the user *)
+
+  lwt activity = to_activity_json request_confirm_booking.request_confirm_booking_activity in
+  lwt bookings = $activity(request_confirm_booking.request_confirm_booking_activity)->bookings in
+
+  lwt count =
+     Lwt_list.fold_left_s
+       (fun acc (`Booking, uid) ->
+          lwt owner, count, status = $booking(uid)->(member, count, status) in
+          if (owner = member) then
+            begin
+              match status with
+                Object_booking.Confirmed payment ->
+                begin
+                  match_lwt $payment(payment)->state with
+                    Object_payment.Paid -> return (acc + count)
+                  | _ -> return acc
+                end
+              | _ -> return acc
+            end
+          else
+            return acc)
+   0
+   bookings
+   in
+
+   let confirmation =
+      {
+        reply_confirm_booking_activity = activity ;
+        reply_confirm_booking_count = count ;
+      }
+    in
+
     lwt _ =
       context.reply_to
         ~message
-        ~content:[ pcdata "success" ]
+        ~content:[ Unsafe.data (Yojson_reply_confirm_booking.to_string confirmation) ]
         ()
     in
     return `None

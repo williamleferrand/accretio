@@ -34,6 +34,8 @@ type t = {
   created_on : timestamp ;
   society: uid ;
 
+  date : int64 ;
+
   reference : string ;
   min_age_in_months : int ;
   max_age_in_months : int ;
