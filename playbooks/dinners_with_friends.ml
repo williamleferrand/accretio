@@ -1565,7 +1565,7 @@ let share_suggestion_current_dinner context () =
 (* marking participants *******************************************************)
 
 let tag_coming = sprintf "coming%Ld"
-let tag_not_coming = sprintf "coming%Ld"
+let tag_not_coming = sprintf "notcoming%Ld"
 
 let mark_not_coming context message =
   with_dinner context message
