@@ -781,6 +781,9 @@ new_member__ ~> `AskMemberForPreferredPickupPoint of int ~> ask_member_for_prefe
 
 ask_payment ~> `PaymentSuccess of (int * int * int) ~> payment_success<forward> ~> `Message of email ~> send_confirmation
                                                        payment_success ~> `GetMoreSpots of email ~> ask_how_many_spots
+
+ask_how_many_spots ~> `One of email ~> join_activity
+
 ask_payment ~> `PaymentFailure of int ~> payment_failure
 
 *store_profile<forward> ~> `Message of email ~> decode_and_store_profile
