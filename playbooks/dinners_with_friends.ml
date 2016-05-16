@@ -1562,6 +1562,126 @@ let share_suggestion_current_dinner context () =
   | Some dinner -> return (`ShareSuggestion dinner)
 
 
+(* marking participants *******************************************************)
+
+let tag_coming = sprintf "coming%Ld"
+let tag_not_coming = sprintf "coming%Ld"
+
+let mark_not_coming context message =
+  with_dinner context message
+    (fun dinner ->
+       lwt member = context.get_message_sender ~message in
+       lwt _ = context.tag_member ~member ~tags:[ tag_coming dinner ] in
+       lwt _ = context.untag_member ~member ~tags:[ tag_not_coming dinner ] in
+       (* todo: reply to the message .. *)
+       return `None)
+
+let mark_coming context message =
+  with_dinner context message
+    (fun dinner ->
+       lwt member = context.get_message_sender ~message in
+       lwt _ = context.tag_member ~member ~tags:[ tag_not_coming dinner ] in
+       lwt _ = context.untag_member ~member ~tags:[ tag_coming dinner ] in
+       (* todo: reply to the message .. *)
+       return `None)
+
+let create_dashboard_current_dinner context () =
+  match_lwt get_dinner context with
+    None -> return `None
+  | Some dinner -> return (`CreateDashboard dinner)
+
+let create_dashboard context dinner =
+  lwt organizers = context.search_members ~query:(tag_organizer dinner.uid) () in
+  lwt participants = context.search_members ~query:(tag_coming dinner.uid) () in
+  let date = Calendar.lmake
+      ~year:dinner.date.year
+      ~month:dinner.date.month
+      ~day:dinner.date.day
+      ~hour:dinner.date.hour
+      ~minute:dinner.date.minutes ()
+  in
+  match dinner.suggestion with
+    None ->
+    lwt _ =
+      context.message_supervisor
+        ~subject:(CalendarLib.Printer.Calendar.sprint "Daddy dinner on %B %d - dashboard" date)
+        ~content:([ pcdata "There is no suggestion yet" ])
+        ()
+    in
+    return `None
+  | Some suggestion ->
+    let format_member member =
+      lwt name, preferred_email = $member(member)->(name, preferred_email) in
+      return (li [ pcdata name ; pcdata " -> " ; pcdata preferred_email ])
+    in
+    lwt organizers = Lwt_list.map_p format_member organizers in
+    lwt participants = Lwt_list.map_p format_member participants in
+
+    lwt _ =
+      context.message_supervisor
+        ~subject:(CalendarLib.Printer.Calendar.sprint "Daddy dinner on %B %d - dashboard" date)
+        ~content:([
+            pcdata "Here's the latest about the dinner at " ; pcdata suggestion.suggestion_name ; pcdata " on " ;
+            pcdata (CalendarLib.Printer.Calendar.sprint "%B %d." date) ; br () ;
+            br () ;
+            pcdata "Organizers:" ; br () ;
+            ul organizers ;
+            pcdata "Participants:" ; br () ;
+            ul participants ;
+            br () ;
+          ])
+         ()
+    in
+    return `None
+
+let make_reservation_current_dinner context () =
+  match_lwt get_dinner context with
+    None -> return `None
+  | Some dinner -> return (`MakeReservation dinner)
+
+let make_reservation context dinner =
+  lwt organizers = context.search_members ~query:(tag_organizer dinner.uid) () in
+  lwt participants = context.search_members ~query:(tag_coming dinner.uid) () in
+  match organizers with
+    [] ->
+    context.log_error "there is no organizer for dinner %Ld" dinner.uid ;
+    return `None
+  | organizer :: _ ->
+    match dinner.suggestion with
+      None -> return `None
+    | Some suggestion ->
+      let participants = Ys_uid.merge participants organizers in
+      lwt salutations = salutations organizer in
+      let date = Calendar.lmake
+          ~year:dinner.date.year
+          ~month:dinner.date.month
+          ~day:dinner.date.day
+          ~hour:dinner.date.hour
+          ~minute:dinner.date.minutes ()
+      in
+      lwt _ =
+        context.message_member
+          ~member:organizer
+          ~data:[ key_dinner, Int64.to_string dinner.uid ]
+          ~remind_after:(Calendar.Period.lmake ~hour:36 ())
+          ~subject:(CalendarLib.Printer.Calendar.sprint "Daddy dinner on %B %d - final count" date)
+          ~content:([
+              salutations ; br () ;
+              br () ;
+              pcdata (string_of_int (List.length participants)) ;
+              pcdata " people (included you) signed up for the dinner at " ;
+              pcdata suggestion.suggestion_name ; pcdata " on " ;
+              pcdata (CalendarLib.Printer.Calendar.sprint "%B %d." date) ; br () ;
+              br () ;
+              pcdata "Would you mind making a reservation if you feel that it is needed?" ; br () ;
+              br () ;
+              pcdata "Thanks!!" ; br () ;
+              br ()
+            ])
+          ()
+      in
+      return `None
+
 (* the playbook ***************************************************************)
 
 PLAYBOOK
@@ -1582,6 +1702,13 @@ extract_suggestion<forward> ~> `Message of email ~> store_suggestion<forward> ~>
 
 *reset
 *share_suggestion_current_dinner ~> `ShareSuggestion of dinner ~> share_suggestion
+
+share_suggestion ~> `NotComing of email ~> mark_not_coming
+share_suggestion ~> `Coming of email ~> mark_coming
+
+*create_dashboard_current_dinner ~> `CreateDashboard of dinner ~> create_dashboard
+
+*make_reservation_current_dinner ~> `MakeReservation of dinner ~> make_reservation
 
 PROPERTIES
   - "Your duties", "Participants take turns at picking up a restaurant. Once the number of participants has been determined by accretio, they are also responsible for making the reservation."
