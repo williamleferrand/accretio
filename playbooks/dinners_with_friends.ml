@@ -1567,7 +1567,7 @@ let share_suggestion_current_dinner context () =
 let tag_coming = sprintf "coming%Ld"
 let tag_not_coming = sprintf "notcoming%Ld"
 
-let mark_not_coming context message =
+let mark_coming context message =
   with_dinner context message
     (fun dinner ->
        lwt member = context.get_message_sender ~message in
@@ -1576,7 +1576,7 @@ let mark_not_coming context message =
        (* todo: reply to the message .. *)
        return `None)
 
-let mark_coming context message =
+let mark_not_coming context message =
   with_dinner context message
     (fun dinner ->
        lwt member = context.get_message_sender ~message in
