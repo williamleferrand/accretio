@@ -680,10 +680,10 @@ let payment_failure context payment =
   return `None
 
 let send_confirmation context message =
+  lwt content = context.get_message_content ~message in
+  let confirmation = Yojson_reply_confirm_booking.from_string content in
   with_original_message context message
     (fun message ->
-       lwt content = context.get_message_content ~message in
-       let confirmation = Yojson_reply_confirm_booking.from_string content in
        let activity = confirmation.reply_confirm_booking_activity in
        lwt member = context.get_message_sender ~message in
        match confirmation.reply_confirm_booking_count with
@@ -725,19 +725,21 @@ let send_confirmation context message =
 let ask_how_many_spots context message =
   lwt content = context.get_message_content ~message in
   let confirmation = Yojson_reply_confirm_booking.from_string content in
-  lwt _ =
-    context.reply_to
-      ~message
-      ~content:[
-        (match confirmation.reply_confirm_booking_count with
-           1 -> pcdata "You have already booked one spot for this activity."
-         | n -> pcdata (sprintf "You have already booked %d spots for this activity." n)) ; br () ;
-        br () ;
+  with_original_message context message
+    (fun message ->
+       lwt _ =
+         context.reply_to
+           ~message
+           ~content:[
+             (match confirmation.reply_confirm_booking_count with
+                1 -> pcdata "You have already booked one spot for this activity."
+              | n -> pcdata (sprintf "You have already booked %d spots for this activity." n)) ; br () ;
+             br () ;
         pcdata "How many additional spots do you need?" ; br () ;
-      ]
-      ()
-  in
-  return `None
+           ]
+           ()
+       in
+       return `None)
 
 (* the join requests **********************************************************)
 
