@@ -59,7 +59,9 @@ type booking_op =
 type payment_op =
   | PaymentUpdateStatePaid
   | PaymentUpdateStateFailed of string
-  | PaymentUpdateStatePending deriving (Json)
+  | PaymentUpdateStatePending
+  | PaymentUpdateAmount of float
+  | PaymentUpdateLabel of string deriving (Json)
 
 type activity_op =
   | ActivityUpdateTitle of string
@@ -243,6 +245,12 @@ let apply_payment_op =
           | PaymentUpdateStatePaid ->
             lwt _ = $payment(uid)<-state = Object_payment.Paid in
             return_true
+          | PaymentUpdateAmount amount ->
+            lwt _ = $payment(uid)<-amount = amount in
+            return_true
+          | PaymentUpdateLabel label ->
+            lwt _ = $payment(uid)<-label = label in
+            return_true
           | _ -> return_true)
   )
 
@@ -264,6 +272,28 @@ let apply_activity_op =
           | _ -> return_true)
   )
 
+let create_payment (member, society, label, amount) =
+  match_lwt Ys_shortlink.create () with
+    None -> return_none
+  | Some shortlink ->
+    match_lwt Object_payment.Store.create
+                ~member
+                ~label
+                ~amount:(Object_payment.apply_stripe_fees amount)
+                ~currency:Object_payment.USD
+                ~callback_success:None
+                ~callback_failure:None
+                ~shortlink
+                ~society
+                ~state:Object_payment.Pending
+                () with
+      `Object_already_exists _ -> Lwt_log.ign_error_f "couldn't create invoice??" ; return_none
+    | `Object_created payment ->
+      lwt _ = $member(member)<-payments += (`Payment, payment.Object_payment.uid) in
+      return (Some payment.Object_payment.uid)
+
+let create_payment = server_function ~name:"admin-create-payment" Json.t<int * int * string * float> create_payment
+
 }}
 
 {client{
@@ -284,7 +314,7 @@ let apply_booking_op = wrap_apply %apply_booking_op
 let apply_payment_op = wrap_apply %apply_payment_op
 let apply_activity_op = wrap_apply %apply_activity_op
 
-let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_types.div_content_fun elt React.signal =
+let dom_graph ~print ~parse ?(static=(fun () -> div [])) fetcher querier builder goto uid_option : Html5_types.div_content_fun elt React.signal =
   S.map
     (function
       | Anonymous ->
@@ -346,7 +376,8 @@ let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_type
             div ~a:[ a_class [ "box" ]] [
               div ~a:[ a_class [ "box-section" ]] [ uid_input ] ;
               div ~a:[ a_class [ "box-section" ]] [ text_input ] ;
-            ]
+            ] ;
+            static () ;
           ]
        | Some uid ->
           let content, update_content = S.create None in
@@ -363,7 +394,8 @@ let dom_graph ~print ~parse fetcher querier builder goto uid_option : Html5_type
                  (function
                    | None -> div ~a:[ a_class [ "box" ]] [ pcdata "Object not found" ]
                    | Some v -> builder uid v)
-                 content)
+                 content) ;
+            static () ;
           ])
     Sessions.session
 
@@ -816,14 +848,89 @@ let builder_payment uid v =
     ]
  in
 
+ div [
+
+   div ~a:[ a_class [ "box" ]] [
+
+     view uid ;
+
+    field "shortlink"
+      ([ pcdata v.Object_payment.shortlink ]) ;
+
+     field "state"
+       (edit_state v.Object_payment.state) ;
+
+     field "amount"
+       (edit_float
+          v.Object_payment.amount
+          (fun f -> apply_payment_op (uid, (PaymentUpdateAmount f)))) ;
+
+     field "label"
+       (edit_string
+          v.Object_payment.label
+          (fun s -> apply_payment_op (uid, (PaymentUpdateLabel s))))
+
+   ] ;
+ ]
+
+let static_payment () =
+  let member, update_member = S.create None in
+  let finalize_member, member_autocomplete =
+    Autocomplete.create_user ~placeholder:"Member name" View_member.format_autocomplete (fun i -> i)
+      (function
+        | `Elt member -> update_member (Some member)
+        | _ -> update_member None)
+  in
+
+  let society, update_society = S.create None in
+  let finalize_society, society_autocomplete =
+    Autocomplete.create_society ~placeholder:"Society name" View_society.format_autocomplete (fun i -> i)
+      (function
+        | `Elt society -> update_society (Some society)
+        | _ -> update_society None)
+  in
+
+  let amount = input ~a:[ a_input_type `Text ; a_placeholder "Amount" ] () in
+  let label = input ~a:[ a_input_type `Text ; a_placeholder "Label" ] () in
+
+  let create _ =
+    match S.value member, S.value society with
+      None, _ ->
+      Help.warning "couldn't locate the member"
+    | Some member, None ->
+      Help.warning "couldn't locate the society"
+    | Some member, Some society ->
+      detach_rpc
+          %create_payment
+             (View_member.uid member, View_society.uid society, Ys_dom.get_value label, float_of_string (Ys_dom.get_value amount))
+             (fun uid -> Service.goto (Service.AdminGraphPayment (Some uid)))
+  in
+
+  let create =
+    button
+      ~a:[ a_button_type `Button ;
+           a_onclick create ]
+      [ pcdata "Create" ]
+  in
+
   div ~a:[ a_class [ "box" ]] [
-
-    view uid ;
-
-    field "state"
-      (edit_state v.Object_payment.state)
-
+    div ~a:[ a_class [ "box-section" ]] [
+      member_autocomplete
+    ] ;
+    div ~a:[ a_class [ "box-section" ]] [
+      society_autocomplete
+    ] ;
+    div ~a:[ a_class [ "box-section" ]] [
+      label
+    ] ;
+    div ~a:[ a_class [ "box-section" ]] [
+      amount
+    ] ;
+    div ~a:[ a_class [ "box-action" ]] [
+      create
+    ] ;
   ]
+
 
 
 let builder_activity uid v =
@@ -850,7 +957,8 @@ let builder_activity uid v =
          (fun bookings ->
             let bookings = List.map snd bookings in
             apply_activity_op (uid, (ActivityUpdateBookings bookings)))
-         v.Object_activity.bookings)
+         v.Object_activity.bookings) ;
+
 
   ]
 
@@ -860,7 +968,6 @@ let dom_graph_member =
   %fetch_member
   %query_member
       builder_member
-
       (fun uid_option -> Service.goto (Service.AdminGraphMember uid_option))
 
 let dom_graph_thread =
@@ -879,6 +986,7 @@ let dom_graph_booking =
 
 let dom_graph_payment =
   dom_graph ~print:Ys_uid.to_string ~parse:Ys_uid.of_string
+    ~static:static_payment
   %fetch_payment
   %query_payment
       builder_payment
