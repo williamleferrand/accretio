@@ -25,11 +25,13 @@ open Sessions
 open Ys_uid
 open Vault
 
+type state = Drafting | Proposing | Cancelled | Done
 
 type t =
   {
     uid : uid ;
-    reference : string ;
+    state : state ;
+    shortlink : string ;
     min_age_in_months : int ;
     max_age_in_months : int ;
 
@@ -38,19 +40,32 @@ type t =
     summary : string ;
     number_of_spots : int ;
     bookings : View_booking.t list ;
+    thread : View_thread.t ;
+    suggestion_member : View_member.t ;
+    suggestion_raw : string ;
   }
 
 }}
 
 {server{
 
+let to_state = function
+  | Object_activity.Proposing -> Proposing
+  | Object_activity.Cancelled -> Cancelled
+  | Object_activity.Drafting -> Drafting
+  | Object_activity.Done -> Done
+
 let to_view uid =
-  lwt reference, min_age_in_months, max_age_in_months, title, description, summary, number_of_spots, bookings =
-    $activity(uid)->(reference, min_age_in_months, max_age_in_months, title, description, summary, number_of_spots, bookings) in
+  lwt shortlink, state, min_age_in_months, max_age_in_months, title, description, summary, number_of_spots, bookings, thread, suggestion_member, suggestion_raw =
+    $activity(uid)->(shortlink, state, min_age_in_months, max_age_in_months, title, description, summary, number_of_spots, bookings, thread, suggestion_member, suggestion_raw) in
   lwt bookings = Lwt_list.map_s (fun (_, uid) -> View_booking.to_view uid) bookings in
+  let state = to_state state in
+  lwt thread = View_thread.to_view thread in
+  lwt suggestion_member = View_member.to_view suggestion_member in
   return {
     uid ;
-    reference ;
+    shortlink ;
+    state ;
     min_age_in_months ;
     max_age_in_months ;
     title ;
@@ -58,6 +73,9 @@ let to_view uid =
     summary ;
     number_of_spots ;
     bookings ;
+    thread ;
+    suggestion_member ;
+    suggestion_raw ;
   }
 
 }}
@@ -70,8 +88,8 @@ open Eliom_content.Html5
 open Eliom_content.Html5.D
 
 let format view =
-  div ~a:[ a_class [ "view-activity" ]] [
-    div ~a:[ a_class [ "reference" ]] [ pcdata view.reference ] ;
+  div ~a:[ a_class [ "view-activity" ; "box" ]] [
+    div ~a:[ a_class [ "shortlink" ]] [ pcdata view.shortlink ] ;
     div ~a:[ a_class [ "title" ]] [ pcdata view.title ] ;
     div ~a:[ a_class [ "description" ]] [ pcdata view.description ] ;
     div ~a:[ a_class [ "summary" ]] [ pcdata view.summary ] ;

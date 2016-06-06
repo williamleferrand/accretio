@@ -8,6 +8,7 @@
  *
  *)
 
+(*
 (* this entier playbook should be rewritten at some point, there are millions of
    hardcoded things here *)
 
@@ -807,3 +808,6 @@ PLAYBOOK
 
 PROPERTIES
   - "Your duties", "None"
+
+
+*)

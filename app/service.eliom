@@ -61,20 +61,18 @@ type service =
   | Dashboard
   | Create
   | Society of string * int
+  | Activity of string * int
   | Manage of string * int * manage_step
   | Payment of string * int
   | Search of string option
   | Schoolbus
+  | Curriculum of string * int
   | Library deriving(Json)
 
 let admin objekt =
   function
   | None -> [ "admin" ; "graph" ; objekt ]
   | Some uid -> [ "admin" ; "graph" ; objekt ; Ys_uid.to_string uid ]
-
-}}
-
-{client{
 
 let path_of_service = function
     Uninitialized -> [ "" ]
@@ -107,7 +105,12 @@ let path_of_service = function
   | Search None -> [ "search" ]
   | Search (Some query) -> [ "search" ; query ]
   | Schoolbus -> [ "schoolbus" ]
+  | Curriculum (shortlink, _) -> [ "curriculum" ; shortlink ]
+  | Activity (shortlink, _) -> [ "activity" ; shortlink ]
   | Landing -> [ "" ]
+}}
+
+{client{
 
 let drop_search s1 s2 =
   match s1, s2 with

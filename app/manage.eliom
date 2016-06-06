@@ -230,7 +230,7 @@ let builder_members shortlink uid =
     in
 
     let add_member =
-      let input_email = input ~a:[ a_input_type `Text ; a_placeholder "Email" ]  () in
+      let input_email = input ~a:[ a_input_type `Text ; a_placeholder "Emails" ]  () in
       let input_tags = input ~a:[ a_input_type `Text ; a_placeholder "Comma separated tags" ]  () in
       let create _ =
         match Ys_dom.get_value input_email with
@@ -267,9 +267,13 @@ let builder_members shortlink uid =
         ]
       ]
     in
+
     div ~a:[ a_class [ "manage" ; "manage-members" ]] [
       menu shortlink uid ;
       RList.map_in_div_hd ~a:[ a_class [ "members" ]] add_member format_member members ;
+      RList.map_in_div ~a:[ a_class [ "emails" ]] (fun (member, _) -> span [ pcdata " " ; pcdata member.View_member.email ]) members ;
+
+
     ]
 
 (* custom *********************************************************************)

@@ -27,16 +27,21 @@ open Ys_uid
 type step = unit with bin_io
 type steps = step list with bin_io, default_value([])
 
+type state = Drafting | Proposing | Cancelled | Done with bin_io, default_value(Cancelled)
+
 type t = {
 
   uid : uid ;
 
   created_on : timestamp ;
+
+  state : state ;
+
   society: uid ;
 
   date : int64 ;
 
-  reference : string ;
+  shortlink : string ;
   min_age_in_months : int ;
   max_age_in_months : int ;
 
@@ -50,11 +55,17 @@ type t = {
 
   bookings : [ `Booking ] edges ;
 
+  suggestion_member : uid ;
+  suggestion_raw : string ;
+
+  cost : float ;
+  thread : uid ;
+
 } with vertex
   (
     {
-      aliases = [ `String reference ] ;
-      required = [ society ; reference ; min_age_in_months ; max_age_in_months ; number_of_spots ; title ; description ] ;
-      uniques = [ reference ] ;
+      aliases = [ `String shortlink ] ;
+      required = [ society ; shortlink ; thread ; description ; suggestion_member ; suggestion_raw ] ;
+      uniques = [ shortlink ] ;
     }
   )

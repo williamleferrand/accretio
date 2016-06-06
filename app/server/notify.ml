@@ -101,9 +101,7 @@ let with_signature locator content =
     br () ;
     br () ;
     pcdata "-----" ; br () ;
-    pcdata "Sent via accretio. Have you read our latest " ;
-    Raw.a ~a:[ a_href (uri_of_string (fun () -> "https://medium.com/@wleferrand/the-global-village-23b7b467d1d8")) ] [ pcdata "Medium post" ] ;
-    pcdata "?" ; br () ;
+    pcdata "Sent via accretio." ; br () ;
   ]
 
 let with_batch_signature locator content =
