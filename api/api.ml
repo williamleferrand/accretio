@@ -136,6 +136,10 @@ type 'output context =
     search_societies : query:string -> unit -> uid list Lwt.t ;
     create_society : playbook:string -> name:string -> description:string -> unit -> uid option Lwt.t ;
 
+    (* some tools *)
+    create_link : Service.service -> string ;
+
+
   }
 
 module type STAGE_SPECIFICS =

@@ -143,7 +143,7 @@ let query_payment query =
 let query_payment = server_function ~name:"query-admin-payment" Json.t<string> query_payment
 
 let query_activity query =
-  Object_activity.Store.find_by_reference query
+  Object_activity.Store.find_by_shortlink query
 
 let query_activity = server_function ~name:"query-admin-activity" Json.t<string> query_activity
 

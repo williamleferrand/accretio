@@ -107,6 +107,8 @@ let dispatch service : 'a option React.signal =
   | Search query -> Search.dom query
   | RequestRecovery -> wrap (Recover.dom_request_recovery ())
   | Schoolbus -> Schoolbus.dom ()
+  | Curriculum (_, uid) -> Fieldtrip_curriculum.dom uid
+  | Activity (_, uid) -> Activity.dom uid
   | _ -> S.const None
 
 let container: Html5_types.div_content_fun elt React.signal =

@@ -1936,3 +1936,8 @@ h2 {
 .schoolbus-planner-activities .view-payment .join-before button {
   padding-right: 10px;
 }
+
+/* line 5, ../sass/_fieldtrip_curriculum.scss */
+.fieldtrip-curriculum .activities .activity {
+  background-color: #1c9fad;
+}

@@ -98,6 +98,7 @@ type t = {
   tags : string ;
 
   objects : [ `Activity ] edges ;
+  activities : [ `Activity ] edges ;
 
 } with vertex
   (

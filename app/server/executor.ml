@@ -525,6 +525,13 @@ let context_factory society =
              lwt _ = $society(society)<-societies += (`Society name, obj.Object_society.uid) in
              return (Some obj.Object_society.uid)
 
+    (* more utilities *********************************************************)
+
+   let create_link service =
+     let prefix = Ys_config.get_string "url-prefix" in
+     let path = Service.path_of_service service in
+     prefix ^ "/" ^ (String.concat "/" path)
+
     (* now we finally have the context that we'll feed to the specific stage *)
 
     let context = {
@@ -579,6 +586,8 @@ let context_factory society =
 
       search_societies ;
       create_society ;
+
+      create_link ;
     }
 
   end in

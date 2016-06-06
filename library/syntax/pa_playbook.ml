@@ -180,6 +180,7 @@ EXTEND Gram
       [
         options = OPT [ "*" -> `Tickable | "-" -> `Mailbox ] ;
         stage = LIDENT ;
+        inbound_type = OPT [ "[" ; ty = ctyp ; "]" -> ty ] ;
         message_strategies = OPT [ "<" ; message_strategies = LIST0 [ strategy = LIDENT -> strategy ] SEP "," ; ">" -> message_strategies ] ->
 
         let options = match options with
@@ -191,6 +192,11 @@ EXTEND Gram
         let options = match message_strategies with
             None -> options
           | Some strats -> MessageStrategies strats :: options
+        in
+
+        let options = match inbound_type with
+            None -> options
+          | Some typ -> InboundType typ :: options
         in
 
         { Vertex.stage ; options ; path = [] }
@@ -294,7 +300,7 @@ EXTEND Gram
             let dispatch = dispatch _loc automata in
             let dispatch_message_manually = dispatch_message_manually _loc automata in
             let dispatch_message_automatically = dispatch_message_automatically _loc automata in
-
+            let names = extract_names _loc automata in
             let automata_description =
               let automata_serialized = graph_to_string automata in
               let triggers = triggers _loc automata in
@@ -334,7 +340,7 @@ EXTEND Gram
               $dispatch_message_automatically$ ;
               $automata_description$ ;
               $crons$ ;
-
+              module Stages = struct $names$ end ;
             >>
           end
         else

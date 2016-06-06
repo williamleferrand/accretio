@@ -24,7 +24,7 @@ open Ast
 
 module StringSet = Set.Make(String)
 
-type opt = Tickable | Mailbox | MessageStrategies of string list | ExternalMailbox
+type opt = Tickable | Mailbox | MessageStrategies of string list | ExternalMailbox | InboundType of ctyp
 
 module Vertex = struct
 
@@ -89,19 +89,20 @@ let static_type = function
 
 let extract_inbound_type _loc automata stage =
   (* very important: force typing for stages defined in Api.Stages *)
-  match static_type (Vertex.stage stage) with
-  | Some `Unit -> Some <:ctyp< unit >>
-  | Some `Int -> Some <:ctyp< int >>
-  | _ ->
-    let edges =
-      G.fold_pred_e
-        (fun edge acc ->
-           match G.E.label edge with
-             <:ctyp< _ >> -> acc
-           | _ as edge -> edge :: acc)
-        automata
-        stage
-        []
+  let inferred =
+    match static_type (Vertex.stage stage) with
+    | Some `Unit -> Some <:ctyp< unit >>
+    | Some `Int -> Some <:ctyp< int >>
+    | _ ->
+      let edges =
+        G.fold_pred_e
+          (fun edge acc ->
+             match G.E.label edge with
+               <:ctyp< _ >> -> acc
+             | _ as edge -> edge :: acc)
+          automata
+          stage
+          []
     in
     match edges with
       <:ctyp< `$uid:_$ of email >> :: _ -> Some <:ctyp< int >>
@@ -113,7 +114,26 @@ let extract_inbound_type _loc automata stage =
       | false ->
         match List.mem Mailbox (Vertex.options stage) with
           true -> Some <:ctyp< int >>
-        | false -> None
+        | false -> None in
+
+  let casted =
+    List.fold_left
+      (fun acc -> function
+         | InboundType ctyp -> Some ctyp
+         | _ -> acc)
+      None
+      (Vertex.options stage)
+  in
+
+  match inferred, casted with
+  | None, Some ctyp -> Some ctyp
+  | None, None -> None
+  | Some ctyp, None -> Some ctyp
+  | Some ty1, Some ty2 when ty1 = ty2 -> Some ty1
+  | _ ->
+    (* here we should fail *)
+    failwith (Printf.sprintf "mismatch between inferred and casted inbound types for stage %s" (Vertex.stage stage))
+
 
 let outbound_types _loc automata =
   G.fold_vertex
@@ -558,3 +578,13 @@ let load_automata _loc import =
   let graph = (Marshal.from_channel ic : G.t) in
   close_in ic ;
   graph
+
+
+let extract_names _loc automata =
+  G.fold_vertex
+    (fun stage acc ->
+       <:str_item<
+         value $lid:Vertex.stage stage$ = $str:Vertex.stage stage$ ;
+         $acc$ ; >>)
+    automata
+    <:str_item<>>

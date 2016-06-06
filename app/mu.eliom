@@ -218,6 +218,36 @@ let _ =
             lwt name, description = $society(uid)->(name, description) in
             return (Service.Society (shortlink, uid), Some name, Some description))
     () ;
+ register_page_with_title
+    ~path:[ "curriculum" ]
+    ~get_params:(string "shortlink")
+    ~extract_service:(fun _ shortlink ->
+        match_lwt Object_society.Store.find_by_shortlink shortlink with
+          | None ->
+            (try_lwt
+               let uid = int_of_string shortlink in
+               lwt shortlink = $society(uid)->shortlink in
+               return (Service.Curriculum (shortlink, uid), None, None)
+             with _ -> return (Service.Landing, None, None))
+          | Some uid ->
+            lwt name, description = $society(uid)->(name, description) in
+            return (Service.Curriculum (shortlink, uid), Some name, Some description))
+    () ;
+ register_page_with_title
+    ~path:[ "activity" ]
+    ~get_params:(string "shortlink")
+    ~extract_service:(fun _ shortlink ->
+        match_lwt Object_society.Store.find_by_shortlink shortlink with
+          | None ->
+            (try_lwt
+               let uid = int_of_string shortlink in
+               lwt shortlink = $society(uid)->shortlink in
+               return (Service.Activity (shortlink, uid), None, None)
+             with _ -> return (Service.Landing, None, None))
+          | Some uid ->
+            lwt name, description = $society(uid)->(name, description) in
+            return (Service.Activity (shortlink, uid), Some name, Some description))
+    () ;
 let manage path step =
   register_page_with_title
     ~path
