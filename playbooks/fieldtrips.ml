@@ -25,7 +25,7 @@ open Ys_uid
 
 let author = "william@accret.io"
 let name = "Field trips"
-let description = "this playbook schedules field trips"
+let description = "This playbook schedules field trips"
 let version = 0
 let tags = ""
 
