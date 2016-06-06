@@ -46,14 +46,14 @@ let to_date_json date =
   }
 
 let to_activity_json activity_uid =
-  lwt activity_reference, activity_min_age_in_months, activity_max_age_in_months,
-      activity_title, activity_description, activity_summary, date = $activity(activity_uid)->(reference, min_age_in_months, max_age_in_months, title, description, summary, date)
+  lwt activity_min_age_in_months, activity_max_age_in_months,
+      activity_title, activity_description, activity_summary, date = $activity(activity_uid)->(min_age_in_months, max_age_in_months, title, description, summary, date)
   in
   let activity_date = to_date_json date in
   return
     {
       activity_uid ;
-      activity_reference ;
+      activity_reference = "dummy" ;
       activity_min_age_in_months ;
       activity_max_age_in_months ;
       activity_date ;
