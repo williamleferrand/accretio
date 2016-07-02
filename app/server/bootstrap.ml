@@ -41,7 +41,10 @@ let run () =
   lwt _ = Migration.run () in
 
   lwt _ = Registry.start () in
+(*
+   commenting that one out for now, it is causing some kind of fd leak
   let _ = ignore_result (Imap_endpoint.start ()) in
+*)
 
   (* starting notify *)
   Notify.dequeue_batches () ;
